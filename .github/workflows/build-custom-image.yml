@@ -10,7 +10,7 @@ on:
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME: xataio/maki/custom-postgres
+  IMAGE_NAME: xataio/postgres-images/cnpg-postgres-plus
   CNPG_BASE: ghcr.io/cloudnative-pg/postgresql:17
 
 jobs:
@@ -76,8 +76,8 @@ jobs:
             -t ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.pg-version.outputs.PG_VERSION }} \
             -t ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.pg-version.outputs.PG_VERSION }}-$(date +%Y%m%d) \
             --label "base.digest=$BASE_DIGEST" \
-            --label "org.opencontainers.image.source=https://github.com/xataio/maki" \
-            --label "org.opencontainers.image.description=custom postgresql image" \
+            --label "org.opencontainers.image.source=https://github.com/xataio/postgres-images" \
+            --label "org.opencontainers.image.description=CNPG PostgreSQL with additional extensions and tools" \
             --label "org.opencontainers.image.licenses=PostgreSQL" \
             --build-arg CNPG_BASE=$CNPG_BASE .
 
@@ -203,8 +203,8 @@ jobs:
             -t ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.pg-version.outputs.PG_VERSION }} \
             -t ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.pg-version.outputs.PG_VERSION }}-$(date +%Y%m%d) \
             --label "base.digest=$BASE_DIGEST" \
-            --label "org.opencontainers.image.source=https://github.com/xataio/maki" \
-            --label "org.opencontainers.image.description=custom postgresql image" \
+            --label "org.opencontainers.image.source=https://github.com/xataio/postgres-images" \
+            --label "org.opencontainers.image.description=CNPG PostgreSQL with additional extensions and tools" \
             --build-arg CNPG_BASE=$CNPG_BASE \
             --push \
             .
