@@ -2,7 +2,7 @@ name: Build Custom CNPG Postgres 17 Image
 
 on:
   push:
-    branches: [main]
+    branches: [main, build-custom-image]
   workflow_dispatch:
   schedule:
     # Run every Wednesday at 2 AM UTC
@@ -11,7 +11,7 @@ on:
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: xataio/postgres-images/cnpg-postgres-plus
-  CNPG_BASE: ghcr.io/cloudnative-pg/postgresql:17
+  CNPG_BASE: ghcr.io/cloudnative-pg/postgresql:17-minimal-bookworm
 
 jobs:
   build-test-publish:
