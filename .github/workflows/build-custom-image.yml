@@ -1,0 +1,223 @@
+name: Build Custom CNPG Postgres 17 Image
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+  schedule:
+    # Run every Wednesday at 2 AM UTC
+    - cron: '0 2 * * 3'
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: xataio/postgres-images/cnpg-postgres-plus
+  CNPG_BASE: ghcr.io/cloudnative-pg/postgresql:17-minimal-bookworm
+
+jobs:
+  build-test-publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Pull CNPG Postgres base image
+        run: docker pull $CNPG_BASE
+
+      - name: Check if base image has been updated
+        id: base-check
+        run: |
+          # Get the digest of the base image
+          BASE_DIGEST=$(docker image inspect $CNPG_BASE --format '{{.Id}}')
+          echo "BASE_DIGEST=$BASE_DIGEST" >> $GITHUB_OUTPUT
+          
+          # For scheduled runs, check if we already have this version pushed
+          if [ "${{ github.event_name }}" = "schedule" ]; then
+            # Try to pull our existing image to compare
+            if docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest 2>/dev/null; then
+              EXISTING_DIGEST=$(docker image inspect ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest --format '{{index .Config.Labels "base.digest"}}')
+              if [ "$EXISTING_DIGEST" = "$BASE_DIGEST" ]; then
+                echo "Base image unchanged, skipping build"
+                echo "SHOULD_BUILD=false" >> $GITHUB_OUTPUT
+                exit 0
+              fi
+            fi
+          fi
+          
+          echo "Base image updated or forced build, proceeding"
+          echo "SHOULD_BUILD=true" >> $GITHUB_OUTPUT
+
+      - name: Get actual Postgres version from CNPG base
+        if: steps.base-check.outputs.SHOULD_BUILD == 'true'
+        id: pg-version
+        run: |
+          ACTUAL_VERSION=$(docker run --rm $CNPG_BASE postgres -V | awk '{print $3}')
+          echo "PG_VERSION=$ACTUAL_VERSION" >> $GITHUB_OUTPUT
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build custom image
+        if: steps.base-check.outputs.SHOULD_BUILD == 'true'
+        run: |
+          # Get base image digest for labeling
+          BASE_DIGEST=$(docker image inspect $CNPG_BASE --format '{{.Id}}')
+          
+          # Build for local testing (amd64 only)
+          docker build \
+            -f docker/custom-postgres/Dockerfile \
+            -t ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest \
+            -t ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.pg-version.outputs.PG_VERSION }} \
+            -t ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.pg-version.outputs.PG_VERSION }}-$(date +%Y%m%d) \
+            --label "base.digest=$BASE_DIGEST" \
+            --label "org.opencontainers.image.source=https://github.com/xataio/postgres-images" \
+            --label "org.opencontainers.image.description=CNPG PostgreSQL with additional extensions and tools" \
+            --label "org.opencontainers.image.licenses=PostgreSQL" \
+            --build-arg CNPG_BASE=$CNPG_BASE .
+
+      - name: Run tests on image
+        if: steps.base-check.outputs.SHOULD_BUILD == 'true'
+        run: |
+          docker rm -f pg-test 2>/dev/null || true
+          
+          # Start PostgreSQL with PGDATA on the disk
+          docker run -d --name pg-test \
+            -e POSTGRES_PASSWORD=test \
+            -e POSTGRES_INITDB_ARGS="--auth-host=trust" \
+            -e PGDATA=/var/lib/postgresql/data \
+            --user postgres \
+            "${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest" \
+            bash -c 'echo "Starting initialization..." && mkdir -p $PGDATA && if [ ! -f $PGDATA/PG_VERSION ]; then echo "Initializing database..." && initdb $POSTGRES_INITDB_ARGS; fi && echo "Starting PostgreSQL..." && postgres'
+ 
+          timeout 60s bash -c 'until docker exec pg-test pg_isready 2>/dev/null; do sleep 2; done'
+          if ! docker exec pg-test pg_isready 2>/dev/null; then
+            echo "=== Container failed to start, showing logs ==="
+            docker logs pg-test || true
+            exit 1
+          fi
+          
+          docker exec pg-test psql -U postgres -c "SELECT version();" || exit 1
+          
+          echo "=== Testing basic extensions ==="
+          for ext in pg_partman pg_trgm pgcrypto citext hstore ltree pg_buffercache pg_freespacemap pg_visibility pgrowlocks moddatetime insert_username hypopg dblink; do
+            docker exec pg-test psql -U postgres -c "CREATE EXTENSION IF NOT EXISTS \"$ext\";" || exit 1
+            docker exec pg-test psql -U postgres -c "\dx" | grep "$ext" || exit 1
+          done
+          
+          echo "=== Testing wal2json logical decoding plugin ==="
+          docker exec pg-test ls -la /usr/lib/postgresql/17/lib/wal2json.so || exit 1
+          
+          # Configure PostgreSQL for logical replication (this requires restart)
+          echo "=== Configuring PostgreSQL for logical replication ==="
+          docker exec pg-test psql -U postgres -c "ALTER SYSTEM SET wal_level = 'logical';"
+          docker exec pg-test psql -U postgres -c "ALTER SYSTEM SET max_replication_slots = 10;"
+          docker exec pg-test psql -U postgres -c "ALTER SYSTEM SET shared_preload_libraries TO 'pg_stat_statements','auto_explain','pg_prewarm', 'pg_cron';"
+          
+          docker restart pg-test
+          timeout 60s bash -c 'until docker exec pg-test pg_isready 2>/dev/null; do sleep 2; done'
+          if ! docker exec pg-test pg_isready 2>/dev/null; then
+            echo "=== Container failed after restart, showing logs ==="
+            docker logs pg-test || true
+            exit 1
+          fi
+          
+          docker exec pg-test psql -U postgres -c "SHOW wal_level;" || exit 1
+          docker exec pg-test psql -U postgres -c "SHOW shared_preload_libraries;" || exit 1          
+          
+          # Now test extensions that require shared_preload_libraries
+          echo "=== Testing preloaded extensions ==="
+          for ext in pg_stat_statements pg_prewarm pg_cron; do
+            echo "Testing preloaded extension: $ext"
+            docker exec pg-test psql -U postgres -c "CREATE EXTENSION IF NOT EXISTS \"$ext\";" || exit 1
+            docker exec pg-test psql -U postgres -c "\dx" | grep "$ext" || exit 1
+          done
+          
+          # Test auto_explain (module, not extension)
+          echo "=== Testing auto_explain module ==="
+          docker exec pg-test psql -U postgres -c "SHOW shared_preload_libraries;" | grep "auto_explain" || exit 1
+          echo "auto_explain module is properly loaded"
+          
+          # By default pg_cron would use exactly the postgres db, but here we are making it explicit so we know about this and we can potentially change it later
+          echo "=== Configuring pg_cron ==="
+          docker exec pg-test psql -U postgres -c "ALTER SYSTEM SET cron.database_name = 'postgres';" || exit 1
+          docker exec pg-test psql -U postgres -c "SELECT pg_reload_conf();" || exit 1
+          
+          # Test pg_prewarm without preloading
+          echo "Testing pg_prewarm as regular extension (not preloaded)"
+          docker exec pg-test psql -U postgres -c "CREATE EXTENSION IF NOT EXISTS pg_prewarm;" || exit 1
+          docker exec pg-test psql -U postgres -c "\dx" | grep "pg_prewarm" || exit 1
+
+          echo "=== Testing wal2json replication slot creation ==="
+          docker exec pg-test psql -U postgres -c "SELECT pg_create_logical_replication_slot('test_slot', 'wal2json');" || exit 1
+          echo "=== wal2json replication slot created successfully ==="
+          
+          docker exec pg-test psql -U postgres -c "CREATE TABLE test_wal2json (id SERIAL PRIMARY KEY, data TEXT);" || exit 1
+          docker exec pg-test psql -U postgres -c "INSERT INTO test_wal2json (data) VALUES ('test data');" || exit 1
+          
+          echo "=== Testing wal2json output ==="
+          docker exec pg-test psql -U postgres -c "SELECT data FROM pg_logical_slot_get_changes('test_slot', NULL, NULL, 'pretty-print', '1');" || exit 1
+          
+          docker exec pg-test psql -U postgres -c "SELECT pg_drop_replication_slot('test_slot');" || exit 1
+          echo "=== wal2json tests passed - plugin is working correctly ==="
+          
+          echo "=== Testing pg_stat_statements functionality ==="
+          docker exec pg-test psql -U postgres -c "SELECT count(*) FROM pg_stat_statements;" || exit 1
+          
+          echo "=== Testing pg_cron functionality ==="
+          docker exec pg-test psql -U postgres -c "SELECT cron.schedule('test-job', '* * * * *', 'SELECT 1;');" || exit 1
+          docker exec pg-test psql -U postgres -c "SELECT cron.unschedule('test-job');" || exit 1
+          echo "pg_cron test passed"
+          
+          echo "=== Testing text search (pg_trgm) ==="
+          docker exec pg-test psql -U postgres -c "CREATE TABLE test_search (text_col text); INSERT INTO test_search VALUES ('hello world');" || exit 1
+          docker exec pg-test psql -U postgres -c "SELECT similarity('hello', text_col) FROM test_search;" || exit 1
+          
+          echo "=== Testing hstore ==="
+          docker exec pg-test psql -U postgres -c "CREATE TABLE test_hstore (data hstore); INSERT INTO test_hstore VALUES ('key=>value');" || exit 1
+          docker exec pg-test psql -U postgres -c "SELECT data->'key' FROM test_hstore;" || exit 1
+          
+          echo "=== Testing hypopg (hypothetical indexes) ==="
+          docker exec pg-test psql -U postgres -c "SELECT hypopg_create_index('CREATE INDEX ON test_search (text_col)');" || exit 1
+          docker exec pg-test psql -U postgres -c "SELECT hypopg_reset();" || exit 1
+          
+          # List all available extensions
+          echo "=== Available extensions ==="
+          docker exec pg-test psql -U postgres -c "SELECT name FROM pg_available_extensions ORDER BY name;" || exit 1
+          
+          # Cleanup
+          docker rm -f pg-test
+
+      - name: Push multi-architecture image to GitHub Container Registry
+        if: steps.base-check.outputs.SHOULD_BUILD == 'true'
+        run: |
+          # Get base image digest for labeling
+          BASE_DIGEST=$(docker image inspect $CNPG_BASE --format '{{.Id}}')
+          
+          # Build and push multi-architecture images
+          docker buildx build \
+            -f docker/custom-postgres/Dockerfile \
+            --platform linux/amd64,linux/arm64 \
+            -t ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest \
+            -t ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.pg-version.outputs.PG_VERSION }} \
+            -t ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.pg-version.outputs.PG_VERSION }}-$(date +%Y%m%d) \
+            --label "base.digest=$BASE_DIGEST" \
+            --label "org.opencontainers.image.source=https://github.com/xataio/postgres-images" \
+            --label "org.opencontainers.image.description=CNPG PostgreSQL with additional extensions and tools" \
+            --build-arg CNPG_BASE=$CNPG_BASE \
+            --push \
+            .
+          
+          echo "::notice::Multi-architecture images pushed to ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}"
+          echo "::notice::Available tags: latest, ${{ steps.pg-version.outputs.PG_VERSION }}, ${{ steps.pg-version.outputs.PG_VERSION }}-$(date +%Y%m%d)"
+          echo "::notice::Platforms: linux/amd64, linux/arm64"
+
+      - name: Notify if no build needed
+        if: steps.base-check.outputs.SHOULD_BUILD == 'false'
+        run: |
+          echo "::notice::Base image unchanged since last build, skipping rebuild"
