@@ -25,4 +25,14 @@ RUN apt-get install -y --no-install-recommends \
     postgresql-17-hypopg \
     && rm -rf /var/lib/apt/lists/*
 
+# Remove tools
+RUN apt-get purge -y --auto-remove \
+    wget \
+    gnupg \
+    ca-certificates \
+    && rm -rf /var/lib/apt/lists/* \
+    && rm -rf /etc/apt/sources.list.d/pgdg.list \
+    && rm -rf /etc/apt/trusted.gpg.d/postgresql.gpg \
+    && apt-get clean
+
 USER postgres
