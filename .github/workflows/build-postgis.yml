@@ -1,0 +1,184 @@
+name: Build Custom CNPG Postgres 17 PostGIS Image
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+  schedule:
+    # Run every Wednesday at 2 AM UTC
+    - cron: '0 2 * * 3'
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: xataio/postgres-images/cnpg-postgres-postgis
+  CNPG_BASE: ghcr.io/cloudnative-pg/postgresql:17-bookworm
+
+jobs:
+  build-test-publish-postgis:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Pull CNPG Postgres base image
+        run: docker pull $CNPG_BASE
+
+      - name: Check if base image has been updated
+        id: base-check
+        run: |
+          # Get the digest of the base image
+          BASE_DIGEST=$(docker image inspect $CNPG_BASE --format '{{.Id}}')
+          echo "BASE_DIGEST=$BASE_DIGEST" >> $GITHUB_OUTPUT
+          
+          # For scheduled runs, check if we already have this version pushed
+          if [ "${{ github.event_name }}" = "schedule" ]; then
+            # Try to pull our existing image to compare
+            if docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest 2>/dev/null; then
+              EXISTING_DIGEST=$(docker image inspect ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest --format '{{index .Config.Labels "base.digest"}}')
+              if [ "$EXISTING_DIGEST" = "$BASE_DIGEST" ]; then
+                echo "Base image unchanged, skipping build"
+                echo "SHOULD_BUILD=false" >> $GITHUB_OUTPUT
+                exit 0
+              fi
+            fi
+          fi
+          
+          echo "Base image updated or forced build, proceeding"
+          echo "SHOULD_BUILD=true" >> $GITHUB_OUTPUT
+
+      - name: Get actual Postgres version from CNPG base
+        if: steps.base-check.outputs.SHOULD_BUILD == 'true'
+        id: pg-version
+        run: |
+          ACTUAL_VERSION=$(docker run --rm $CNPG_BASE postgres -V | awk '{print $3}')
+          echo "PG_VERSION=$ACTUAL_VERSION" >> $GITHUB_OUTPUT
+
+      - name: Set up QEMU
+        if: steps.base-check.outputs.SHOULD_BUILD == 'true'
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        if: steps.base-check.outputs.SHOULD_BUILD == 'true'
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GitHub Container Registry
+        if: steps.base-check.outputs.SHOULD_BUILD == 'true'
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build custom image for testing
+        if: steps.base-check.outputs.SHOULD_BUILD == 'true'
+        run: |
+          # Get base image digest for labeling
+          BASE_DIGEST=$(docker image inspect $CNPG_BASE --format '{{.Id}}')
+          
+          # Build for local testing (amd64 only)
+          docker build \
+            -f docker/postgis/Dockerfile \
+            -t ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest \
+            -t ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.pg-version.outputs.PG_VERSION }} \
+            -t ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.pg-version.outputs.PG_VERSION }}-$(date +%Y%m%d) \
+            --label "base.digest=$BASE_DIGEST" \
+            --label "org.opencontainers.image.source=https://github.com/xataio/postgres-images" \
+            --label "org.opencontainers.image.description=CNPG PostgreSQL with PostGIS extension" \
+            --label "org.opencontainers.image.licenses=PostgreSQL" \
+            --build-arg CNPG_BASE=$CNPG_BASE .
+
+      - name: Run tests on image
+        if: steps.base-check.outputs.SHOULD_BUILD == 'true'
+        run: |
+          docker rm -f pg-test 2>/dev/null || true
+          
+          # Start PostgreSQL with PGDATA on the disk
+          docker run -d --name pg-test \
+            -e POSTGRES_PASSWORD=test \
+            -e POSTGRES_INITDB_ARGS="--auth-host=trust" \
+            -e PGDATA=/var/lib/postgresql/data \
+            --user postgres \
+            "${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest" \
+            bash -c 'echo "Starting initialization..." && mkdir -p $PGDATA && if [ ! -f $PGDATA/PG_VERSION ]; then echo "Initializing database..." && initdb $POSTGRES_INITDB_ARGS; fi && echo "Starting PostgreSQL..." && postgres'
+          
+          timeout 60s bash -c 'until docker exec pg-test pg_isready 2>/dev/null; do sleep 2; done'
+          if ! docker exec pg-test pg_isready 2>/dev/null; then
+            echo "=== Container failed to start, showing logs ==="
+            docker logs pg-test || true
+            exit 1
+          fi
+          
+          docker exec pg-test psql -U postgres -c "SELECT version();" || exit 1
+          
+          echo "=== Testing PostGIS extension ==="
+          docker exec pg-test psql -U postgres -c "CREATE EXTENSION IF NOT EXISTS postgis;" || exit 1
+          docker exec pg-test psql -U postgres -c "\dx" | grep "postgis" || exit 1
+          
+          echo "=== Testing PostGIS version and functionality ==="
+          docker exec pg-test psql -U postgres -c "SELECT PostGIS_Full_Version();" || exit 1
+          docker exec pg-test psql -U postgres -c "SELECT ST_AsText(ST_MakePoint(1,1));" || exit 1
+          
+          echo "=== Testing PostGIS topology extension ==="
+          docker exec pg-test psql -U postgres -c "CREATE EXTENSION IF NOT EXISTS postgis_topology;" || exit 1
+          docker exec pg-test psql -U postgres -c "\dx" | grep "postgis_topology" || exit 1
+          
+          echo "=== Testing PostGIS raster extension ==="
+          docker exec pg-test psql -U postgres -c "CREATE EXTENSION IF NOT EXISTS postgis_raster;" || exit 1
+          docker exec pg-test psql -U postgres -c "\dx" | grep "postgis_raster" || exit 1
+          
+          echo "=== Testing PostGIS tiger geocoder extension ==="
+          docker exec pg-test psql -U postgres -c "CREATE EXTENSION IF NOT EXISTS postgis_tiger_geocoder;" || exit 1
+          docker exec pg-test psql -U postgres -c "\dx" | grep "postgis_tiger_geocoder" || exit 1
+          
+          echo "=== Creating spatial table and testing spatial query ==="
+          docker exec pg-test psql -U postgres -c "
+            CREATE TABLE spatial_test (
+              id SERIAL PRIMARY KEY,
+              name TEXT,
+              location GEOMETRY(Point, 4326)
+            );
+            INSERT INTO spatial_test (name, location) VALUES 
+              ('Point A', ST_GeomFromText('POINT(-71.060316 48.432044)', 4326)),
+              ('Point B', ST_GeomFromText('POINT(-71.070316 48.442044)', 4326));
+            SELECT name, ST_Distance(location::geography, ST_GeomFromText('POINT(-71.065316 48.437044)', 4326)::geography) as distance_meters
+            FROM spatial_test
+            ORDER BY location <-> ST_GeomFromText('POINT(-71.065316 48.437044)', 4326)::geometry
+            LIMIT 1;
+          " || exit 1
+          
+          # List all available extensions
+          echo "=== Available extensions ==="
+          docker exec pg-test psql -U postgres -c "SELECT name FROM pg_available_extensions WHERE name LIKE '%postgis%' ORDER BY name;" || exit 1
+          
+          # Cleanup
+          docker rm -f pg-test
+
+      - name: Push multi-architecture image to GitHub Container Registry
+        if: steps.base-check.outputs.SHOULD_BUILD == 'true'
+        run: |
+          # Get base image digest for labeling
+          BASE_DIGEST=$(docker image inspect $CNPG_BASE --format '{{.Id}}')
+          
+          # Build and push multi-architecture images
+          docker buildx build \
+            -f docker/postgis/Dockerfile \
+            --platform linux/amd64,linux/arm64 \
+            -t ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest \
+            -t ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.pg-version.outputs.PG_VERSION }} \
+            -t ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.pg-version.outputs.PG_VERSION }}-postgis3 \
+            -t ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.pg-version.outputs.PG_VERSION }}-$(date +%Y%m%d) \
+            --label "base.digest=$BASE_DIGEST" \
+            --label "org.opencontainers.image.source=https://github.com/xataio/postgres-images" \
+            --label "org.opencontainers.image.description=CNPG PostgreSQL with PostGIS extension" \
+            --build-arg CNPG_BASE=$CNPG_BASE \
+            --push \
+            .
+          
+          echo "::notice::Multi-architecture images pushed to ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}"
+          echo "::notice::Available tags: latest, ${{ steps.pg-version.outputs.PG_VERSION }}, ${{ steps.pg-version.outputs.PG_VERSION }}-postgis3, ${{ steps.pg-version.outputs.PG_VERSION }}-$(date +%Y%m%d)"
+          echo "::notice::Platforms: linux/amd64, linux/arm64"
+
+      - name: Notify if no build needed
+        if: steps.base-check.outputs.SHOULD_BUILD == 'false'
+        run: |
+          echo "::notice::Base image unchanged since last build, skipping rebuild"
