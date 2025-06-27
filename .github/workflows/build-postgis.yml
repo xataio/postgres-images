@@ -2,7 +2,7 @@ name: Build Custom CNPG Postgres 17 PostGIS Image
 
 on:
   push:
-    branches: [main]
+    branches: [main, build-postgis]
   workflow_dispatch:
   schedule:
     # Run every Wednesday at 2 AM UTC
@@ -127,7 +127,8 @@ jobs:
           docker exec pg-test psql -U postgres -c "\dx" | grep "postgis_raster" || exit 1
           
           echo "=== Testing PostGIS tiger geocoder extension ==="
-          docker exec pg-test psql -U postgres -c "CREATE EXTENSION IF NOT EXISTS postgis_tiger_geocoder;" || exit 1
+          docker exec pg-test psql -U postgres -c "CREATE EXTENSION IF NOT EXISTS fuzzystrmatch;" || exit 1
+          docker exec pg-test psql -U postgres -c "CREATE EXTENSION IF NOT EXISTS postgis_tiger_geocoder CASCADE;" || exit 1
           docker exec pg-test psql -U postgres -c "\dx" | grep "postgis_tiger_geocoder" || exit 1
           
           echo "=== Creating spatial table and testing spatial query ==="
