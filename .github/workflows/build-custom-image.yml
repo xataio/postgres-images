@@ -3,6 +3,8 @@ name: Build Custom CNPG Postgres 17 Image
 on:
   push:
     branches: [main]
+  pull_request:
+    branches: [main]
   workflow_dispatch:
   schedule:
     # Run every Wednesday at 2 AM UTC
