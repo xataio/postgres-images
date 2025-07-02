@@ -8,10 +8,18 @@ DOCKERFILE_DIR ?= docker/custom-postgres
 DOCKERFILE ?= $(DOCKERFILE_DIR)/Dockerfile
 PLATFORMS ?= linux/amd64,linux/arm64
 DATE_TAG := $(shell date +%Y%m%d)
+CONFIG_FILE := $(DOCKERFILE_DIR)/extensions.json
 
 # Derived variables
 FULL_IMAGE_NAME := $(REGISTRY)/$(IMAGE_NAME)
 
+# extract names where preload_required==true, wrap each in single‐quotes,
+# then join them with commas
+PRELOAD_LIBS := $(shell \
+  jq -r '.extensions[] | select(.preload_required==true) | .name' $(CONFIG_FILE) \
+    | sed "s/.*/'&'/" \
+    | paste -sd, - \
+)
 # Default target
 .PHONY: help
 help: ## Show this help message
@@ -80,10 +88,16 @@ test: ## Run tests on the built image
 	@echo "Testing wal2json plugin..."
 	docker exec pg-test ls -la /usr/lib/postgresql/17/lib/wal2json.so
 
-	@echo "Configuring PostgreSQL for logical replication..."
-	docker exec pg-test psql -U postgres -c "ALTER SYSTEM SET wal_level = 'logical';"
-	docker exec pg-test psql -U postgres -c "ALTER SYSTEM SET max_replication_slots = 10;"
-	docker exec pg-test psql -U postgres -c "ALTER SYSTEM SET shared_preload_libraries TO 'pg_stat_statements','auto_explain','pg_prewarm', 'pg_cron';"
+	@echo "Applying postgres_config settings…"
+	@jq -r '.postgres_config[] | "\(.setting) \(.value|@sh)"' $(CONFIG_FILE) \
+	  | while IFS=' ' read -r setting val; do \
+	      sql="ALTER SYSTEM SET $$setting = $$val;"; \
+	      echo " → $$sql"; \
+	      docker exec pg-test psql -U postgres -c "$$sql"; \
+	    done
+
+	@echo "Setting shared_preload_libraries to: $(PRELOAD_LIBS)"
+	docker exec pg-test psql -U postgres -c "ALTER SYSTEM SET shared_preload_libraries TO $(PRELOAD_LIBS);"
 
 	@echo "Restarting PostgreSQL..."
 	docker restart pg-test
@@ -101,36 +115,13 @@ test: ## Run tests on the built image
 		docker exec pg-test psql -U postgres -c "\dx" | grep "$$ext" || exit 1; \
 	done
 
-	@echo "Testing auto_explain module..."
-	docker exec pg-test psql -U postgres -c "SHOW shared_preload_libraries;" | grep "auto_explain"
-
-	@echo "Configuring pg_cron..."
-	docker exec pg-test psql -U postgres -c "ALTER SYSTEM SET cron.database_name = 'postgres';"
-	docker exec pg-test psql -U postgres -c "SELECT pg_reload_conf();"
-
-	@echo "Testing wal2json replication..."
-	docker exec pg-test psql -U postgres -c "SELECT pg_create_logical_replication_slot('test_slot', 'wal2json');"
-	docker exec pg-test psql -U postgres -c "CREATE TABLE test_wal2json (id SERIAL PRIMARY KEY, data TEXT);"
-	docker exec pg-test psql -U postgres -c "INSERT INTO test_wal2json (data) VALUES ('test data');"
-	docker exec pg-test psql -U postgres -c "SELECT data FROM pg_logical_slot_get_changes('test_slot', NULL, NULL, 'pretty-print', '1');"
-	docker exec pg-test psql -U postgres -c "SELECT pg_drop_replication_slot('test_slot');"
-
-	@echo "Testing additional functionality..."
-	docker exec pg-test psql -U postgres -c "SELECT count(*) FROM pg_stat_statements;"
-	docker exec pg-test psql -U postgres -c "SELECT cron.schedule('test-job', '* * * * *', 'SELECT 1;');"
-	docker exec pg-test psql -U postgres -c "SELECT cron.unschedule('test-job');"
-
-	@echo "Testing text search..."
-	docker exec pg-test psql -U postgres -c "CREATE TABLE test_search (text_col text); INSERT INTO test_search VALUES ('hello world');"
-	docker exec pg-test psql -U postgres -c "SELECT similarity('hello', text_col) FROM test_search;"
-
-	@echo "Testing hstore..."
-	docker exec pg-test psql -U postgres -c "CREATE TABLE test_hstore (data hstore); INSERT INTO test_hstore VALUES ('key=>value');"
-	docker exec pg-test psql -U postgres -c "SELECT data->'key' FROM test_hstore;"
-
-	@echo "Testing hypopg..."
-	docker exec pg-test psql -U postgres -c "SELECT hypopg_create_index('CREATE INDEX ON test_search (text_col)');"
-	docker exec pg-test psql -U postgres -c "SELECT hypopg_reset();"
+	@echo "Testing all extensions from $(CONFIG_FILE)..."
+	@jq -r '.extensions[]| select(.test_enabled==true)| "\(.name)\t\(.test_commands[])"' $(CONFIG_FILE) \
+	  | while IFS="$(printf '\t')" read -r ext cmd; do \
+	      echo "Testing extension: $$ext"; \
+	      echo " → $$cmd"; \
+	      docker exec pg-test psql -U postgres -c "$$cmd" || exit 1; \
+	    done
 
 	@echo "Listing available extensions..."
 	docker exec pg-test psql -U postgres -c "SELECT name FROM pg_available_extensions ORDER BY name;"
