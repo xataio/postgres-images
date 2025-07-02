@@ -100,15 +100,12 @@ test: ## Run tests on the built image
 	docker exec pg-test ls -la /usr/lib/postgresql/17/lib/wal2json.so
 
 	@echo "Applying postgres_config settings…"
-	@jq -r '.postgres_config[] \
-	           | if (.value|type=="number") then \
-	               "ALTER SYSTEM SET \(.setting) = \(.value);" \
-	             else \
-	               "ALTER SYSTEM SET \(.setting) = '\''\(.value)'\'';" \
-	             end' $(CONFIG_FILE) \
-	  | while IFS= read -r sql; do \
-	      echo " → $$sql"; \
-	      docker exec pg-test psql -U postgres -c "$$sql"; \
+	@printf '%s' "$(CONFIG_CMDS)" \
+	  | sed 's/;[[:space:]]*/;&\n/g' \
+	  | sed '/^[[:space:]]*$$/d' \
+	  | while IFS= read -r stmt; do \
+	      echo " → $$stmt"; \
+	      docker exec pg-test psql -U postgres -c "$$stmt"; \
 	    done
 
 	@echo "Setting shared_preload_libraries to: $(PRELOAD_LIBS)"
