@@ -176,3 +176,49 @@ act -j build-test-publish \
 --container-architecture linux/amd64
 ```
 
+# Adding a new extension
+
+This project builds a custom PostgreSQL image using CloudNativePG as a base, with additional extensions declared in `docker/custom-postgres/extensions.json` and automatically tested via the `Makefile`.
+
+## 1. Declare the Extension in `extensions.json`
+
+Open `docker/custom-postgres/extensions.json` and add a new object under `"extensions":`:
+
+```jsonc
+{
+  "name": "my_extension",
+  "package": "postgresql-17-myext",         // OS package name to install
+  "description": "Short description here",
+  "preload_required": false,                // set true if you must preload
+  "test_enabled": true,                     // set false to skip automated tests
+  "test_commands": [
+    "CREATE EXTENSION IF NOT EXISTS \"my_extension\";",
+    "SELECT my_extension_function();"
+  ],
+  // optional fields:
+  "file_check": "/usr/lib/postgresql/17/lib/my_extension.so",
+  "postgres_config": {
+    "my_setting": "value"
+  }
+}
+```
+Terms:
+* name: Extension name as used by CREATE EXTENSION.
+
+* package: APT package to install in the Dockerfile.
+
+* preload_required: If true, it will be added to shared_preload_libraries.
+
+* test_enabled: Toggles automated testing of this extension.
+
+* test_commands: Array of SQL commands run against a live container.
+
+* file_check: (Optional) path to verify the .so file.
+
+* postgres_config: (Optional) key/value pairs to ALTER SYSTEM SET.
+
+## 2. Build locally and run all extension tests
+
+```bash
+  make build-and-test
+```
