@@ -121,6 +121,8 @@ test: ## Run tests on the built image
 	@echo "Configuring pg_cron..."
 	docker exec pg-test psql -U postgres -c "ALTER SYSTEM SET cron.database_name = 'postgres';"
 	docker exec pg-test psql -U postgres -c "SELECT pg_reload_conf();"
+	docker exec pg-test psql -U postgres -c "SELECT cron.schedule('test-job', '* * * * *', 'SELECT 1;');"
+	docker exec pg-test psql -U postgres -c  "SELECT cron.unschedule('test-job');"
 
 	@echo "Testing wal2json replication..."
 	docker exec pg-test psql -U postgres -c "SELECT pg_create_logical_replication_slot('test_slot', 'wal2json');"
@@ -185,6 +187,12 @@ test: ## Run tests on the built image
 	@echo "Testing insert_username..."
 	docker exec pg-test psql -U postgres -c "CREATE TABLE IF NOT EXISTS test_username (id int, username text);"
 	docker exec pg-test psql -U postgres -c  "CREATE TRIGGER test_user_trigger BEFORE INSERT ON test_username FOR EACH ROW EXECUTE FUNCTION insert_username(username);"
+
+	@echo "Testing pg_stat_statements..."
+	docker exec pg-test psql -U postgres -c "SELECT count(*) FROM pg_stat_statements;"
+
+	@echo "Testing pg_prewarm..."
+	docker exec pg-test psql -U postgres -c "SELECT pg_prewarm('pg_class') > 0;"
 
 	@echo "Testing dblink..."
 	docker exec pg-test psql -U postgres -c "SELECT dblink_connect('testconn', 'host=localhost user=postgres dbname=postgres') IS NOT NULL;"
