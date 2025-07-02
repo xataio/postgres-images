@@ -146,6 +146,49 @@ test: ## Run tests on the built image
 	docker exec pg-test psql -U postgres -c "SELECT hypopg_create_index('CREATE INDEX ON test_search (text_col)');"
 	docker exec pg-test psql -U postgres -c "SELECT hypopg_reset();"
 
+	@echo "Testing pg_partman..."
+	docker exec pg-test psql -U postgres -c "SELECT count(*) FROM public.part_config;"
+
+	@echo "Testing pg_trgm..."
+	docker exec pg-test psql -U postgres -c "CREATE TABLE IF NOT EXISTS test_search (text_col text); INSERT INTO test_search VALUES ('hello world');"
+	docker exec pg-test psql -U postgres -c "SELECT similarity('hello', text_col) FROM test_search;"
+
+	@echo "Testing pgcrypto..."
+	docker exec pg-test psql -U postgres -c "SELECT digest('test', 'sha256');"
+
+	@echo "Testing citext..."
+	docker exec pg-test psql -U postgres -c "CREATE TABLE test_citext (text_col citext); INSERT INTO test_citext VALUES ('Hello');"
+	docker exec pg-test psql -U postgres -c "SELECT * FROM test_citext WHERE text_col = 'hello';"
+
+	@echo "Testing ltree..."
+	docker exec pg-test psql -U postgres -c "CREATE TABLE test_ltree (path ltree); INSERT INTO test_ltree VALUES ('top.science.astronomy');"
+	docker exec pg-test psql -U postgres -c "SELECT * FROM test_ltree WHERE path ~ '*.science.*';"
+
+	@echo "Testing pg_buffercache..."
+	docker exec pg-test psql -U postgres -c "CREATE TABLE IF NOT EXISTS test_ltree (path ltree); INSERT INTO test_ltree VALUES ('top.science.astronomy');"
+	docker exec pg-test psql -U postgres -c "SELECT count(*) FROM pg_buffercache;"
+
+	@echo "Testing pg_freespacemap..."
+	docker exec pg-test psql -U postgres -c "SELECT pg_freespace('pg_class', 0) IS NOT NULL;"
+
+	@echo "Testing pg_visibility..."
+	docker exec pg-test psql -U postgres -c "SELECT pg_visibility_map_summary('pg_class') IS NOT NULL;"
+
+	@echo "Testing pgrowlocks..."
+	docker exec pg-test psql -U postgres -c "CREATE TABLE IF NOT EXISTS test_locks (id int); INSERT INTO test_locks VALUES (1);"
+	docker exec pg-test psql -U postgres -c "SELECT count(*) FROM pgrowlocks('test_locks');"
+
+	@echo "Testing moddatetime..."
+	docker exec pg-test psql -U postgres -c "CREATE TABLE test_moddate (id int, modified timestamp DEFAULT now());"
+	docker exec pg-test psql -U postgres -c "CREATE TRIGGER test_trigger BEFORE UPDATE ON test_moddate FOR EACH ROW EXECUTE FUNCTION moddatetime(modified);"
+
+	@echo "Testing insert_username..."
+	docker exec pg-test psql -U postgres -c "CREATE TABLE IF NOT EXISTS test_username (id int, username text);"
+	docker exec pg-test psql -U postgres -c  "CREATE TRIGGER test_user_trigger BEFORE INSERT ON test_username FOR EACH ROW EXECUTE FUNCTION insert_username(username);"
+
+	@echo "Testing dblink..."
+	docker exec pg-test psql -U postgres -c "SELECT dblink_connect('testconn', 'host=localhost user=postgres dbname=postgres') IS NOT NULL;"
+
 	@echo "Listing available extensions..."
 	docker exec pg-test psql -U postgres -c "SELECT name FROM pg_available_extensions ORDER BY name;"
 
