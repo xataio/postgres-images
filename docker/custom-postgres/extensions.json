@@ -8,7 +8,7 @@
       "test_enabled": true,
       "test_commands": [
         "CREATE EXTENSION IF NOT EXISTS \"pg_partman\";",
-        "SELECT count(*) FROM partman.part_config;"
+        "SELECT count(*) FROM public.part_config;"
       ]
     },
     {

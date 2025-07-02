@@ -115,87 +115,13 @@ test: ## Run tests on the built image
 		docker exec pg-test psql -U postgres -c "\dx" | grep "$$ext" || exit 1; \
 	done
 
-	@echo "Testing auto_explain module..."
-	docker exec pg-test psql -U postgres -c "SHOW shared_preload_libraries;" | grep "auto_explain"
-
-	@echo "Configuring pg_cron..."
-	docker exec pg-test psql -U postgres -c "ALTER SYSTEM SET cron.database_name = 'postgres';"
-	docker exec pg-test psql -U postgres -c "SELECT pg_reload_conf();"
-	docker exec pg-test psql -U postgres -c "SELECT cron.schedule('test-job', '* * * * *', 'SELECT 1;');"
-	docker exec pg-test psql -U postgres -c  "SELECT cron.unschedule('test-job');"
-
-	@echo "Testing wal2json replication..."
-	docker exec pg-test psql -U postgres -c "SELECT pg_create_logical_replication_slot('test_slot', 'wal2json');"
-	docker exec pg-test psql -U postgres -c "CREATE TABLE test_wal2json (id SERIAL PRIMARY KEY, data TEXT);"
-	docker exec pg-test psql -U postgres -c "INSERT INTO test_wal2json (data) VALUES ('test data');"
-	docker exec pg-test psql -U postgres -c "SELECT data FROM pg_logical_slot_get_changes('test_slot', NULL, NULL, 'pretty-print', '1');"
-	docker exec pg-test psql -U postgres -c "SELECT pg_drop_replication_slot('test_slot');"
-
-	@echo "Testing additional functionality..."
-	docker exec pg-test psql -U postgres -c "SELECT count(*) FROM pg_stat_statements;"
-	docker exec pg-test psql -U postgres -c "SELECT cron.schedule('test-job', '* * * * *', 'SELECT 1;');"
-	docker exec pg-test psql -U postgres -c "SELECT cron.unschedule('test-job');"
-
-	@echo "Testing text search..."
-	docker exec pg-test psql -U postgres -c "CREATE TABLE test_search (text_col text); INSERT INTO test_search VALUES ('hello world');"
-	docker exec pg-test psql -U postgres -c "SELECT similarity('hello', text_col) FROM test_search;"
-
-	@echo "Testing hstore..."
-	docker exec pg-test psql -U postgres -c "CREATE TABLE test_hstore (data hstore); INSERT INTO test_hstore VALUES ('key=>value');"
-	docker exec pg-test psql -U postgres -c "SELECT data->'key' FROM test_hstore;"
-
-	@echo "Testing hypopg..."
-	docker exec pg-test psql -U postgres -c "SELECT hypopg_create_index('CREATE INDEX ON test_search (text_col)');"
-	docker exec pg-test psql -U postgres -c "SELECT hypopg_reset();"
-
-	@echo "Testing pg_partman..."
-	docker exec pg-test psql -U postgres -c "SELECT count(*) FROM public.part_config;"
-
-	@echo "Testing pg_trgm..."
-	docker exec pg-test psql -U postgres -c "CREATE TABLE IF NOT EXISTS test_search (text_col text); INSERT INTO test_search VALUES ('hello world');"
-	docker exec pg-test psql -U postgres -c "SELECT similarity('hello', text_col) FROM test_search;"
-
-	@echo "Testing pgcrypto..."
-	docker exec pg-test psql -U postgres -c "SELECT digest('test', 'sha256');"
-
-	@echo "Testing citext..."
-	docker exec pg-test psql -U postgres -c "CREATE TABLE test_citext (text_col citext); INSERT INTO test_citext VALUES ('Hello');"
-	docker exec pg-test psql -U postgres -c "SELECT * FROM test_citext WHERE text_col = 'hello';"
-
-	@echo "Testing ltree..."
-	docker exec pg-test psql -U postgres -c "CREATE TABLE test_ltree (path ltree); INSERT INTO test_ltree VALUES ('top.science.astronomy');"
-	docker exec pg-test psql -U postgres -c "SELECT * FROM test_ltree WHERE path ~ '*.science.*';"
-
-	@echo "Testing pg_buffercache..."
-	docker exec pg-test psql -U postgres -c "CREATE TABLE IF NOT EXISTS test_ltree (path ltree); INSERT INTO test_ltree VALUES ('top.science.astronomy');"
-	docker exec pg-test psql -U postgres -c "SELECT count(*) FROM pg_buffercache;"
-
-	@echo "Testing pg_freespacemap..."
-	docker exec pg-test psql -U postgres -c "SELECT pg_freespace('pg_class', 0) IS NOT NULL;"
-
-	@echo "Testing pg_visibility..."
-	docker exec pg-test psql -U postgres -c "SELECT pg_visibility_map_summary('pg_class') IS NOT NULL;"
-
-	@echo "Testing pgrowlocks..."
-	docker exec pg-test psql -U postgres -c "CREATE TABLE IF NOT EXISTS test_locks (id int); INSERT INTO test_locks VALUES (1);"
-	docker exec pg-test psql -U postgres -c "SELECT count(*) FROM pgrowlocks('test_locks');"
-
-	@echo "Testing moddatetime..."
-	docker exec pg-test psql -U postgres -c "CREATE TABLE test_moddate (id int, modified timestamp DEFAULT now());"
-	docker exec pg-test psql -U postgres -c "CREATE TRIGGER test_trigger BEFORE UPDATE ON test_moddate FOR EACH ROW EXECUTE FUNCTION moddatetime(modified);"
-
-	@echo "Testing insert_username..."
-	docker exec pg-test psql -U postgres -c "CREATE TABLE IF NOT EXISTS test_username (id int, username text);"
-	docker exec pg-test psql -U postgres -c  "CREATE TRIGGER test_user_trigger BEFORE INSERT ON test_username FOR EACH ROW EXECUTE FUNCTION insert_username(username);"
-
-	@echo "Testing pg_stat_statements..."
-	docker exec pg-test psql -U postgres -c "SELECT count(*) FROM pg_stat_statements;"
-
-	@echo "Testing pg_prewarm..."
-	docker exec pg-test psql -U postgres -c "SELECT pg_prewarm('pg_class') > 0;"
-
-	@echo "Testing dblink..."
-	docker exec pg-test psql -U postgres -c "SELECT dblink_connect('testconn', 'host=localhost user=postgres dbname=postgres') IS NOT NULL;"
+	@echo "Testing all extensions from $(CONFIG_FILE)..."
+	@jq -r '.extensions[]| select(.test_enabled==true)| "\(.name)\t\(.test_commands[])"' $(CONFIG_FILE) \
+	  | while IFS="$(printf '\t')" read -r ext cmd; do \
+	      echo "Testing extension: $$ext"; \
+	      echo " → $$cmd"; \
+	      docker exec pg-test psql -U postgres -c "$$cmd" || exit 1; \
+	    done
 
 	@echo "Listing available extensions..."
 	docker exec pg-test psql -U postgres -c "SELECT name FROM pg_available_extensions ORDER BY name;"
