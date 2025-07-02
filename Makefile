@@ -20,17 +20,6 @@ PRELOAD_LIBS := $(shell \
     | sed "s/.*/'&'/" \
     | paste -sd, - \
 )
-
-# now iterate the postgres_config array directly
-CONFIG_CMDS := $(shell \
-  jq -r ".postgres_config[] | \
-    if (.value|test(\"^[0-9]+$$\")) then \
-      \"ALTER SYSTEM SET \\(.setting) = \\(.value);\" \
-    else \
-      \"ALTER SYSTEM SET \\(.setting) = '\\(.value)';\" \
-    end" \
-    $(CONFIG_FILE) \
-)
 # Default target
 .PHONY: help
 help: ## Show this help message
@@ -100,12 +89,11 @@ test: ## Run tests on the built image
 	docker exec pg-test ls -la /usr/lib/postgresql/17/lib/wal2json.so
 
 	@echo "Applying postgres_config settings…"
-	@printf '%s' "$(CONFIG_CMDS)" \
-	  | sed 's/;[[:space:]]*/;&\n/g' \
-	  | sed '/^[[:space:]]*$$/d' \
-	  | while IFS= read -r stmt; do \
-	      echo " → $$stmt"; \
-	      docker exec pg-test psql -U postgres -c "$$stmt"; \
+	@jq -r '.postgres_config[] | "\(.setting) \(.value|@sh)"' $(CONFIG_FILE) \
+	  | while IFS=' ' read -r setting val; do \
+	      sql="ALTER SYSTEM SET $$setting = $$val;"; \
+	      echo " → $$sql"; \
+	      docker exec pg-test psql -U postgres -c "$$sql"; \
 	    done
 
 	@echo "Setting shared_preload_libraries to: $(PRELOAD_LIBS)"
