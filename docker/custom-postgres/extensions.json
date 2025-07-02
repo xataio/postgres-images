@@ -225,8 +225,8 @@
       ]
     }
   ],
-  "postgres_config": {
-    "wal_level": "logical",
-    "max_replication_slots": "10"
-  }
+  "postgres_config": [
+    { "setting": "wal_level",            "value": "logical" },
+    { "setting": "max_replication_slots","value": "10"      }
+  ]
 }
