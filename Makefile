@@ -78,16 +78,6 @@ test: ## Run tests on the built image
 	@echo "Testing basic functionality..."
 	docker exec pg-test psql -U postgres -c "SELECT version();"
 
-	@echo "Testing basic extensions..."
-	@for ext in pg_partman pg_trgm pgcrypto citext hstore ltree pg_buffercache pg_freespacemap pg_visibility pgrowlocks moddatetime insert_username hypopg dblink; do \
-		echo "Testing extension: $$ext"; \
-		docker exec pg-test psql -U postgres -c "CREATE EXTENSION IF NOT EXISTS \"$$ext\";" || exit 1; \
-		docker exec pg-test psql -U postgres -c "\dx" | grep "$$ext" || exit 1; \
-	done
-
-	@echo "Testing wal2json plugin..."
-	docker exec pg-test ls -la /usr/lib/postgresql/17/lib/wal2json.so
-
 	@echo "Applying postgres_config settings…"
 	@jq -r '.postgres_config[] | "\(.setting) \(.value|@sh)"' $(CONFIG_FILE) \
 	  | while IFS=' ' read -r setting val; do \
@@ -107,13 +97,6 @@ test: ## Run tests on the built image
 	@echo "Verifying configuration..."
 	docker exec pg-test psql -U postgres -c "SHOW wal_level;"
 	docker exec pg-test psql -U postgres -c "SHOW shared_preload_libraries;"
-
-	@echo "Testing preloaded extensions..."
-	@for ext in pg_stat_statements pg_prewarm pg_cron; do \
-		echo "Testing preloaded extension: $$ext"; \
-		docker exec pg-test psql -U postgres -c "CREATE EXTENSION IF NOT EXISTS \"$$ext\";" || exit 1; \
-		docker exec pg-test psql -U postgres -c "\dx" | grep "$$ext" || exit 1; \
-	done
 
 	@echo "Testing all extensions from $(CONFIG_FILE)..."
 	@jq -r '.extensions[]| select(.test_enabled==true)| "\(.name)\t\(.test_commands[])"' $(CONFIG_FILE) \
