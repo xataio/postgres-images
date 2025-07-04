@@ -9,6 +9,7 @@ DOCKERFILE ?= $(DOCKERFILE_DIR)/Dockerfile
 PLATFORMS ?= linux/amd64,linux/arm64
 DATE_TAG := $(shell date +%Y%m%d)
 CONFIG_FILE := $(DOCKERFILE_DIR)/extensions.json
+DESCRIPTION ?= CNPG PostgreSQL with additional extensions and tools
 
 # Derived variables
 FULL_IMAGE_NAME := $(REGISTRY)/$(IMAGE_NAME)
@@ -23,7 +24,7 @@ PRELOAD_LIBS := $(shell \
 # Default target
 .PHONY: help
 help: ## Show this help message
-	@echo "PostgreSQL CNPG Custom Image Build"
+	@echo "$(DESCRIPTION) Image Build"
 	@echo "Available targets:"
 	@awk 'BEGIN {FS = ":.*?## "} /^[a-zA-Z_-]+:.*?## / {printf "  %-20s %s\n", $$1, $$2}' $(MAKEFILE_LIST)
 
@@ -52,7 +53,7 @@ build-local: get-pg-version get-base-digest ## Build image locally for testing (
 		-t $(FULL_IMAGE_NAME):$(PG_VERSION)-$(DATE_TAG) \
 		--label "base.digest=$(BASE_DIGEST)" \
 		--label "org.opencontainers.image.source=https://github.com/xataio/postgres-images" \
-		--label "org.opencontainers.image.description=CNPG PostgreSQL with additional extensions and tools" \
+		--label "org.opencontainers.image.description=$(DESCRIPTION)" \
 		--label "org.opencontainers.image.licenses=PostgreSQL" \
 		--build-arg CNPG_BASE=$(CNPG_BASE) \
 		.
@@ -86,17 +87,18 @@ test: ## Run tests on the built image
 	      docker exec pg-test psql -U postgres -c "$$sql"; \
 	    done
 
-	@echo "Setting shared_preload_libraries to: $(PRELOAD_LIBS)"
-	docker exec pg-test psql -U postgres -c "ALTER SYSTEM SET shared_preload_libraries TO $(PRELOAD_LIBS);"
-
-	@echo "Restarting PostgreSQL..."
-	docker restart pg-test
-	@timeout 60s bash -c 'until docker exec pg-test pg_isready 2>/dev/null; do sleep 2; done' || \
-		(echo "=== Container failed after restart, showing logs ===" && docker logs pg-test && exit 1)
-
-	@echo "Verifying configuration..."
-	docker exec pg-test psql -U postgres -c "SHOW wal_level;"
-	docker exec pg-test psql -U postgres -c "SHOW shared_preload_libraries;"
+	@if [ -n "$(PRELOAD_LIBS)" ]; then \
+		echo "Setting shared_preload_libraries to: $(PRELOAD_LIBS)"; \
+		docker exec pg-duckdb-test psql -U postgres -c "ALTER SYSTEM SET shared_preload_libraries TO $(PRELOAD_LIBS);"; \
+		echo "Restarting PostgreSQL..."; \
+		docker restart pg-duckdb-test; \
+		timeout 60s bash -c 'until docker exec pg-duckdb-test pg_isready 2>/dev/null; do sleep 2; done' || \
+			(echo "=== Container failed after restart, showing logs ===" && docker logs pg-duckdb-test && exit 1); \
+		echo "Verifying preloaded libraries..."; \
+		docker exec pg-duckdb-test psql -U postgres -c "SHOW shared_preload_libraries;"; \
+	else \
+		echo "No extensions require preloading, skipping shared_preload_libraries configuration"; \
+	fi
 
 	@echo "Testing all extensions from $(CONFIG_FILE)..."
 	@jq -r '.extensions[]| select(.test_enabled==true)| "\(.name)\t\(.test_commands[])"' $(CONFIG_FILE) \
@@ -137,7 +139,7 @@ build-multiarch: get-pg-version get-base-digest setup-buildx ## Build multi-arch
 		-t $(FULL_IMAGE_NAME):$(PG_VERSION)-$(DATE_TAG) \
 		--label "base.digest=$(BASE_DIGEST)" \
 		--label "org.opencontainers.image.source=https://github.com/xataio/postgres-images" \
-		--label "org.opencontainers.image.description=CNPG PostgreSQL with additional extensions and tools" \
+		--label "org.opencontainers.image.description=$(DESCRIPTION)" \
 		--label "org.opencontainers.image.licenses=PostgreSQL" \
 		--build-arg CNPG_BASE=$(CNPG_BASE) \
 		.
@@ -153,7 +155,7 @@ push-multiarch: get-pg-version get-base-digest setup-buildx ## Build and push mu
 		-t $(FULL_IMAGE_NAME):$(PG_VERSION)-$(DATE_TAG) \
 		--label "base.digest=$(BASE_DIGEST)" \
 		--label "org.opencontainers.image.source=https://github.com/xataio/postgres-images" \
-		--label "org.opencontainers.image.description=CNPG PostgreSQL with additional extensions and tools" \
+		--label "org.opencontainers.image.description=$(DESCRIPTION)" \
 		--label "org.opencontainers.image.licenses=PostgreSQL" \
 		--build-arg CNPG_BASE=$(CNPG_BASE) \
 		--push \
