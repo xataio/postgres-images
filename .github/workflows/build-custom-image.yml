@@ -39,6 +39,10 @@ jobs:
             dockerfile_dir: "docker/custom-postgres"
             image_name: "xataio/postgres-images/cnpg-postgres-plus"
             cnpg_base: "ghcr.io/cloudnative-pg/postgresql:17-minimal-bookworm"
+          - name: "postgis"
+            dockerfile_dir: "docker/postgis"
+            image_name: "xataio/postgres-images/cnpg-postgres-postgis"
+            cnpg_base: "ghcr.io/cloudnative-pg/postgresql:17-standard-bookworm"
 
     env:
       REGISTRY: ghcr.io

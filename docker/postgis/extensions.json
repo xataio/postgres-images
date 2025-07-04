@@ -1,0 +1,50 @@
+{
+  "extensions": [
+    {
+      "name": "postgis",
+      "package": "postgresql-17-postgis-3",
+      "description": "PostGIS geometry and geography spatial types and functions",
+      "preload_required": false,
+      "test_enabled": true,
+      "test_commands": [
+        "CREATE EXTENSION IF NOT EXISTS \"postgis\";",
+        "CREATE TABLE test_geometry (id INT, geom GEOMETRY(POINT, 4326));",
+        "INSERT INTO test_geometry VALUES (1, ST_GeomFromText('POINT(0 0)', 4326));",
+        "SELECT ST_AsText(geom) FROM test_geometry;"
+      ]
+    },
+    {
+      "name": "postgis_topology",
+      "package": "postgresql-17-postgis-3",
+      "description": "PostGIS topology spatial types and functions",
+      "preload_required": false,
+      "test_enabled": true,
+      "test_commands": [
+        "CREATE EXTENSION IF NOT EXISTS \"postgis_topology\";",
+        "SELECT topology.CreateTopology('test_topo', 4326);"
+      ]
+    },
+    {
+      "name": "postgis_tiger_geocoder",
+      "package": "postgresql-17-postgis-3-scripts",
+      "description": "PostGIS tiger geocoder and reverse geocoder",
+      "preload_required": false,
+      "test_enabled": true,
+      "test_commands": [
+        "CREATE EXTENSION IF NOT EXISTS \"postgis_tiger_geocoder\";"
+      ]
+    },
+    {
+      "name": "fuzzystrmatch",
+      "package": "postgresql-contrib-17",
+      "description": "Determine similarities and distance between strings",
+      "preload_required": false,
+      "test_enabled": true,
+      "test_commands": [
+        "CREATE EXTENSION IF NOT EXISTS \"fuzzystrmatch\";",
+        "SELECT soundex('hello');"
+      ]
+    }
+  ],
+  "postgres_config": []
+}
