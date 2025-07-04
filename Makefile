@@ -89,13 +89,13 @@ test: ## Run tests on the built image
 
 	@if [ -n "$(PRELOAD_LIBS)" ]; then \
 		echo "Setting shared_preload_libraries to: $(PRELOAD_LIBS)"; \
-		docker exec pg-duckdb-test psql -U postgres -c "ALTER SYSTEM SET shared_preload_libraries TO $(PRELOAD_LIBS);"; \
+		docker exec pg-test psql -U postgres -c "ALTER SYSTEM SET shared_preload_libraries TO $(PRELOAD_LIBS);"; \
 		echo "Restarting PostgreSQL..."; \
-		docker restart pg-duckdb-test; \
-		timeout 60s bash -c 'until docker exec pg-duckdb-test pg_isready 2>/dev/null; do sleep 2; done' || \
-			(echo "=== Container failed after restart, showing logs ===" && docker logs pg-duckdb-test && exit 1); \
+		docker restart pg-test; \
+		timeout 60s bash -c 'until docker exec pg-test pg_isready 2>/dev/null; do sleep 2; done' || \
+			(echo "=== Container failed after restart, showing logs ===" && docker logs pg-test && exit 1); \
 		echo "Verifying preloaded libraries..."; \
-		docker exec pg-duckdb-test psql -U postgres -c "SHOW shared_preload_libraries;"; \
+		docker exec pg-test psql -U postgres -c "SHOW shared_preload_libraries;"; \
 	else \
 		echo "No extensions require preloading, skipping shared_preload_libraries configuration"; \
 	fi
