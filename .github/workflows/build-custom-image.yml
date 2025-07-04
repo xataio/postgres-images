@@ -18,6 +18,22 @@ env:
 jobs:
   build-test-publish:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        config:
+          - name: "analytics"
+            dockerfile_dir: "docker/analytics"
+            image_name: "xataio/postgres-images/cnpg-analytics"
+            cnpg_base: "ghcr.io/cloudnative-pg/postgresql:17-standard-bookworm"
+          - name: "full_extensions"
+            dockerfile_dir: "docker/custom-postgres"
+            image_name: "xataio/postgres-images/cnpg-postgres-plus"
+            cnpg_base: "ghcr.io/cloudnative-pg/postgresql:17-minimal-bookworm"
+    env:
+      REGISTRY: ghcr.io
+      IMAGE_NAME: xataio/postgres-images/cnpg-postgres-plus
+      CNPG_BASE: ghcr.io/cloudnative-pg/postgresql:17-minimal-bookworm
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -33,14 +49,26 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Show build information
-        run: make show-info
+        run: make show-info \
+               DOCKERFILE_DIR="${{ matrix.config.dockerfile_dir }}" \
+               IMAGE_NAME="${{ matrix.config.image_name }}" \
+               CNPG_BASE="${{ matrix.config.cnpg_base }}"
 
       - name: Build and test (always for push/manual)
         if: github.event_name != 'schedule'
         run: |
-          make build-and-test
-          make push-multiarch
+          make build-and-test \
+            DOCKERFILE_DIR="${{ matrix.config.dockerfile_dir }}" \
+            IMAGE_NAME="${{ matrix.config.image_name }}" \
+            CNPG_BASE="${{ matrix.config.cnpg_base }}"
+          make push-multiarch \
+            DOCKERFILE_DIR="${{ matrix.config.dockerfile_dir }}" \
+            IMAGE_NAME="${{ matrix.config.image_name }}" \
+            CNPG_BASE="${{ matrix.config.cnpg_base }}"
 
       - name: Conditional build for scheduled runs
         if: github.event_name == 'schedule'
-        run: make ci-build
+        run: make ci-build \
+          DOCKERFILE_DIR="${{ matrix.config.dockerfile_dir }}" \
+          IMAGE_NAME="${{ matrix.config.image_name }}" \
+          CNPG_BASE="${{ matrix.config.cnpg_base }}"
