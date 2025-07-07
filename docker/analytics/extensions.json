@@ -8,7 +8,7 @@
       "test_enabled": true,
       "test_commands": [
         "CREATE EXTENSION IF NOT EXISTS \"pg_duckdb\";",
-        "CREATE TABLE test_duckdb (id INT, name TEXT) USING duckdb;",
+        "CREATE TEMP TABLE test_duckdb (id INT, name TEXT) USING duckdb;",
         "INSERT INTO test_duckdb VALUES (1, 'test');",
         "SELECT * FROM test_duckdb;"
       ]

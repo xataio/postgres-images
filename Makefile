@@ -101,12 +101,16 @@ test: ## Run tests on the built image
 	fi
 
 	@echo "Testing all extensions from $(CONFIG_FILE)..."
-	@jq -r '.extensions[]| select(.test_enabled==true)| "\(.name)\t\(.test_commands[])"' $(CONFIG_FILE) \
-	  | while IFS="$(printf '\t')" read -r ext cmd; do \
-	      echo "Testing extension: $$ext"; \
-	      echo " → $$cmd"; \
-	      docker exec pg-test psql -U postgres -c "$$cmd" || exit 1; \
-	    done
+	@jq -r '.extensions[] | select(.test_enabled==true) | .name' $(CONFIG_FILE) | while read -r ext; do \
+    	echo "Testing extension: $$ext"; \
+    	echo "Running commands for $$ext:"; \
+    	jq -r --arg ext "$$ext" '.extensions[] | select(.name == $$ext and .test_enabled==true) | .test_commands[]' $(CONFIG_FILE) | sed 's/^/ → /'; \
+    	if ! jq -r --arg ext "$$ext" '.extensions[] | select(.name == $$ext and .test_enabled==true) | .test_commands[]' $(CONFIG_FILE) | docker exec -i pg-test psql -U postgres; then \
+        	echo "ERROR: Commands failed for extension $$ext"; \
+        	docker rm -f pg-test; \
+        	exit 1; \
+    	fi; \
+	done
 
 	@echo "Listing available extensions..."
 	docker exec pg-test psql -U postgres -c "SELECT name FROM pg_available_extensions ORDER BY name;"
