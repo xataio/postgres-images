@@ -222,3 +222,7 @@ Terms:
 ```bash
   make build-and-test
 ```
+
+## 3. Manual builds
+
+You can select which image to build and from which base image (standard or  minimal)
