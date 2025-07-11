@@ -1,4 +1,4 @@
-name: Build Custom CNPG Postgres 17 Image
+name: Build Multiple CNPG Postgres Images
 
 on:
   push:
@@ -6,41 +6,152 @@ on:
   pull_request:
     branches: [main]
   workflow_dispatch:
+    inputs:
+      build_config:
+        description: 'Which configuration to build'
+        required: true
+        default: 'all'
+        type: choice
+        options:
+          - 'all'
+          - 'analytics'
+          - 'full_extensions'
+          - 'postgis'
+      cnpg_base:
+        description: 'CNPG base image'
+        required: true
+        default: 'standard'
+        type: choice
+        options:
+          - 'standard'
+          - 'minimal'
+      custom_cnpg_base:
+        description: 'Custom CNPG base image (optional - overrides the choice above)'
+        required: false
+        type: string
   schedule:
     # Run every Wednesday at 2 AM UTC
     - cron: '0 2 * * 3'
 
-env:
-  REGISTRY: ghcr.io
-  IMAGE_NAME: xataio/postgres-images/cnpg-postgres-plus
-  CNPG_BASE: ghcr.io/cloudnative-pg/postgresql:17-minimal-bookworm
-
 jobs:
+  # Summary job that requires all matrix jobs to complete successfully
   build-test-publish:
     runs-on: ubuntu-latest
+    needs: build-test-publish-matrix
+    if: always()
     steps:
+      - name: Check matrix job results
+        run: |
+          if [[ "${{ needs.build-test-publish-matrix.result }}" == "success" ]]; then
+            echo "All matrix jobs completed successfully"
+          else
+            echo "One or more matrix jobs failed"
+            exit 1
+          fi
+
+  build-test-publish-matrix:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        config:
+          - name: "analytics"
+            dockerfile_dir: "docker/analytics"
+            image_name: "xataio/postgres-images/cnpg-postgres-analytics"
+            cnpg_base: "ghcr.io/cloudnative-pg/postgresql:17-standard-bookworm"
+          - name: "full_extensions"
+            dockerfile_dir: "docker/custom-postgres"
+            image_name: "xataio/postgres-images/cnpg-postgres-plus"
+            cnpg_base: "ghcr.io/cloudnative-pg/postgresql:17-minimal-bookworm"
+          - name: "postgis"
+            dockerfile_dir: "docker/postgis"
+            image_name: "xataio/postgres-images/cnpg-postgres-postgis"
+            cnpg_base: "ghcr.io/cloudnative-pg/postgresql:17-standard-bookworm"
+
+    env:
+      REGISTRY: ghcr.io
+      PLATFORMS: linux/amd64,linux/arm64
+
+    steps:
+      - name: Check if this configuration should run
+        id: should_run
+        run: |
+          if [[ "${{ github.event_name }}" != "workflow_dispatch" ]] || \
+             [[ "${{ github.event.inputs.build_config }}" == "all" ]] || \
+             [[ "${{ github.event.inputs.build_config }}" == "${{ matrix.config.name }}" ]]; then
+            echo "run=true" >> $GITHUB_OUTPUT
+            echo "This configuration (${{ matrix.config.name }}) will run"
+          else
+            echo "run=false" >> $GITHUB_OUTPUT
+            echo "Skipping configuration: ${{ matrix.config.name }}"
+          fi
+
       - name: Checkout repository
+        if: steps.should_run.outputs.run == 'true'
         uses: actions/checkout@v4
 
       - name: Set up Docker Buildx
+        if: steps.should_run.outputs.run == 'true'
         uses: docker/setup-buildx-action@v3
 
       - name: Log in to GitHub Container Registry
+        if: steps.should_run.outputs.run == 'true'
         uses: docker/login-action@v3
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Show build information
-        run: make show-info
-
-      - name: Build and test (always for push/manual)
-        if: github.event_name != 'schedule'
+      - name: Determine CNPG base image
+        if: steps.should_run.outputs.run == 'true'
+        id: cnpg_base
         run: |
-          make build-and-test
-          make push-multiarch
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            # Use custom base if provided
+            if [[ -n "${{ github.event.inputs.custom_cnpg_base }}" ]]; then
+              echo "base=${{ github.event.inputs.custom_cnpg_base }}" >> $GITHUB_OUTPUT
+              echo "Using custom CNPG base: ${{ github.event.inputs.custom_cnpg_base }}"
+            else
+              # Use selected base
+              if [[ "${{ github.event.inputs.cnpg_base }}" == "minimal" ]]; then
+                echo "base=ghcr.io/cloudnative-pg/postgresql:17-minimal-bookworm" >> $GITHUB_OUTPUT
+                echo "Using minimal CNPG base"
+              else
+                echo "base=ghcr.io/cloudnative-pg/postgresql:17-standard-bookworm" >> $GITHUB_OUTPUT
+                echo "Using standard CNPG base"
+              fi
+            fi
+          else
+            # Use default from matrix for non-manual runs
+            echo "base=${{ matrix.config.cnpg_base }}" >> $GITHUB_OUTPUT
+            echo "Using matrix default CNPG base: ${{ matrix.config.cnpg_base }}"
+          fi
 
-      - name: Conditional build for scheduled runs
-        if: github.event_name == 'schedule'
-        run: make ci-build
+      - name: Show build information for ${{ matrix.config.name }}
+        if: steps.should_run.outputs.run == 'true'
+        run: |
+          echo "Building configuration: ${{ matrix.config.name }}"
+          echo "CNPG base image: ${{ steps.cnpg_base.outputs.base }}"
+          make show-info \
+            DOCKERFILE_DIR="${{ matrix.config.dockerfile_dir }}" \
+            IMAGE_NAME="${{ matrix.config.image_name }}" \
+            CNPG_BASE="${{ steps.cnpg_base.outputs.base }}"
+
+      - name: Build and test ${{ matrix.config.name }} (always for push/manual)
+        if: steps.should_run.outputs.run == 'true' && github.event_name != 'schedule'
+        run: |
+          make build-and-test \
+            DOCKERFILE_DIR="${{ matrix.config.dockerfile_dir }}" \
+            IMAGE_NAME="${{ matrix.config.image_name }}" \
+            CNPG_BASE="${{ steps.cnpg_base.outputs.base }}"
+          make push-multiarch \
+            DOCKERFILE_DIR="${{ matrix.config.dockerfile_dir }}" \
+            IMAGE_NAME="${{ matrix.config.image_name }}" \
+            CNPG_BASE="${{ steps.cnpg_base.outputs.base }}"
+
+      - name: Conditional build for ${{ matrix.config.name }} (scheduled runs)
+        if: steps.should_run.outputs.run == 'true' && github.event_name == 'schedule'
+        run: |
+          make ci-build \
+            DOCKERFILE_DIR="${{ matrix.config.dockerfile_dir }}" \
+            IMAGE_NAME="${{ matrix.config.image_name }}" \
+            CNPG_BASE="${{ steps.cnpg_base.outputs.base }}"
