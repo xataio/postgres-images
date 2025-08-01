@@ -268,6 +268,102 @@
         "CREATE EXTENSION IF NOT EXISTS \"fuzzystrmatch\";",
         "SELECT soundex('hello');"
       ]
+    },
+    {
+      "name": "hll",
+      "package": "postgresql-17-hll",
+      "description": "HyperLogLog data type for cardinality estimation",
+      "preload_required": false,
+      "test_enabled": true,
+      "test_commands": [
+        "CREATE EXTENSION IF NOT EXISTS \"hll\";",
+        "CREATE TABLE test_hll (id INT, users hll); INSERT INTO test_hll VALUES (1, hll_empty());",
+        "SELECT hll_cardinality(users) FROM test_hll;"
+      ]
+    },
+    {
+      "name": "ip4r",
+      "package": "postgresql-17-ip4r",
+      "description": "IPv4 and IPv6 types and functions",
+      "preload_required": false,
+      "test_enabled": true,
+      "test_commands": [
+        "CREATE EXTENSION IF NOT EXISTS \"ip4r\";",
+        "CREATE TABLE test_ip4r (id INT, ip_range ip4r); INSERT INTO test_ip4r VALUES (1, '192.168.1.0/24');",
+        "SELECT * FROM test_ip4r WHERE '192.168.1.100'::ip4 <<= ip_range;"
+      ]
+    },
+    {
+      "name": "pg_hint_plan",
+      "package": "postgresql-17-pg-hint-plan",
+      "description": "Query execution plan hinting",
+      "preload_required": true,
+      "test_enabled": true,
+      "test_commands": [
+        "CREATE EXTENSION IF NOT EXISTS \"pg_hint_plan\";",
+        "/*+ SeqScan(pg_class) */ SELECT relname FROM pg_class WHERE relname = 'pg_class';"
+      ]
+    },
+    {
+      "name": "pg_repack",
+      "package": "postgresql-17-repack",
+      "description": "Remove bloat from tables and indexes without exclusive lock",
+      "preload_required": false,
+      "test_enabled": true,
+      "test_commands": [
+        "CREATE EXTENSION IF NOT EXISTS \"pg_repack\";",
+        "CREATE TABLE test_repack (id SERIAL PRIMARY KEY, data TEXT); INSERT INTO test_repack (data) VALUES ('test');",
+        "SELECT repack.version();"
+      ]
+    },
+    {
+      "name": "pgrouting",
+      "package": "postgresql-17-pgrouting",
+      "description": "Routing functionality for PostGIS/PostgreSQL",
+      "preload_required": false,
+      "test_enabled": true,
+      "test_commands": [
+        "CREATE EXTENSION IF NOT EXISTS \"pgrouting\";",
+        "CREATE TABLE test_routing (id INT, source INT, target INT, cost FLOAT); INSERT INTO test_routing VALUES (1, 1, 2, 1.0);",
+        "SELECT pgr_version();"
+      ]
+    },
+    {
+      "name": "pgtap",
+      "package": "postgresql-17-pgtap",
+      "description": "Unit testing framework for PostgreSQL",
+      "preload_required": false,
+      "test_enabled": true,
+      "test_commands": [
+        "CREATE EXTENSION IF NOT EXISTS \"pgtap\";",
+        "SELECT plan(1);",
+        "SELECT ok(1=1, 'Simple test');",
+        "SELECT * FROM finish();"
+      ]
+    },
+    {
+      "name": "pgvector",
+      "package": "postgresql-17-pgvector",
+      "description": "Vector similarity search for PostgreSQL",
+      "preload_required": false,
+      "test_enabled": true,
+      "test_commands": [
+        "CREATE EXTENSION IF NOT EXISTS \"vector\";",
+        "CREATE TABLE test_embeddings (id SERIAL PRIMARY KEY, embedding vector(3)); INSERT INTO test_embeddings (embedding) VALUES ('[1,2,3]');",
+        "SELECT embedding <-> '[3,1,2]' AS distance FROM test_embeddings;"
+      ]
+    },
+    {
+      "name": "prefix",
+      "package": "postgresql-17-prefix",
+      "description": "Prefix matching operator",
+      "preload_required": false,
+      "test_enabled": true,
+      "test_commands": [
+        "CREATE EXTENSION IF NOT EXISTS \"prefix\";",
+        "CREATE TABLE test_prefix (id INT, phone prefix_range); INSERT INTO test_prefix VALUES (1, '1');",
+        "SELECT * FROM test_prefix WHERE phone @> '1234567890';"
+      ]
     }
   ],
   "postgres_config": [
