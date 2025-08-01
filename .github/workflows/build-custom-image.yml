@@ -65,6 +65,7 @@ jobs:
     env:
       REGISTRY: ghcr.io
       PLATFORMS: linux/amd64,linux/arm64
+      IMAGE_TAG: ${{ github.sha }}
 
     steps:
       - name: Check if this configuration should run
@@ -126,10 +127,12 @@ jobs:
         run: |
           echo "Building configuration: ${{ matrix.config.name }}"
           echo "CNPG base image: ${{ steps.cnpg_base.outputs.base }}"
+          echo "Image tag: ${IMAGE_TAG}"
           make show-info \
             DOCKERFILE_DIR="${{ matrix.config.dockerfile_dir }}" \
             IMAGE_NAME="${{ matrix.config.image_name }}" \
-            CNPG_BASE="${{ steps.cnpg_base.outputs.base }}"
+            CNPG_BASE="${{ steps.cnpg_base.outputs.base }}" \
+            IMAGE_TAG=${IMAGE_TAG}
 
       - name: Build and test ${{ matrix.config.name }} (always for push/manual)
         if: steps.should_run.outputs.run == 'true' && github.event_name != 'schedule'
@@ -137,11 +140,16 @@ jobs:
           make build-and-test \
             DOCKERFILE_DIR="${{ matrix.config.dockerfile_dir }}" \
             IMAGE_NAME="${{ matrix.config.image_name }}" \
-            CNPG_BASE="${{ steps.cnpg_base.outputs.base }}"
+            CNPG_BASE="${{ steps.cnpg_base.outputs.base }}" \
+            IMAGE_TAG=${IMAGE_TAG}
+      - name: Push ${{ matrix.config.name }} multiarch image
+        if: steps.should_run.outputs.run == 'true' && github.event_name != 'schedule'
+        run: |
           make push-multiarch \
             DOCKERFILE_DIR="${{ matrix.config.dockerfile_dir }}" \
             IMAGE_NAME="${{ matrix.config.image_name }}" \
-            CNPG_BASE="${{ steps.cnpg_base.outputs.base }}"
+            CNPG_BASE="${{ steps.cnpg_base.outputs.base }}" \
+            IMAGE_TAG=${IMAGE_TAG}
 
       - name: Conditional build for ${{ matrix.config.name }} (scheduled runs)
         if: steps.should_run.outputs.run == 'true' && github.event_name == 'schedule'
@@ -149,4 +157,5 @@ jobs:
           make ci-build \
             DOCKERFILE_DIR="${{ matrix.config.dockerfile_dir }}" \
             IMAGE_NAME="${{ matrix.config.image_name }}" \
-            CNPG_BASE="${{ steps.cnpg_base.outputs.base }}"
+            CNPG_BASE="${{ steps.cnpg_base.outputs.base }}" \
+            IMAGE_TAG=${IMAGE_TAG}

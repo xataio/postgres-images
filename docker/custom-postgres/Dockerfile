@@ -19,12 +19,59 @@ RUN CODENAME=$(grep VERSION_CODENAME /etc/os-release | cut -d= -f2 | tr -d '"') 
 
 # Copy extensions.json into image
 COPY docker/custom-postgres/extensions.json /tmp/extensions.json
+# Generate plain version map for verification
+RUN jq -r '.extensions[] | "\(.name) \(.version)"' /tmp/extensions.json > /usr/local/share/extensions-versions.txt
 
-# Install all necessary packages from extensions.json
-RUN PKGS=$(jq -r '.extensions[].package' /tmp/extensions.json | sort -u | xargs) && \
-    echo "Installing packages: $PKGS" && \
-    apt-get install -y --no-install-recommends $PKGS && \
+
+# Install pinned package versions (skip postgresql-contrib-17 pinning)
+# postgresql-contrib-17 is a virtual package so it does not get a proper version
+RUN PINNED_PKGS=$(jq -r '.extensions[] | select(.package != "postgresql-contrib-17") | "\(.package)=\(.package_version)"' /tmp/extensions.json | sort -u | xargs) && \
+    echo "Installing pinned packages: $PINNED_PKGS" && \
+    apt-get install -y --no-install-recommends $PINNED_PKGS postgresql-contrib-17 && \
     rm -rf /var/lib/apt/lists/*
+
+# Version verification script
+COPY docker/custom-postgres/extensions.json /tmp/extensions.json
+RUN cat <<'EOF' > /usr/local/bin/verify-extensions.sh
+#!/bin/bash
+set -e
+
+echo "Verifying SQL extension versions..."
+mismatches=()
+
+while read -r name expected_version preload; do
+    # Skip preload-only modules or non-creatable ones
+    if [[ "$name" == "auto_explain" || "$name" == "wal2json" ]]; then
+        # Verify .so file exists instead
+        so_path=$(find /usr/lib/postgresql -name "${name}.so" 2>/dev/null)
+        if [[ -z "$so_path" ]]; then
+            mismatches+=("Module '${name}' not found (.so missing)")
+        fi
+        continue
+    fi
+
+    actual_version=$(psql -tAc "SELECT default_version FROM pg_available_extensions WHERE name='${name}';" 2>/dev/null | xargs)
+    if [ -z "$actual_version" ]; then
+        mismatches+=("Extension '${name}' not found (expected ${expected_version})")
+    elif [ "$actual_version" != "$expected_version" ]; then
+        mismatches+=("Extension '${name}': expected ${expected_version}, found ${actual_version}")
+    fi
+
+done < /usr/local/share/extensions-versions.txt
+
+if [ ${#mismatches[@]} -gt 0 ]; then
+    echo "Version mismatches detected:"
+    for mismatch in "${mismatches[@]}"; do
+        echo "  - $mismatch"
+    done
+    exit 1
+else
+    echo "All extension versions match expected values."
+fi
+EOF
+
+RUN chmod +x /usr/local/bin/verify-extensions.sh
+
 
 # Install PostGIS extensions and additional dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -38,25 +85,30 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 # Download and install PostGIS tools manually for ARM64
-# This avoids the dependency issues with the postgis package
+# Use pinned package version matching the SQL extension version (3.5.3)
 RUN ARCH=$(dpkg --print-architecture) && \
     if [ "$ARCH" = "arm64" ]; then \
-        # Install just the tools we need without the problematic dependencies \
+        POSTGIS_PKG_VERSION=3.5.3+dfsg-1~exp1.pgdg120+1 && \
         apt-get update && \
         mkdir -p /tmp/postgis-tools && \
         cd /tmp/postgis-tools && \
-        apt-get download postgis && \
+        # Download the exact version of postgis tools
+        apt-get download postgis=${POSTGIS_PKG_VERSION} && \
         dpkg-deb -x postgis_*.deb . && \
         cp -r usr/bin/* /usr/bin/ || true && \
-        # Try to get the tools working with existing libraries \
+        # Install required runtime libraries for the tools
         apt-get install -y --no-install-recommends \
             libgdal32 \
             gdal-data \
+            libgeos-c1v5 \
+            libproj25 \
+            libjson-c5 \
+            libprotobuf-c1 \
             || true && \
         cd / && rm -rf /tmp/postgis-tools && \
         rm -rf /var/lib/apt/lists/*; \
     else \
-        # On AMD64, just install normally \
+        # On AMD64, just install normally
         apt-get update && \
         apt-get install -y --no-install-recommends postgis && \
         rm -rf /var/lib/apt/lists/*; \
