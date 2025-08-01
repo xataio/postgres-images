@@ -466,6 +466,408 @@
         "CREATE TABLE test_stattuple (id SERIAL PRIMARY KEY, data TEXT); INSERT INTO test_stattuple (data) VALUES ('test data');",
         "SELECT tuple_count, tuple_len FROM pgstattuple('test_stattuple');"
       ]
+    },
+    {
+      "name": "address_standardizer",
+      "package": "postgresql-contrib-17",
+      "version": "3.5.3",
+      "package_version": "",
+      "description": "Standardizes address data using rules-based parsing",
+      "preload_required": false,
+      "test_enabled": true,
+      "test_commands": [
+        "CREATE EXTENSION IF NOT EXISTS address_standardizer;",
+        "CREATE EXTENSION IF NOT EXISTS address_standardizer_data_us;",
+        "SELECT * FROM parse_address('1 Devonshire Place, Boston, MA 02109');"
+      ]
+    },
+    {
+      "name": "address_standardizer_data_us",
+      "package": "postgresql-contrib-17",
+      "version": "3.5.3",
+      "package_version": "",
+      "description": "US address data for address_standardizer",
+      "preload_required": false,
+      "test_enabled": true,
+      "test_commands": [
+        "CREATE EXTENSION IF NOT EXISTS address_standardizer;",
+        "CREATE EXTENSION IF NOT EXISTS address_standardizer_data_us;",
+        "SELECT * FROM parse_address('1 Devonshire Place, Boston, MA 02109');"
+      ]
+    },
+    {
+      "name": "amcheck",
+      "package": "postgresql-contrib-17",
+      "version": "1.4",
+      "package_version": "",
+      "description": "Functions for verifying relation integrity",
+      "preload_required": false,
+      "test_enabled": true,
+      "test_commands": [
+        "CREATE EXTENSION IF NOT EXISTS amcheck;"
+      ]
+    },
+    {
+      "name": "autoinc",
+      "package": "postgresql-contrib-17",
+      "version": "1.0",
+      "package_version": "",
+      "description": "Functions for automatic increment of fields",
+      "preload_required": false,
+      "test_enabled": true,
+      "test_commands": [
+        "CREATE EXTENSION IF NOT EXISTS autoinc;"
+      ]
+    },
+    {
+      "name": "bloom",
+      "package": "postgresql-contrib-17",
+      "version": "1.0",
+      "package_version": "",
+      "description": "Bloom index access method",
+      "preload_required": false,
+      "test_enabled": true,
+      "test_commands": [
+        "CREATE EXTENSION IF NOT EXISTS bloom;"
+      ]
+    },
+    {
+      "name": "btree_gin",
+      "package": "postgresql-contrib-17",
+      "version": "1.3",
+      "package_version": "",
+      "description": "Support for indexing common datatypes in GIN",
+      "preload_required": false,
+      "test_enabled": true,
+      "test_commands": [
+        "CREATE EXTENSION IF NOT EXISTS btree_gin;"
+      ]
+    },
+    {
+      "name": "btree_gist",
+      "package": "postgresql-contrib-17",
+      "version": "1.7",
+      "package_version": "",
+      "description": "Support for indexing common datatypes in GiST",
+      "preload_required": false,
+      "test_enabled": true,
+      "test_commands": [
+        "CREATE EXTENSION IF NOT EXISTS btree_gist;"
+      ]
+    },
+    {
+      "name": "cube",
+      "package": "postgresql-contrib-17",
+      "version": "1.5",
+      "package_version": "",
+      "description": "Multi-dimensional cube data type",
+      "preload_required": false,
+      "test_enabled": true,
+      "test_commands": [
+        "CREATE EXTENSION IF NOT EXISTS cube;"
+      ]
+    },
+    {
+      "name": "dict_int",
+      "package": "postgresql-contrib-17",
+      "version": "1.0",
+      "package_version": "",
+      "description": "Text search dictionary template for integers",
+      "preload_required": false,
+      "test_enabled": true,
+      "test_commands": [
+        "CREATE EXTENSION IF NOT EXISTS dict_int;"
+      ]
+    },
+    {
+      "name": "dict_xsyn",
+      "package": "postgresql-contrib-17",
+      "version": "1.0",
+      "package_version": "",
+      "description": "Text search dictionary template for synonyms",
+      "preload_required": false,
+      "test_enabled": true,
+      "test_commands": [
+        "CREATE EXTENSION IF NOT EXISTS dict_xsyn;"
+      ]
+    },
+    {
+      "name": "earthdistance",
+      "package": "postgresql-contrib-17",
+      "version": "1.2",
+      "package_version": "",
+      "description": "Earth distance calculations",
+      "preload_required": false,
+      "test_enabled": true,
+      "test_commands": [
+        "CREATE EXTENSION IF NOT EXISTS earthdistance;"
+      ]
+    },
+    {
+      "name": "file_fdw",
+      "package": "postgresql-contrib-17",
+      "version": "1.0",
+      "package_version": "",
+      "description": "Foreign data wrapper for flat file access",
+      "preload_required": false,
+      "test_enabled": true,
+      "test_commands": [
+        "CREATE EXTENSION IF NOT EXISTS file_fdw;"
+      ]
+    },
+    {
+      "name": "intagg",
+      "package": "postgresql-contrib-17",
+      "version": "1.1",
+      "package_version": "",
+      "description": "Integer aggregator (deprecated in favor of array_agg)",
+      "preload_required": false,
+      "test_enabled": true,
+      "test_commands": [
+        "CREATE EXTENSION IF NOT EXISTS intagg;"
+      ]
+    },
+    {
+      "name": "intarray",
+      "package": "postgresql-contrib-17",
+      "version": "1.5",
+      "package_version": "",
+      "description": "Functions for 1-D arrays of integers",
+      "preload_required": false,
+      "test_enabled": true,
+      "test_commands": [
+        "CREATE EXTENSION IF NOT EXISTS intarray;"
+      ]
+    },
+    {
+      "name": "isn",
+      "package": "postgresql-contrib-17",
+      "version": "1.2",
+      "package_version": "",
+      "description": "International Standard Number data types",
+      "preload_required": false,
+      "test_enabled": true,
+      "test_commands": [
+        "CREATE EXTENSION IF NOT EXISTS isn;"
+      ]
+    },
+    {
+      "name": "lo",
+      "package": "postgresql-contrib-17",
+      "version": "1.1",
+      "package_version": "",
+      "description": "Large Object maintenance functions",
+      "preload_required": false,
+      "test_enabled": true,
+      "test_commands": [
+        "CREATE EXTENSION IF NOT EXISTS lo;"
+      ]
+    },
+    {
+      "name": "pageinspect",
+      "package": "postgresql-contrib-17",
+      "version": "1.12",
+      "package_version": "",
+      "description": "Low-level page inspection",
+      "preload_required": false,
+      "test_enabled": true,
+      "test_commands": [
+        "CREATE EXTENSION IF NOT EXISTS pageinspect;"
+      ]
+    },
+    {
+      "name": "pg_surgery",
+      "package": "postgresql-contrib-17",
+      "version": "1.0",
+      "package_version": "",
+      "description": "Row surgery functions for modifying rows",
+      "preload_required": false,
+      "test_enabled": true,
+      "test_commands": [
+        "CREATE EXTENSION IF NOT EXISTS pg_surgery;"
+      ]
+    },
+    {
+      "name": "pg_walinspect",
+      "package": "postgresql-contrib-17",
+      "version": "1.1",
+      "package_version": "",
+      "description": "WAL inspection functions",
+      "preload_required": false,
+      "test_enabled": true,
+      "test_commands": [
+        "CREATE EXTENSION IF NOT EXISTS pg_walinspect;"
+      ]
+    },
+    {
+      "name": "plpgsql",
+      "package": "postgresql-contrib-17",
+      "version": "1.0",
+      "package_version": "",
+      "description": "PL/pgSQL procedural language",
+      "preload_required": false,
+      "test_enabled": true,
+      "test_commands": [
+        "CREATE EXTENSION IF NOT EXISTS plpgsql;"
+      ]
+    },
+    {
+      "name": "postgres_fdw",
+      "package": "postgresql-contrib-17",
+      "version": "1.1",
+      "package_version": "",
+      "description": "Foreign data wrapper for PostgreSQL",
+      "preload_required": false,
+      "test_enabled": true,
+      "test_commands": [
+        "CREATE EXTENSION IF NOT EXISTS postgres_fdw;"
+      ]
+    },
+    {
+      "name": "refint",
+      "package": "postgresql-contrib-17",
+      "version": "1.0",
+      "package_version": "",
+      "description": "Referential integrity triggers (example)",
+      "preload_required": false,
+      "test_enabled": true,
+      "test_commands": [
+        "CREATE EXTENSION IF NOT EXISTS refint;"
+      ]
+    },
+    {
+      "name": "seg",
+      "package": "postgresql-contrib-17",
+      "version": "1.4",
+      "package_version": "",
+      "description": "Floating-point intervals",
+      "preload_required": false,
+      "test_enabled": true,
+      "test_commands": [
+        "CREATE EXTENSION IF NOT EXISTS seg;"
+      ]
+    },
+    {
+      "name": "sslinfo",
+      "package": "postgresql-contrib-17",
+      "version": "1.2",
+      "package_version": "",
+      "description": "Information about SSL connections",
+      "preload_required": false,
+      "test_enabled": true,
+      "test_commands": [
+        "CREATE EXTENSION IF NOT EXISTS sslinfo;"
+      ]
+    },
+    {
+      "name": "tablefunc",
+      "package": "postgresql-contrib-17",
+      "version": "1.0",
+      "package_version": "",
+      "description": "Functions that manipulate whole tables, including crosstab",
+      "preload_required": false,
+      "test_enabled": true,
+      "test_commands": [
+        "CREATE EXTENSION IF NOT EXISTS tablefunc;"
+      ]
+    },
+    {
+      "name": "tcn",
+      "package": "postgresql-contrib-17",
+      "version": "1.0",
+      "package_version": "",
+      "description": "Triggered change notifications",
+      "preload_required": false,
+      "test_enabled": true,
+      "test_commands": [
+        "CREATE EXTENSION IF NOT EXISTS tcn;"
+      ]
+    },
+    {
+      "name": "tsm_system_rows",
+      "package": "postgresql-contrib-17",
+      "version": "1.0",
+      "package_version": "",
+      "description": "TABLESAMPLE method which accepts number of rows",
+      "preload_required": false,
+      "test_enabled": true,
+      "test_commands": [
+        "CREATE EXTENSION IF NOT EXISTS tsm_system_rows;"
+      ]
+    },
+    {
+      "name": "tsm_system_time",
+      "package": "postgresql-contrib-17",
+      "version": "1.0",
+      "package_version": "",
+      "description": "TABLESAMPLE method which accepts time in milliseconds",
+      "preload_required": false,
+      "test_enabled": true,
+      "test_commands": [
+        "CREATE EXTENSION IF NOT EXISTS tsm_system_time;"
+      ]
+    },
+    {
+      "name": "unaccent",
+      "package": "postgresql-contrib-17",
+      "version": "1.1",
+      "package_version": "",
+      "description": "Text search dictionary that removes accents",
+      "preload_required": false,
+      "test_enabled": true,
+      "test_commands": [
+        "CREATE EXTENSION IF NOT EXISTS unaccent;"
+      ]
+    },
+    {
+      "name": "uuid-ossp",
+      "package": "postgresql-contrib-17",
+      "version": "1.1",
+      "package_version": "",
+      "description": "UUID generation functions",
+      "preload_required": false,
+      "test_enabled": true,
+      "test_commands": [
+        "CREATE EXTENSION IF NOT EXISTS \"uuid-ossp\";"
+      ]
+    },
+    {
+      "name": "xml2",
+      "package": "postgresql-contrib-17",
+      "version": "1.1",
+      "package_version": "",
+      "description": "XPath querying and XSLT support",
+      "preload_required": false,
+      "test_enabled": true,
+      "test_commands": [
+        "CREATE EXTENSION IF NOT EXISTS xml2;"
+      ]
+    },
+    {
+      "name": "postgis_raster",
+      "package": "postgresql-17-postgis-3",
+      "version": "3.5.3",
+      "package_version": "3.5.3+dfsg-1~exp1.pgdg120+1",
+      "description": "PostGIS raster extension",
+      "preload_required": false,
+      "test_enabled": true,
+      "test_commands": [
+        "CREATE EXTENSION IF NOT EXISTS postgis_raster;",
+        "SELECT PostGIS_Raster_Lib_Version();"
+      ]
+    },
+    {
+      "name": "postgis_sfcgal",
+      "package": "postgresql-17-postgis-3",
+      "version": "3.5.3",
+      "package_version": "3.5.3+dfsg-1~exp1.pgdg120+1",
+      "description": "PostGIS SFCGAL support",
+      "preload_required": false,
+      "test_enabled": true,
+      "test_commands": [
+        "CREATE EXTENSION IF NOT EXISTS postgis_sfcgal;",
+        "SELECT postgis_sfcgal_version();"
+      ]
     }
   ],
   "postgres_config": [
