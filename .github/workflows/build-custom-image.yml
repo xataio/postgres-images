@@ -14,7 +14,6 @@ on:
         type: choice
         options:
           - 'all'
-          - 'analytics'
           - 'full_extensions'
       cnpg_base:
         description: 'CNPG base image'
@@ -53,10 +52,6 @@ jobs:
     strategy:
       matrix:
         config:
-          - name: "analytics"
-            dockerfile_dir: "docker/analytics"
-            image_name: "xataio/postgres-images/cnpg-postgres-analytics"
-            cnpg_base: "ghcr.io/cloudnative-pg/postgresql:17-standard-bookworm"
           - name: "full_extensions"
             dockerfile_dir: "docker/custom-postgres"
             image_name: "xataio/postgres-images/cnpg-postgres-plus"
