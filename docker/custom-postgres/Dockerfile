@@ -30,49 +30,6 @@ RUN PINNED_PKGS=$(jq -r '.extensions[] | select(.package != "postgresql-contrib-
     apt-get install -y --no-install-recommends $PINNED_PKGS postgresql-contrib-17 && \
     rm -rf /var/lib/apt/lists/*
 
-# Version verification script
-COPY docker/custom-postgres/extensions.json /tmp/extensions.json
-RUN cat <<'EOF' > /usr/local/bin/verify-extensions.sh
-#!/bin/bash
-set -e
-
-echo "Verifying SQL extension versions..."
-mismatches=()
-
-while read -r name expected_version preload; do
-    # Skip preload-only modules or non-creatable ones
-    if [[ "$name" == "auto_explain" || "$name" == "wal2json" ]]; then
-        # Verify .so file exists instead
-        so_path=$(find /usr/lib/postgresql -name "${name}.so" 2>/dev/null)
-        if [[ -z "$so_path" ]]; then
-            mismatches+=("Module '${name}' not found (.so missing)")
-        fi
-        continue
-    fi
-
-    actual_version=$(psql -tAc "SELECT default_version FROM pg_available_extensions WHERE name='${name}';" 2>/dev/null | xargs)
-    if [ -z "$actual_version" ]; then
-        mismatches+=("Extension '${name}' not found (expected ${expected_version})")
-    elif [ "$actual_version" != "$expected_version" ]; then
-        mismatches+=("Extension '${name}': expected ${expected_version}, found ${actual_version}")
-    fi
-
-done < /usr/local/share/extensions-versions.txt
-
-if [ ${#mismatches[@]} -gt 0 ]; then
-    echo "Version mismatches detected:"
-    for mismatch in "${mismatches[@]}"; do
-        echo "  - $mismatch"
-    done
-    exit 1
-else
-    echo "All extension versions match expected values."
-fi
-EOF
-
-RUN chmod +x /usr/local/bin/verify-extensions.sh
-
-
 # Install PostGIS extensions and additional dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
     postgresql-17-postgis-3 \
@@ -92,11 +49,9 @@ RUN ARCH=$(dpkg --print-architecture) && \
         apt-get update && \
         mkdir -p /tmp/postgis-tools && \
         cd /tmp/postgis-tools && \
-        # Download the exact version of postgis tools
         apt-get download postgis=${POSTGIS_PKG_VERSION} && \
         dpkg-deb -x postgis_*.deb . && \
         cp -r usr/bin/* /usr/bin/ || true && \
-        # Install required runtime libraries for the tools
         apt-get install -y --no-install-recommends \
             libgdal32 \
             gdal-data \
@@ -108,7 +63,6 @@ RUN ARCH=$(dpkg --print-architecture) && \
         cd / && rm -rf /tmp/postgis-tools && \
         rm -rf /var/lib/apt/lists/*; \
     else \
-        # On AMD64, just install normally
         apt-get update && \
         apt-get install -y --no-install-recommends postgis && \
         rm -rf /var/lib/apt/lists/*; \
@@ -130,5 +84,44 @@ RUN apt-get purge -y --auto-remove \
     && rm -rf /etc/apt/trusted.gpg.d/postgresql.gpg \
     && rm -rf /tmp/extensions.json \
     && apt-get clean
+
+# Add version verification script AFTER cleanup (so it persists)
+RUN cat <<'EOF' > /usr/local/bin/verify-extensions.sh
+#!/bin/bash
+set -e
+
+echo "Verifying SQL extension versions..."
+mismatches=()
+
+while read -r name expected_version; do
+    # Skip preload-only modules or non-creatable ones
+    if [[ "$name" == "auto_explain" || "$name" == "wal2json" ]]; then
+        so_path=$(find /usr/lib/postgresql -name "${name}.so" 2>/dev/null)
+        if [[ -z "$so_path" ]]; then
+            mismatches+=("Module '${name}' not found (.so missing)")
+        fi
+        continue
+    fi
+
+    actual_version=$(psql -tAc "SELECT default_version FROM pg_available_extensions WHERE name='${name}';" 2>/dev/null | xargs)
+    if [ -z "$actual_version" ]; then
+        mismatches+=("Extension '${name}' not found (expected ${expected_version})")
+    elif [ "$actual_version" != "$expected_version" ]; then
+        mismatches+=("Extension '${name}': expected ${expected_version}, found ${actual_version}")
+    fi
+done < /usr/local/share/extensions-versions.txt
+
+if [ ${#mismatches[@]} -gt 0 ]; then
+    echo "Version mismatches detected:"
+    for mismatch in "${mismatches[@]}"; do
+        echo "  - $mismatch"
+    done
+    exit 1
+else
+    echo "All extension versions match expected values."
+fi
+EOF
+
+RUN chmod +x /usr/local/bin/verify-extensions.sh
 
 USER postgres
