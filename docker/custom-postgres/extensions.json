@@ -364,10 +364,48 @@
         "CREATE TABLE test_prefix (id INT, phone prefix_range); INSERT INTO test_prefix VALUES (1, '1');",
         "SELECT * FROM test_prefix WHERE phone @> '1234567890';"
       ]
+    },
+    {
+      "name": "pgaudit",
+      "package": "postgresql-17-pgaudit",
+      "description": "Audit logging extension for PostgreSQL",
+      "preload_required": true,
+      "test_enabled": true,
+      "test_commands": [
+        "CREATE EXTENSION IF NOT EXISTS \"pgaudit\";",
+        "SHOW pgaudit.log;"
+      ]
+    },
+    {
+      "name": "pglogical",
+      "package": "postgresql-17-pglogical",
+      "description": "Logical replication extension for PostgreSQL",
+      "preload_required": true,
+      "test_enabled": true,
+      "test_commands": [
+        "CREATE EXTENSION IF NOT EXISTS \"pglogical\";",
+        "SELECT pglogical.create_node(node_name := 'test_node', dsn := 'host=localhost port=5432 dbname=postgres');"
+      ]
+    },
+    {
+      "name": "pgstattuple",
+      "package": "postgresql-contrib-17",
+      "description": "Functions to show tuple-level statistics",
+      "preload_required": false,
+      "test_enabled": true,
+      "test_commands": [
+        "CREATE EXTENSION IF NOT EXISTS \"pgstattuple\";",
+        "CREATE TABLE test_stattuple (id SERIAL PRIMARY KEY, data TEXT); INSERT INTO test_stattuple (data) VALUES ('test data');",
+        "SELECT tuple_count, tuple_len FROM pgstattuple('test_stattuple');"
+      ]
     }
   ],
   "postgres_config": [
     { "setting": "wal_level", "value": "logical" },
-    { "setting": "max_replication_slots", "value": "10" }
+    { "setting": "max_replication_slots", "value": "10" },
+    { "setting": "max_worker_processes", "value": "10" },
+    { "setting": "max_wal_senders", "value": "10" },
+    { "setting": "pgaudit.log", "value": "all" },
+    { "setting": "pgaudit.log_catalog", "value": "off" }
   ]
 }
