@@ -11,6 +11,21 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     jq \
     && rm -rf /var/lib/apt/lists/*
 
+# Install all locales
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    locales \
+    locales-all \
+    && rm -rf /var/lib/apt/lists/*
+
+# Generate all locales (this ensures they're available for PostgreSQL)
+# The locales-all package should provide most locales, but we'll also
+# uncomment all locales in locale.gen and generate them to be thorough
+RUN sed -i 's/^# *\([a-zA-Z0-9_]\)/\1/' /etc/locale.gen && \
+    locale-gen
+
+# Verify locales are available
+RUN locale -a | head -20 && echo "... and more locales available"
+
 # Add PostgreSQL APT repository (detect codename without lsb_release)
 RUN CODENAME=$(grep VERSION_CODENAME /etc/os-release | cut -d= -f2 | tr -d '"') && \
     echo "deb http://apt.postgresql.org/pub/repos/apt $CODENAME-pgdg main" > /etc/apt/sources.list.d/pgdg.list && \
@@ -78,5 +93,8 @@ RUN apt-get purge -y --auto-remove \
     && rm -rf /etc/apt/trusted.gpg.d/postgresql.gpg \
     && rm -rf /tmp/extensions.json \
     && apt-get clean
+
+# Verify locales are still available after cleanup
+RUN echo "Available locales after cleanup:" && locale -a | wc -l && echo "locales installed"
 
 USER postgres
