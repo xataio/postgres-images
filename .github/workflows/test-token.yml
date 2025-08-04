@@ -1,0 +1,16 @@
+name: Test GHCR GIT_TOKEN
+
+on:
+  workflow_dispatch:
+
+jobs:
+  test-ghcr-pull:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Log in to GHCR using GIT_TOKEN
+        run: |
+          echo "${{ secrets.GIT_TOKEN }}" | docker login ghcr.io -u xataio --password-stdin
+
+      - name: Test pull image
+        run: |
+          docker pull ghcr.io/xataio/postgres-images/cnpg-postgres-plus:9c38125077fe27cd45c55234806eb42603460a39
