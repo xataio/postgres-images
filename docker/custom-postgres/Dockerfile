@@ -100,7 +100,7 @@ RUN apt-get purge -y --auto-remove \
     && rm -rf /tmp/extensions.json \
     && apt-get clean
 
-<<<<<<< HEAD
+
 # Add version verification script AFTER cleanup (so it persists)
 RUN cat <<'EOF' > /usr/local/bin/verify-extensions.sh
 #!/bin/bash
