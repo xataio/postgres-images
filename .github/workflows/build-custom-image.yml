@@ -82,6 +82,21 @@ jobs:
             CNPG_BASE="${{ steps.cnpg_base.outputs.base }}" \
             IMAGE_TAG=${IMAGE_TAG}
 
+      - name: Run Snyk to check Docker image for vulnerabilities
+        uses: snyk/actions/docker@master
+        continue-on-error: true  # Do not fail build on vulnerabilities
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+        with:
+          image: ${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }}
+          args: --severity-threshold=high --file=${{ env.DOCKERFILE_DIR }}/Dockerfile
+
+      - name: Upload Snyk SARIF to Code Scanning
+        uses: github/codeql-action/upload-sarif@v3
+        continue-on-error: true
+        with:
+          sarif_file: snyk.sarif
+
       - name: Push multiarch image
         if: github.event_name != 'schedule'
         run: |
