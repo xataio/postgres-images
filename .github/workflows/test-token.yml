@@ -7,9 +7,9 @@ jobs:
   test-ghcr-pull:
     runs-on: ubuntu-latest
     steps:
-      - name: Log in to GHCR using GIT_TOKEN
+      - name: Log in to GHCR using READ_ONLY_REPO_ACCESS
         run: |
-          echo "${{ secrets.GIT_TOKEN }}" | docker login ghcr.io -u xataio --password-stdin
+          echo "${{ secrets.READ_ONLY_REPO_ACCESS }}" | docker login ghcr.io -u xataio --password-stdin
 
       - name: Test pull image
         run: |
