@@ -88,7 +88,7 @@ jobs:
         env:
           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
         with:
-          image: ${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }}
+          image: ghcr.io/${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }}
           args: --severity-threshold=high --file=${{ env.DOCKERFILE_DIR }}/Dockerfile --sarif-file-output=snyk.sarif
 
       - name: Upload Snyk SARIF to Code Scanning
