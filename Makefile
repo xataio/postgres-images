@@ -10,17 +10,19 @@ PLATFORMS ?= linux/amd64,linux/arm64
 DATE_TAG := $(shell date +%Y%m%d)
 CONFIG_FILE := $(DOCKERFILE_DIR)/extensions.json
 DESCRIPTION ?= CNPG PostgreSQL with additional extensions and tools
+IMAGE_TAG ?= latest  # Default tag; CI overrides with commit SHA
 
 # Derived variables
 FULL_IMAGE_NAME := $(REGISTRY)/$(IMAGE_NAME)
 
-# extract names where preload_required==true, wrap each in single‐quotes,
+# extract names where preload_required==true, wrap each in single-quotes,
 # then join them with commas
 PRELOAD_LIBS := $(shell \
   jq -r '.extensions[] | select(.preload_required==true) | .name' $(CONFIG_FILE) \
     | sed "s/.*/'&'/" \
     | paste -sd, - \
 )
+
 # Default target
 .PHONY: help
 help: ## Show this help message
@@ -44,13 +46,11 @@ get-base-digest: pull-base ## Get base image digest
 	@echo "Base image digest: $(BASE_DIGEST)"
 
 .PHONY: build-local
-build-local: get-pg-version get-base-digest ## Build image locally for testing (amd64 only)
-	@echo "Building local image for testing..."
+build-local: get-pg-version get-base-digest ## Build image locally for testing
+	@echo "Building local image (tag: $(IMAGE_TAG))..."
 	docker build \
 		-f $(DOCKERFILE) \
-		-t $(FULL_IMAGE_NAME):latest \
-		-t $(FULL_IMAGE_NAME):$(PG_VERSION) \
-		-t $(FULL_IMAGE_NAME):$(PG_VERSION)-$(DATE_TAG) \
+		-t $(FULL_IMAGE_NAME):$(IMAGE_TAG) \
 		--label "base.digest=$(BASE_DIGEST)" \
 		--label "org.opencontainers.image.source=https://github.com/xataio/postgres-images" \
 		--label "org.opencontainers.image.description=$(DESCRIPTION)" \
@@ -60,7 +60,7 @@ build-local: get-pg-version get-base-digest ## Build image locally for testing (
 
 .PHONY: test
 test: ## Run tests on the built image
-	@echo "Running tests on $(FULL_IMAGE_NAME)"
+	@echo "Running tests on $(FULL_IMAGE_NAME):$(IMAGE_TAG)"
 	@docker rm -f pg-test 2>/dev/null || true
 
 	@echo "Starting PostgreSQL container..."
@@ -69,7 +69,7 @@ test: ## Run tests on the built image
 		-e POSTGRES_INITDB_ARGS="--auth-host=trust" \
 		-e PGDATA=/var/lib/postgresql/data \
 		--user postgres \
-		"$(FULL_IMAGE_NAME):latest" \
+		"$(FULL_IMAGE_NAME):$(IMAGE_TAG)" \
 		bash -c 'echo "Starting initialization..." && mkdir -p $$PGDATA && if [ ! -f $$PGDATA/PG_VERSION ]; then echo "Initializing database..." && initdb $$POSTGRES_INITDB_ARGS; fi && echo "Starting PostgreSQL..." && postgres'
 
 	@echo "Waiting for PostgreSQL to be ready..."
@@ -115,6 +115,9 @@ test: ## Run tests on the built image
 	@echo "Listing available extensions..."
 	docker exec pg-test psql -U postgres -c "SELECT name FROM pg_available_extensions ORDER BY name;"
 
+	@echo "Verifying SQL extension versions..."
+	docker exec pg-test /usr/local/bin/verify-extensions.sh
+
 	@echo "Cleaning up test container..."
 	docker rm -f pg-test
 	@echo "All tests passed!"
@@ -134,13 +137,11 @@ setup-buildx: ## Setup Docker buildx for multi-platform builds
 
 .PHONY: build-multiarch
 build-multiarch: get-pg-version get-base-digest setup-buildx ## Build multi-architecture image (no push)
-	@echo "Building multi-architecture image..."
+	@echo "Building multi-architecture image (tag: $(IMAGE_TAG))..."
 	docker buildx build \
 		-f $(DOCKERFILE) \
 		--platform $(PLATFORMS) \
-		-t $(FULL_IMAGE_NAME):latest \
-		-t $(FULL_IMAGE_NAME):$(PG_VERSION) \
-		-t $(FULL_IMAGE_NAME):$(PG_VERSION)-$(DATE_TAG) \
+		-t $(FULL_IMAGE_NAME):$(IMAGE_TAG) \
 		--label "base.digest=$(BASE_DIGEST)" \
 		--label "org.opencontainers.image.source=https://github.com/xataio/postgres-images" \
 		--label "org.opencontainers.image.description=$(DESCRIPTION)" \
@@ -150,13 +151,11 @@ build-multiarch: get-pg-version get-base-digest setup-buildx ## Build multi-arch
 
 .PHONY: push-multiarch
 push-multiarch: get-pg-version get-base-digest setup-buildx ## Build and push multi-architecture image
-	@echo "Building and pushing multi-architecture image..."
+	@echo "Building and pushing multi-architecture image (tag: $(IMAGE_TAG))..."
 	docker buildx build \
 		-f $(DOCKERFILE) \
 		--platform $(PLATFORMS) \
-		-t $(FULL_IMAGE_NAME):latest \
-		-t $(FULL_IMAGE_NAME):$(PG_VERSION) \
-		-t $(FULL_IMAGE_NAME):$(PG_VERSION)-$(DATE_TAG) \
+		-t $(FULL_IMAGE_NAME):$(IMAGE_TAG) \
 		--label "base.digest=$(BASE_DIGEST)" \
 		--label "org.opencontainers.image.source=https://github.com/xataio/postgres-images" \
 		--label "org.opencontainers.image.description=$(DESCRIPTION)" \
@@ -164,15 +163,14 @@ push-multiarch: get-pg-version get-base-digest setup-buildx ## Build and push mu
 		--build-arg CNPG_BASE=$(CNPG_BASE) \
 		--push \
 		.
-	@echo "Multi-architecture images pushed to $(FULL_IMAGE_NAME)"
-	@echo "Available tags: latest, $(PG_VERSION), $(PG_VERSION)-$(DATE_TAG)"
+	@echo "Multi-architecture image pushed to $(FULL_IMAGE_NAME):$(IMAGE_TAG)"
 	@echo "Platforms: $(PLATFORMS)"
 
 .PHONY: check-base-updated
 check-base-updated: get-base-digest ## Check if base image has been updated
 	@echo "Checking if base image has been updated..."
-	@if docker pull $(FULL_IMAGE_NAME):latest 2>/dev/null; then \
-		EXISTING_DIGEST=$$(docker image inspect $(FULL_IMAGE_NAME):latest --format '{{index .Config.Labels "base.digest"}}' 2>/dev/null || echo ""); \
+	@if docker pull $(FULL_IMAGE_NAME):$(IMAGE_TAG) 2>/dev/null; then \
+		EXISTING_DIGEST=$$(docker image inspect $(FULL_IMAGE_NAME):$(IMAGE_TAG) --format '{{index .Config.Labels "base.digest"}}' 2>/dev/null || echo ""); \
 		if [ "$$EXISTING_DIGEST" = "$(BASE_DIGEST)" ]; then \
 			echo "Base image unchanged, no rebuild needed"; \
 			exit 1; \
@@ -186,7 +184,7 @@ check-base-updated: get-base-digest ## Check if base image has been updated
 .PHONY: clean
 clean: ## Clean up Docker resources
 	@echo "Cleaning up..."
-	-docker rm -f pg-test 2>/dev/null
+	-docker rm -f pg-test pg-verify 2>/dev/null
 	-docker system prune -f
 	@echo "Cleanup complete"
 
@@ -202,10 +200,11 @@ show-info: get-pg-version get-base-digest ## Show build information
 	@echo "Date Tag: $(DATE_TAG)"
 	@echo "Platforms: $(PLATFORMS)"
 	@echo "Dockerfile: $(DOCKERFILE)"
+	@echo "Image Tag: $(IMAGE_TAG)"
 
 # CI-friendly target that mirrors the GitHub Actions logic
 .PHONY: ci-build
-ci-build: ## CI build process (build, test, and conditionally push)
+ci-build: ## CI build process (build, test, verify, and conditionally push)
 	@echo "Starting CI build process..."
 	@if $(MAKE) check-base-updated 2>/dev/null; then \
 		echo "Base image updated, proceeding with build..."; \

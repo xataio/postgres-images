@@ -3,6 +3,8 @@
     {
       "name": "pg_partman",
       "package": "postgresql-17-partman",
+      "package_version": "5.2.4-1.pgdg120+1",
+      "version": "5.2.4",
       "description": "Partition management extension for PostgreSQL",
       "preload_required": false,
       "test_enabled": true,
@@ -14,6 +16,8 @@
     {
       "name": "pg_trgm",
       "package": "postgresql-contrib-17",
+      "package_version": "",
+      "version": "1.6",
       "description": "Trigram matching for similarity searches",
       "preload_required": false,
       "test_enabled": true,
@@ -26,6 +30,8 @@
     {
       "name": "pgcrypto",
       "package": "postgresql-contrib-17",
+      "package_version": "",
+      "version": "1.3",
       "description": "Cryptographic functions",
       "preload_required": false,
       "test_enabled": true,
@@ -37,6 +43,8 @@
     {
       "name": "citext",
       "package": "postgresql-contrib-17",
+      "package_version": "",
+      "version": "1.6",
       "description": "Case-insensitive text data type",
       "preload_required": false,
       "test_enabled": true,
@@ -49,6 +57,8 @@
     {
       "name": "hstore",
       "package": "postgresql-contrib-17",
+      "package_version": "",
+      "version": "1.8",
       "description": "Key-value store data type",
       "preload_required": false,
       "test_enabled": true,
@@ -61,6 +71,8 @@
     {
       "name": "ltree",
       "package": "postgresql-contrib-17",
+      "package_version": "",
+      "version": "1.3",
       "description": "Tree-like structures data type",
       "preload_required": false,
       "test_enabled": true,
@@ -73,6 +85,8 @@
     {
       "name": "pg_buffercache",
       "package": "postgresql-contrib-17",
+      "package_version": "",
+      "version": "1.5",
       "description": "Buffer cache inspection",
       "preload_required": false,
       "test_enabled": true,
@@ -84,6 +98,8 @@
     {
       "name": "pg_freespacemap",
       "package": "postgresql-contrib-17",
+      "package_version":"",
+      "version": "1.2",
       "description": "Free space map examination",
       "preload_required": false,
       "test_enabled": true,
@@ -95,6 +111,8 @@
     {
       "name": "pg_visibility",
       "package": "postgresql-contrib-17",
+      "package_version": "",
+      "version": "1.2",
       "description": "Visibility map examination",
       "preload_required": false,
       "test_enabled": true,
@@ -106,6 +124,8 @@
     {
       "name": "pgrowlocks",
       "package": "postgresql-contrib-17",
+      "package_version": "",
+      "version": "1.2",
       "description": "Row locking information",
       "preload_required": false,
       "test_enabled": true,
@@ -118,6 +138,8 @@
     {
       "name": "moddatetime",
       "package": "postgresql-contrib-17",
+      "package_version": "",
+      "version": "1.0",
       "description": "Automatic timestamp updates",
       "preload_required": false,
       "test_enabled": true,
@@ -130,6 +152,8 @@
     {
       "name": "insert_username",
       "package": "postgresql-contrib-17",
+      "package_version": "",
+      "version": "1.0",
       "description": "Automatic username insertion",
       "preload_required": false,
       "test_enabled": true,
@@ -142,6 +166,8 @@
     {
       "name": "dblink",
       "package": "postgresql-contrib-17",
+      "package_version": "",
+      "version": "1.2",
       "description": "Cross-database queries",
       "preload_required": false,
       "test_enabled": true,
@@ -153,6 +179,8 @@
     {
       "name": "wal2json",
       "package": "postgresql-17-wal2json",
+      "package_version": "2.6-2.pgdg120+1",
+      "version": "2.6",
       "description": "Logical replication output plugin for JSON",
       "preload_required": false,
       "test_enabled": true,
@@ -168,6 +196,8 @@
     {
       "name": "pg_cron",
       "package": "postgresql-17-cron",
+      "package_version": "1.6.5-1.pgdg120+1",
+      "version": "1.6",
       "description": "Job scheduler for PostgreSQL",
       "preload_required": true,
       "test_enabled": true,
@@ -183,6 +213,8 @@
     {
       "name": "hypopg",
       "package": "postgresql-17-hypopg",
+      "package_version": "1.4.2-1.pgdg120+1",
+      "version": "1.4.2",
       "description": "Hypothetical indexes for query planning",
       "preload_required": false,
       "test_enabled": true,
@@ -195,6 +227,8 @@
     {
       "name": "pg_stat_statements",
       "package": "postgresql-contrib-17",
+      "package_version": "",
+      "version": "1.11",
       "description": "Query execution statistics",
       "preload_required": true,
       "test_enabled": true,
@@ -206,6 +240,8 @@
     {
       "name": "auto_explain",
       "package": "postgresql-contrib-17",
+      "package_version": "",
+      "version": "1.0",
       "description": "Automatic query plan logging",
       "preload_required": true,
       "test_enabled": true,
@@ -216,6 +252,8 @@
     {
       "name": "pg_prewarm",
       "package": "postgresql-contrib-17",
+      "package_version": "",
+      "version": "1.2",
       "description": "Database prewarming",
       "preload_required": true,
       "test_enabled": true,
@@ -227,6 +265,8 @@
     {
       "name": "postgis",
       "package": "postgresql-17-postgis-3",
+      "package_version": "3.5.3+dfsg-1~exp1.pgdg120+1",
+      "version": "3.5.3",
       "description": "PostGIS geometry and geography spatial types and functions",
       "preload_required": false,
       "test_enabled": true,
@@ -240,6 +280,8 @@
     {
       "name": "postgis_topology",
       "package": "postgresql-17-postgis-3",
+      "package_version": "3.5.3+dfsg-1~exp1.pgdg120+1",
+      "version": "3.5.3",
       "description": "PostGIS topology spatial types and functions",
       "preload_required": false,
       "test_enabled": true,
@@ -251,6 +293,8 @@
     {
       "name": "postgis_tiger_geocoder",
       "package": "postgresql-17-postgis-3-scripts",
+      "package_version": "3.5.3+dfsg-1~exp1.pgdg120+1",
+      "version": "3.5.3",
       "description": "PostGIS tiger geocoder and reverse geocoder",
       "preload_required": false,
       "test_enabled": true,
@@ -261,6 +305,8 @@
     {
       "name": "fuzzystrmatch",
       "package": "postgresql-contrib-17",
+      "package_version": "",
+      "version": "1.2",
       "description": "Determine similarities and distance between strings",
       "preload_required": false,
       "test_enabled": true,
@@ -272,6 +318,8 @@
     {
       "name": "hll",
       "package": "postgresql-17-hll",
+      "package_version": "2.18-2.pgdg120+1",
+      "version": "2.18",
       "description": "HyperLogLog data type for cardinality estimation",
       "preload_required": false,
       "test_enabled": true,
@@ -284,6 +332,8 @@
     {
       "name": "ip4r",
       "package": "postgresql-17-ip4r",
+      "package_version": "2.4.2-3.pgdg120+1",
+      "version": "2.4",
       "description": "IPv4 and IPv6 types and functions",
       "preload_required": false,
       "test_enabled": true,
@@ -296,6 +346,8 @@
     {
       "name": "pg_hint_plan",
       "package": "postgresql-17-pg-hint-plan",
+      "package_version": "1.7.0-1.pgdg120+1",
+      "version": "1.7.0",
       "description": "Query execution plan hinting",
       "preload_required": true,
       "test_enabled": true,
@@ -307,6 +359,8 @@
     {
       "name": "pg_repack",
       "package": "postgresql-17-repack",
+      "package_version": "1.5.2-1.pgdg120+1",
+      "version": "1.5.2",
       "description": "Remove bloat from tables and indexes without exclusive lock",
       "preload_required": false,
       "test_enabled": true,
@@ -319,6 +373,8 @@
     {
       "name": "pgrouting",
       "package": "postgresql-17-pgrouting",
+      "package_version": "3.8.0-1~exp1.pgdg120+1",
+      "version": "3.8.0",
       "description": "Routing functionality for PostGIS/PostgreSQL",
       "preload_required": false,
       "test_enabled": true,
@@ -331,6 +387,8 @@
     {
       "name": "pgtap",
       "package": "postgresql-17-pgtap",
+      "package_version": "1.3.3-3.pgdg120+1",
+      "version": "1.3.3",
       "description": "Unit testing framework for PostgreSQL",
       "preload_required": false,
       "test_enabled": true,
@@ -342,8 +400,10 @@
       ]
     },
     {
-      "name": "pgvector",
+      "name": "vector",
       "package": "postgresql-17-pgvector",
+      "package_version": "0.8.0-1.pgdg120+1",
+      "version": "0.8.0",
       "description": "Vector similarity search for PostgreSQL",
       "preload_required": false,
       "test_enabled": true,
@@ -356,6 +416,8 @@
     {
       "name": "prefix",
       "package": "postgresql-17-prefix",
+      "package_version": "1.2.10-3.pgdg120+1",
+      "version": "1.2.0",
       "description": "Prefix matching operator",
       "preload_required": false,
       "test_enabled": true,
@@ -368,6 +430,8 @@
     {
       "name": "pgaudit",
       "package": "postgresql-17-pgaudit",
+      "package_version": "17.1-1.pgdg120+1",
+      "version": "17.1",
       "description": "Audit logging extension for PostgreSQL",
       "preload_required": true,
       "test_enabled": true,
@@ -379,6 +443,8 @@
     {
       "name": "pglogical",
       "package": "postgresql-17-pglogical",
+      "package_version": "2.4.5-1.pgdg120+1",
+      "version": "2.4.5",
       "description": "Logical replication extension for PostgreSQL",
       "preload_required": true,
       "test_enabled": true,
@@ -390,6 +456,8 @@
     {
       "name": "pgstattuple",
       "package": "postgresql-contrib-17",
+      "package_version": "",
+      "version": "1.5",
       "description": "Functions to show tuple-level statistics",
       "preload_required": false,
       "test_enabled": true,
@@ -397,6 +465,408 @@
         "CREATE EXTENSION IF NOT EXISTS \"pgstattuple\";",
         "CREATE TABLE test_stattuple (id SERIAL PRIMARY KEY, data TEXT); INSERT INTO test_stattuple (data) VALUES ('test data');",
         "SELECT tuple_count, tuple_len FROM pgstattuple('test_stattuple');"
+      ]
+    },
+    {
+      "name": "address_standardizer",
+      "package": "postgresql-contrib-17",
+      "version": "3.5.3",
+      "package_version": "",
+      "description": "Standardizes address data using rules-based parsing",
+      "preload_required": false,
+      "test_enabled": true,
+      "test_commands": [
+        "CREATE EXTENSION IF NOT EXISTS address_standardizer;",
+        "CREATE EXTENSION IF NOT EXISTS address_standardizer_data_us;",
+        "SELECT * FROM parse_address('1 Devonshire Place, Boston, MA 02109');"
+      ]
+    },
+    {
+      "name": "address_standardizer_data_us",
+      "package": "postgresql-contrib-17",
+      "version": "3.5.3",
+      "package_version": "",
+      "description": "US address data for address_standardizer",
+      "preload_required": false,
+      "test_enabled": true,
+      "test_commands": [
+        "CREATE EXTENSION IF NOT EXISTS address_standardizer;",
+        "CREATE EXTENSION IF NOT EXISTS address_standardizer_data_us;",
+        "SELECT * FROM parse_address('1 Devonshire Place, Boston, MA 02109');"
+      ]
+    },
+    {
+      "name": "amcheck",
+      "package": "postgresql-contrib-17",
+      "version": "1.4",
+      "package_version": "",
+      "description": "Functions for verifying relation integrity",
+      "preload_required": false,
+      "test_enabled": true,
+      "test_commands": [
+        "CREATE EXTENSION IF NOT EXISTS amcheck;"
+      ]
+    },
+    {
+      "name": "autoinc",
+      "package": "postgresql-contrib-17",
+      "version": "1.0",
+      "package_version": "",
+      "description": "Functions for automatic increment of fields",
+      "preload_required": false,
+      "test_enabled": true,
+      "test_commands": [
+        "CREATE EXTENSION IF NOT EXISTS autoinc;"
+      ]
+    },
+    {
+      "name": "bloom",
+      "package": "postgresql-contrib-17",
+      "version": "1.0",
+      "package_version": "",
+      "description": "Bloom index access method",
+      "preload_required": false,
+      "test_enabled": true,
+      "test_commands": [
+        "CREATE EXTENSION IF NOT EXISTS bloom;"
+      ]
+    },
+    {
+      "name": "btree_gin",
+      "package": "postgresql-contrib-17",
+      "version": "1.3",
+      "package_version": "",
+      "description": "Support for indexing common datatypes in GIN",
+      "preload_required": false,
+      "test_enabled": true,
+      "test_commands": [
+        "CREATE EXTENSION IF NOT EXISTS btree_gin;"
+      ]
+    },
+    {
+      "name": "btree_gist",
+      "package": "postgresql-contrib-17",
+      "version": "1.7",
+      "package_version": "",
+      "description": "Support for indexing common datatypes in GiST",
+      "preload_required": false,
+      "test_enabled": true,
+      "test_commands": [
+        "CREATE EXTENSION IF NOT EXISTS btree_gist;"
+      ]
+    },
+    {
+      "name": "cube",
+      "package": "postgresql-contrib-17",
+      "version": "1.5",
+      "package_version": "",
+      "description": "Multi-dimensional cube data type",
+      "preload_required": false,
+      "test_enabled": true,
+      "test_commands": [
+        "CREATE EXTENSION IF NOT EXISTS cube;"
+      ]
+    },
+    {
+      "name": "dict_int",
+      "package": "postgresql-contrib-17",
+      "version": "1.0",
+      "package_version": "",
+      "description": "Text search dictionary template for integers",
+      "preload_required": false,
+      "test_enabled": true,
+      "test_commands": [
+        "CREATE EXTENSION IF NOT EXISTS dict_int;"
+      ]
+    },
+    {
+      "name": "dict_xsyn",
+      "package": "postgresql-contrib-17",
+      "version": "1.0",
+      "package_version": "",
+      "description": "Text search dictionary template for synonyms",
+      "preload_required": false,
+      "test_enabled": true,
+      "test_commands": [
+        "CREATE EXTENSION IF NOT EXISTS dict_xsyn;"
+      ]
+    },
+    {
+      "name": "earthdistance",
+      "package": "postgresql-contrib-17",
+      "version": "1.2",
+      "package_version": "",
+      "description": "Earth distance calculations",
+      "preload_required": false,
+      "test_enabled": true,
+      "test_commands": [
+        "CREATE EXTENSION IF NOT EXISTS earthdistance;"
+      ]
+    },
+    {
+      "name": "file_fdw",
+      "package": "postgresql-contrib-17",
+      "version": "1.0",
+      "package_version": "",
+      "description": "Foreign data wrapper for flat file access",
+      "preload_required": false,
+      "test_enabled": true,
+      "test_commands": [
+        "CREATE EXTENSION IF NOT EXISTS file_fdw;"
+      ]
+    },
+    {
+      "name": "intagg",
+      "package": "postgresql-contrib-17",
+      "version": "1.1",
+      "package_version": "",
+      "description": "Integer aggregator (deprecated in favor of array_agg)",
+      "preload_required": false,
+      "test_enabled": true,
+      "test_commands": [
+        "CREATE EXTENSION IF NOT EXISTS intagg;"
+      ]
+    },
+    {
+      "name": "intarray",
+      "package": "postgresql-contrib-17",
+      "version": "1.5",
+      "package_version": "",
+      "description": "Functions for 1-D arrays of integers",
+      "preload_required": false,
+      "test_enabled": true,
+      "test_commands": [
+        "CREATE EXTENSION IF NOT EXISTS intarray;"
+      ]
+    },
+    {
+      "name": "isn",
+      "package": "postgresql-contrib-17",
+      "version": "1.2",
+      "package_version": "",
+      "description": "International Standard Number data types",
+      "preload_required": false,
+      "test_enabled": true,
+      "test_commands": [
+        "CREATE EXTENSION IF NOT EXISTS isn;"
+      ]
+    },
+    {
+      "name": "lo",
+      "package": "postgresql-contrib-17",
+      "version": "1.1",
+      "package_version": "",
+      "description": "Large Object maintenance functions",
+      "preload_required": false,
+      "test_enabled": true,
+      "test_commands": [
+        "CREATE EXTENSION IF NOT EXISTS lo;"
+      ]
+    },
+    {
+      "name": "pageinspect",
+      "package": "postgresql-contrib-17",
+      "version": "1.12",
+      "package_version": "",
+      "description": "Low-level page inspection",
+      "preload_required": false,
+      "test_enabled": true,
+      "test_commands": [
+        "CREATE EXTENSION IF NOT EXISTS pageinspect;"
+      ]
+    },
+    {
+      "name": "pg_surgery",
+      "package": "postgresql-contrib-17",
+      "version": "1.0",
+      "package_version": "",
+      "description": "Row surgery functions for modifying rows",
+      "preload_required": false,
+      "test_enabled": true,
+      "test_commands": [
+        "CREATE EXTENSION IF NOT EXISTS pg_surgery;"
+      ]
+    },
+    {
+      "name": "pg_walinspect",
+      "package": "postgresql-contrib-17",
+      "version": "1.1",
+      "package_version": "",
+      "description": "WAL inspection functions",
+      "preload_required": false,
+      "test_enabled": true,
+      "test_commands": [
+        "CREATE EXTENSION IF NOT EXISTS pg_walinspect;"
+      ]
+    },
+    {
+      "name": "plpgsql",
+      "package": "postgresql-contrib-17",
+      "version": "1.0",
+      "package_version": "",
+      "description": "PL/pgSQL procedural language",
+      "preload_required": false,
+      "test_enabled": true,
+      "test_commands": [
+        "CREATE EXTENSION IF NOT EXISTS plpgsql;"
+      ]
+    },
+    {
+      "name": "postgres_fdw",
+      "package": "postgresql-contrib-17",
+      "version": "1.1",
+      "package_version": "",
+      "description": "Foreign data wrapper for PostgreSQL",
+      "preload_required": false,
+      "test_enabled": true,
+      "test_commands": [
+        "CREATE EXTENSION IF NOT EXISTS postgres_fdw;"
+      ]
+    },
+    {
+      "name": "refint",
+      "package": "postgresql-contrib-17",
+      "version": "1.0",
+      "package_version": "",
+      "description": "Referential integrity triggers (example)",
+      "preload_required": false,
+      "test_enabled": true,
+      "test_commands": [
+        "CREATE EXTENSION IF NOT EXISTS refint;"
+      ]
+    },
+    {
+      "name": "seg",
+      "package": "postgresql-contrib-17",
+      "version": "1.4",
+      "package_version": "",
+      "description": "Floating-point intervals",
+      "preload_required": false,
+      "test_enabled": true,
+      "test_commands": [
+        "CREATE EXTENSION IF NOT EXISTS seg;"
+      ]
+    },
+    {
+      "name": "sslinfo",
+      "package": "postgresql-contrib-17",
+      "version": "1.2",
+      "package_version": "",
+      "description": "Information about SSL connections",
+      "preload_required": false,
+      "test_enabled": true,
+      "test_commands": [
+        "CREATE EXTENSION IF NOT EXISTS sslinfo;"
+      ]
+    },
+    {
+      "name": "tablefunc",
+      "package": "postgresql-contrib-17",
+      "version": "1.0",
+      "package_version": "",
+      "description": "Functions that manipulate whole tables, including crosstab",
+      "preload_required": false,
+      "test_enabled": true,
+      "test_commands": [
+        "CREATE EXTENSION IF NOT EXISTS tablefunc;"
+      ]
+    },
+    {
+      "name": "tcn",
+      "package": "postgresql-contrib-17",
+      "version": "1.0",
+      "package_version": "",
+      "description": "Triggered change notifications",
+      "preload_required": false,
+      "test_enabled": true,
+      "test_commands": [
+        "CREATE EXTENSION IF NOT EXISTS tcn;"
+      ]
+    },
+    {
+      "name": "tsm_system_rows",
+      "package": "postgresql-contrib-17",
+      "version": "1.0",
+      "package_version": "",
+      "description": "TABLESAMPLE method which accepts number of rows",
+      "preload_required": false,
+      "test_enabled": true,
+      "test_commands": [
+        "CREATE EXTENSION IF NOT EXISTS tsm_system_rows;"
+      ]
+    },
+    {
+      "name": "tsm_system_time",
+      "package": "postgresql-contrib-17",
+      "version": "1.0",
+      "package_version": "",
+      "description": "TABLESAMPLE method which accepts time in milliseconds",
+      "preload_required": false,
+      "test_enabled": true,
+      "test_commands": [
+        "CREATE EXTENSION IF NOT EXISTS tsm_system_time;"
+      ]
+    },
+    {
+      "name": "unaccent",
+      "package": "postgresql-contrib-17",
+      "version": "1.1",
+      "package_version": "",
+      "description": "Text search dictionary that removes accents",
+      "preload_required": false,
+      "test_enabled": true,
+      "test_commands": [
+        "CREATE EXTENSION IF NOT EXISTS unaccent;"
+      ]
+    },
+    {
+      "name": "uuid-ossp",
+      "package": "postgresql-contrib-17",
+      "version": "1.1",
+      "package_version": "",
+      "description": "UUID generation functions",
+      "preload_required": false,
+      "test_enabled": true,
+      "test_commands": [
+        "CREATE EXTENSION IF NOT EXISTS \"uuid-ossp\";"
+      ]
+    },
+    {
+      "name": "xml2",
+      "package": "postgresql-contrib-17",
+      "version": "1.1",
+      "package_version": "",
+      "description": "XPath querying and XSLT support",
+      "preload_required": false,
+      "test_enabled": true,
+      "test_commands": [
+        "CREATE EXTENSION IF NOT EXISTS xml2;"
+      ]
+    },
+    {
+      "name": "postgis_raster",
+      "package": "postgresql-17-postgis-3",
+      "version": "3.5.3",
+      "package_version": "3.5.3+dfsg-1~exp1.pgdg120+1",
+      "description": "PostGIS raster extension",
+      "preload_required": false,
+      "test_enabled": true,
+      "test_commands": [
+        "CREATE EXTENSION IF NOT EXISTS postgis_raster;",
+        "SELECT PostGIS_Raster_Lib_Version();"
+      ]
+    },
+    {
+      "name": "postgis_sfcgal",
+      "package": "postgresql-17-postgis-3",
+      "version": "3.5.3",
+      "package_version": "3.5.3+dfsg-1~exp1.pgdg120+1",
+      "description": "PostGIS SFCGAL support",
+      "preload_required": false,
+      "test_enabled": true,
+      "test_commands": [
+        "CREATE EXTENSION IF NOT EXISTS postgis_sfcgal;",
+        "SELECT postgis_sfcgal_version();"
       ]
     }
   ],
