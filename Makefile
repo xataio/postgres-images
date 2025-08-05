@@ -10,7 +10,7 @@ PLATFORMS ?= linux/amd64,linux/arm64
 DATE_TAG := $(shell date +%Y%m%d)
 CONFIG_FILE := $(DOCKERFILE_DIR)/extensions.json
 DESCRIPTION ?= CNPG PostgreSQL with additional extensions and tools
-IMAGE_TAG ?= latest  # Default tag; CI overrides with commit SHA
+IMAGE_TAG ?= latest# Default tag; CI overrides with commit SHA
 
 # Derived variables
 FULL_IMAGE_NAME := $(REGISTRY)/$(IMAGE_NAME)
@@ -213,3 +213,10 @@ ci-build: ## CI build process (build, test, verify, and conditionally push)
 	else \
 		echo "Base image unchanged, skipping build"; \
 	fi
+
+# for testing outside of CI
+# needs snyk installed and snyk auth
+.PHONY: scan
+scan: ## Run Snyk vulnerability scan (on demand)
+	@echo "Running Snyk container scan for $(FULL_IMAGE_NAME):$(IMAGE_TAG)..."
+	@snyk container test $(FULL_IMAGE_NAME):$(IMAGE_TAG) --severity-threshold=high

@@ -226,3 +226,17 @@ Terms:
 ## 3. Manual builds
 
 You can select which image to build and from which base image (standard or  minimal)
+
+## 4. Run snyk locally for vulnerability checks
+
+You need a snyk account for this. Free is fine
+
+```bash
+brew tap snyk/tap      
+brew install snyk
+snyk auth
+```
+
+```bash
+  make scan
+```
