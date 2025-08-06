@@ -73,6 +73,22 @@ jobs:
             CNPG_BASE="${{ steps.cnpg_base.outputs.base }}" \
             IMAGE_TAG=${IMAGE_TAG}
 
+      # only trigger scheduled weekly build if the CNPG image changed
+      - name: Check if base image changed (schedule only)
+        if: github.event_name == 'schedule'
+        id: check-base
+        run: |
+          if make check-base-updated \
+            DOCKERFILE_DIR="${DOCKERFILE_DIR}" \
+            IMAGE_NAME="${IMAGE_NAME}" \
+            CNPG_BASE="${{ steps.cnpg_base.outputs.base }}" \
+            IMAGE_TAG=latest; then
+            echo "changed=true" >> $GITHUB_OUTPUT
+          else
+            echo "changed=false" >> $GITHUB_OUTPUT
+          fi
+
+      # for any other build it does not matter if the base changed or not
       - name: Build and test image
         if: github.event_name != 'schedule'
         run: |
@@ -82,16 +98,29 @@ jobs:
             CNPG_BASE="${{ steps.cnpg_base.outputs.base }}" \
             IMAGE_TAG=${IMAGE_TAG}
 
+      # build for scheduled runs only if base changed
+      - name: Build and test image (schedule)
+        if: github.event_name == 'schedule' && steps.check-base.outputs.changed == 'true'
+        run: |
+          make build-and-test \
+            DOCKERFILE_DIR="${DOCKERFILE_DIR}" \
+            IMAGE_NAME="${IMAGE_NAME}" \
+            CNPG_BASE="${{ steps.cnpg_base.outputs.base }}" \
+            IMAGE_TAG=latest
+
+      # only run snyk if it is not a scheduled run or, for scheduled runs, if something changed and we had to actually build the image
       - name: Run Snyk to check Docker image for vulnerabilities
+        if: github.event_name != 'schedule' || steps.check-base.outputs.changed == 'true'
         uses: snyk/actions/docker@master
         continue-on-error: true
         env:
           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
         with:
-          image: ghcr.io/${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }}
+          image: ghcr.io/${{ env.IMAGE_NAME }}:${{ github.event_name == 'schedule' && 'latest' || env.IMAGE_TAG }}
           args: --severity-threshold=high --file=${{ env.DOCKERFILE_DIR }}/Dockerfile --sarif-file-output=snyk.sarif
 
       - name: Upload Snyk SARIF to Code Scanning
+        if: github.event_name != 'schedule' || steps.check-base.outputs.changed == 'true'
         uses: github/codeql-action/upload-sarif@v3
         continue-on-error: true
         with:
@@ -106,11 +135,11 @@ jobs:
             CNPG_BASE="${{ steps.cnpg_base.outputs.base }}" \
             IMAGE_TAG=${IMAGE_TAG}
 
-      - name: Scheduled build (no push)
-        if: github.event_name == 'schedule'
+      - name: Push multiarch image for scheduled build
+        if: github.event_name == 'schedule' && steps.check-base.outputs.changed == 'true'
         run: |
-          make ci-build \
+          make push-multiarch \
             DOCKERFILE_DIR="${DOCKERFILE_DIR}" \
             IMAGE_NAME="${IMAGE_NAME}" \
             CNPG_BASE="${{ steps.cnpg_base.outputs.base }}" \
-            IMAGE_TAG=${IMAGE_TAG}
+            IMAGE_TAG=latest
