@@ -400,7 +400,7 @@
     {
       "name": "pgrouting",
       "package": "postgresql-17-pgrouting",
-      "package_version": "3.8.0-1~exp1.pgdg120+1",
+      "package_version": "3.8.0-1.pgdg120+1",
       "version": "3.8.0",
       "description": "Routing functionality for PostGIS/PostgreSQL",
       "docs_url": "https://docs.pgrouting.org/",
