@@ -1,0 +1,124 @@
+name: Build CNPG Postgres Experimental Image
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      cnpg_base:
+        description: 'CNPG base image'
+        required: true
+        default: 'minimal'
+        type: choice
+        options:
+          - 'standard'
+          - 'minimal'
+      custom_cnpg_base:
+        description: 'Custom CNPG base image (optional - overrides the choice above)'
+        required: false
+        type: string
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  build-test-publish:
+    runs-on: ubuntu-latest
+    env:
+      REGISTRY: ghcr.io
+      PLATFORMS: linux/amd64,linux/arm64
+      # You can keep the same repo path as custom or a separate one for clarity
+      IMAGE_NAME: xataio/postgres-images/cnpg-postgres-experimental
+      DOCKERFILE_DIR: docker/experimental
+      DEFAULT_CNPG_BASE: ghcr.io/cloudnative-pg/postgresql:17-minimal-bookworm
+      IMAGE_TAG: ${{ github.sha }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Determine CNPG base image
+        id: cnpg_base
+        run: |
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            if [[ -n "${{ github.event.inputs.custom_cnpg_base }}" ]]; then
+              echo "base=${{ github.event.inputs.custom_cnpg_base }}" >> $GITHUB_OUTPUT
+            elif [[ "${{ github.event.inputs.cnpg_base }}" == "minimal" ]]; then
+              echo "base=ghcr.io/cloudnative-pg/postgresql:17-minimal-bookworm" >> $GITHUB_OUTPUT
+            else
+              echo "base=ghcr.io/cloudnative-pg/postgresql:17-standard-bookworm" >> $GITHUB_OUTPUT
+            fi
+          else
+            echo "base=${{ env.DEFAULT_CNPG_BASE }}" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Show build information
+        run: |
+          echo "Building CNPG Postgres Experimental image"
+          make show-info \
+            DOCKERFILE_DIR="${DOCKERFILE_DIR}" \
+            IMAGE_NAME="${IMAGE_NAME}" \
+            CNPG_BASE="${{ steps.cnpg_base.outputs.base }}" \
+            IMAGE_TAG=${IMAGE_TAG}
+
+      - name: Build and test image
+        run: |
+          make build-and-test \
+            DOCKERFILE_DIR="${DOCKERFILE_DIR}" \
+            IMAGE_NAME="${IMAGE_NAME}" \
+            CNPG_BASE="${{ steps.cnpg_base.outputs.base }}" \
+            IMAGE_TAG=${IMAGE_TAG}
+
+      - name: Run Snyk to check Docker image for vulnerabilities
+        uses: snyk/actions/docker@master
+        continue-on-error: true
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+        with:
+          image: ghcr.io/${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }}
+          args: --severity-threshold=high --file=${{ env.DOCKERFILE_DIR }}/Dockerfile --sarif-file-output=snyk.sarif
+
+      - name: Upload Snyk SARIF to Code Scanning
+        uses: github/codeql-action/upload-sarif@v3
+        continue-on-error: true
+        with:
+          sarif_file: snyk.sarif
+
+      # PRs (same-repo): push multi-arch **SHA-only** tag
+      # PRs (other-repo): no push
+      - name: Push multiarch image (PRs → sha only)
+        if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.fork == false
+        run: |
+          docker buildx build \
+            --platform "${PLATFORMS}" \
+            -f "${DOCKERFILE_DIR}/Dockerfile" \
+            -t "ghcr.io/${IMAGE_NAME}:${IMAGE_TAG}" \
+            --label "org.opencontainers.image.source=https://github.com/${{ github.repository }}" \
+            --label "org.opencontainers.image.description=CNPG PostgreSQL experimental image (PR build)" \
+            --label "org.opencontainers.image.licenses=PostgreSQL" \
+            --build-arg CNPG_BASE="${{ steps.cnpg_base.outputs.base }}" \
+            --push \
+            .
+
+      # Push and manual dispatch: push full tag set via Makefile (latest, 17.x, 17.x-<date>, sha)
+      - name: Push multiarch image (full tags)
+        if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+        run: |
+          make push-multiarch \
+            DOCKERFILE_DIR="${DOCKERFILE_DIR}" \
+            IMAGE_NAME="${IMAGE_NAME}" \
+            CNPG_BASE="${{ steps.cnpg_base.outputs.base }}" \
+            IMAGE_TAG=${IMAGE_TAG}
