@@ -126,8 +126,25 @@ jobs:
         with:
           sarif_file: snyk.sarif
 
-      - name: Push multiarch image
-        if: github.event_name != 'schedule'
+      # PRs (same-repo only): push **sha** tag (multi-arch). No latest / 17.5 / 17.5-date.
+      # PRs from forks - don't push
+      - name: Push multiarch image (PRs → sha only)
+        if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.fork == false
+        run: |
+          docker buildx build \
+            --platform "${PLATFORMS}" \
+            -f "${DOCKERFILE_DIR}/Dockerfile" \
+            -t "ghcr.io/${IMAGE_NAME}:${{ github.sha }}" \
+            --label "org.opencontainers.image.source=https://github.com/${{ github.repository }}" \
+            --label "org.opencontainers.image.description=CNPG PostgreSQL image (PR build)" \
+            --label "org.opencontainers.image.licenses=PostgreSQL" \
+            --build-arg CNPG_BASE="${{ steps.cnpg_base.outputs.base }}" \
+            --push \
+            .
+
+      # Main pushes and manual runs: (full tags, IMAGE_TAG=latest)
+      - name: Push multiarch image (full tags)
+        if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
         run: |
           make push-multiarch \
             DOCKERFILE_DIR="${DOCKERFILE_DIR}" \
@@ -135,6 +152,7 @@ jobs:
             CNPG_BASE="${{ steps.cnpg_base.outputs.base }}" \
             IMAGE_TAG=${IMAGE_TAG}
 
+      # Scheduled run: run only if base changed (full tags, IMAGE_TAG=latest)
       - name: Push multiarch image for scheduled build
         if: github.event_name == 'schedule' && steps.check-base.outputs.changed == 'true'
         run: |
