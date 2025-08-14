@@ -69,7 +69,7 @@ test: ## Run tests on the built image
 	@echo "Starting PostgreSQL container..."
 	docker run -d --name pg-test \
 		-e POSTGRES_PASSWORD=test \
-		-e POSTGRES_INITDB_ARGS="--auth-host=trust" \
+		-e POSTGRES_INITDB_ARGS="--auth-host=trust --encoding=UTF8" \
 		-e PGDATA=/var/lib/postgresql/data \
 		--user postgres \
 		"$(FULL_IMAGE_NAME):$(IMAGE_TAG)" \
