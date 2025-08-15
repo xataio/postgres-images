@@ -64,13 +64,14 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
   && cd /tmp \
   && git clone https://github.com/duckdb/pg_duckdb.git \
   && cd pg_duckdb \
+  # Remove httpfs stanza from the extension config to make sure it never builds
+  && sed -i '/duckdb_extension_load(httpfs/,/)/d' pg_duckdb_extensions.cmake \
   # Invalidate any prior cached build so our flags take effect
   && rm -rf third_party/duckdb/build/release \
   # Don't fetch remote extensions like httpfs, and turn httpfs off entirely \
   # disable the following: sanitizers, shell, python, unit test,  \
   # does not automagically load extensions at runtime \
-  # does not automagicaly try to install extensions from the internet \
-  #
+  # does not automagically try to install extensions from the internet \
   && export DUCKDB_EXTENSION_REMOTE_URLS="" \
   && make GEN=ninja \
     BUILD_SHELL=0 BUILD_PYTHON=0 BUILD_UNITTESTS=0 BUILD_HTTPFS=0 \
