@@ -72,18 +72,16 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
   # does not automagicaly try to install extensions from the internet \
   #
   && export DUCKDB_EXTENSION_REMOTE_URLS="" \
-  && make GEN=ninja CMAKE_VARS="\
+  && make GEN=ninja \
+    BUILD_SHELL=0 BUILD_PYTHON=0 BUILD_UNITTESTS=0 BUILD_HTTPFS=0 \
+    CMAKE_VARS="\
       -DENABLE_SANITIZER=FALSE  \
       -DENABLE_UBSAN=0 \
-      -DBUILD_SHELL=0  \
-      -DBUILD_PYTHON=0  \
-      -DBUILD_UNITTESTS=0 \
       -DENABLE_EXTENSION_AUTOLOADING=0  \
       -DENABLE_EXTENSION_AUTOINSTALL=0 \
       -DDUCKDB_EXTENSION_CONFIGS=../pg_duckdb_extensions.cmake \
       -DOVERRIDE_GIT_DESCRIBE=v1.3.2 \
-      -DCMAKE_BUILD_TYPE=Release \
-      -DBUILD_HTTPFS=OFF"\
+      -DCMAKE_BUILD_TYPE=Release" \
   && make install \
   && cd /tmp && rm -rf pg_duckdb \
   # Strip build toolchain to keep image small
