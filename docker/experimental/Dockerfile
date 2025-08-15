@@ -72,7 +72,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
   # does not automagicaly try to install extensions from the internet \
   #
   && export DUCKDB_EXTENSION_REMOTE_URLS="" \
-  make GEN=ninja CMAKE_VARS="\
+  && make GEN=ninja CMAKE_VARS="\
       -DENABLE_SANITIZER=FALSE  \
       -DENABLE_UBSAN=0 \
       -DBUILD_SHELL=0  \
