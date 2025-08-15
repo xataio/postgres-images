@@ -37,126 +37,63 @@ COPY docker/experimental/extensions.json /tmp/extensions.json
 # Generate plain version map for verification
 RUN jq -r '.extensions[] | "\(.name) \(.version)"' /tmp/extensions.json > /usr/local/share/extensions-versions.txt
 
-
-# Install pinned package versions (skip postgresql-contrib-17 pinning)
-# postgresql-contrib-17 is a virtual package so it does not get a proper version
-RUN PINNED_PKGS=$(jq -r '.extensions[] | select(.package != "postgresql-contrib-17" and .package != "source")| "\(.package)=\(.package_version)"' /tmp/extensions.json | sort -u | xargs) && \
-    echo "Installing pinned packages: $PINNED_PKGS" && \
-    apt-get install -y --no-install-recommends $PINNED_PKGS postgresql-contrib-17 && \
-    rm -rf /var/lib/apt/lists/*
-
-# Install PostGIS extensions and additional dependencies
+# Build pg_duckdb from source (DuckDB v1.3.2, no httpfs)
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    postgresql-17-postgis-3 \
-    postgresql-17-postgis-3-scripts \
-    libgdal32 \
-    libgeos-c1v5 \
-    libproj25 \
-    libjson-c5 \
-    libprotobuf-c1 \
-    && rm -rf /var/lib/apt/lists/*
-
-# Download and install PostGIS tools manually for ARM64
-# Use pinned package version matching the SQL extension version (3.5.3)
-RUN ARCH=$(dpkg --print-architecture) && \
-    if [ "$ARCH" = "arm64" ]; then \
-        POSTGIS_PKG_VERSION=3.5.3+dfsg-1~exp1.pgdg120+1 && \
-        apt-get update && \
-        mkdir -p /tmp/postgis-tools && \
-        cd /tmp/postgis-tools && \
-        apt-get download postgis=${POSTGIS_PKG_VERSION} && \
-        dpkg-deb -x postgis_*.deb . && \
-        cp -r usr/bin/* /usr/bin/ || true && \
-        apt-get install -y --no-install-recommends \
-            libgdal32 \
-            gdal-data \
-            libgeos-c1v5 \
-            libproj25 \
-            libjson-c5 \
-            libprotobuf-c1 \
-            || true && \
-        cd / && rm -rf /tmp/postgis-tools && \
-        rm -rf /var/lib/apt/lists/*; \
-    else \
-        apt-get update && \
-        apt-get install -y --no-install-recommends postgis && \
-        rm -rf /var/lib/apt/lists/*; \
-    fi
-
-# Test if PostGIS tools are available and working
-RUN which shp2pgsql || echo "shp2pgsql not found" && \
-    which pgsql2shp || echo "pgsql2shp not found" && \
-    which raster2pgsql || echo "raster2pgsql not found"
-#
-## Add Pigsty APT repository for pg_duckdb
-#RUN wget -qO- https://repo.pigsty.io/key | gpg --dearmor -o /etc/apt/keyrings/pigsty.gpg && \
-#    DISTRO_CODENAME=$(grep VERSION_CODENAME /etc/os-release | cut -d= -f2 | tr -d '"') && \
-#    echo "deb [signed-by=/etc/apt/keyrings/pigsty.gpg] https://repo.pigsty.io/apt/infra generic main" > /etc/apt/sources.list.d/pigsty-io.list && \
-#    echo "deb [signed-by=/etc/apt/keyrings/pigsty.gpg] https://repo.pigsty.io/apt/pgsql/${DISTRO_CODENAME} ${DISTRO_CODENAME} main" >> /etc/apt/sources.list.d/pigsty-io.list && \
-#    apt-get update
-#
-## Install all necessary packages from extensions.json
-#RUN PKGS=postgresql-17-pg-duckdb && \
-#    echo "Installing packages: $PKGS" && \
-#    apt-get install -y --no-install-recommends $PKGS && \
-#    rm -rf /var/lib/apt/lists/*
-
-# Build pg_duckdb from source
-# Build pg_duckdb from source
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    build-essential \
-    libreadline-dev \
-    zlib1g-dev \
-    flex \
-    bison \
-    libxml2-dev \
-    libxslt-dev \
-    libssl-dev \
-    libxml2-utils \
-    xsltproc \
-    pkg-config \
-    libc++-dev \
-    libc++abi-dev \
-    libglib2.0-dev \
-    libtinfo6 \
-    cmake \
-    libstdc++-12-dev \
-    liblz4-dev \
-    ninja-build \
-    postgresql-server-dev-17 \
-    git \
-    && rm -rf /var/lib/apt/lists/* && \
-    cd /tmp && \
-    # Clone repositories (as per official guide)
-    git clone https://github.com/duckdb/pg_duckdb.git && \
-    # Build pg_duckdb
-    cd pg_duckdb && \
-    make && \
-    make install && \
-    # Cleanup
-    cd /tmp && rm -rf pg_duckdb && \
-    # Remove build tools to keep image size down
-    apt-get purge -y --auto-remove \
-        build-essential \
-        libreadline-dev \
-        zlib1g-dev \
-        flex \
-        bison \
-        libxml2-dev \
-        libxslt-dev \
-        libssl-dev \
-        libxml2-utils \
-        xsltproc \
-        pkg-config \
-        libc++-dev \
-        libc++abi-dev \
-        libglib2.0-dev \
-        cmake \
-        libstdc++-12-dev \
-        liblz4-dev \
-        ninja-build \
-        git \
-    && rm -rf /var/lib/apt/lists/*
+      build-essential \
+      libreadline-dev \
+      zlib1g-dev \
+      flex \
+      bison \
+      libxml2-dev \
+      libxslt-dev \
+      libssl-dev \
+      libxml2-utils \
+      xsltproc \
+      pkg-config \
+      libc++-dev \
+      libc++abi-dev \
+      libglib2.0-dev \
+      libtinfo6 \
+      cmake \
+      libstdc++-12-dev \
+      liblz4-dev \
+      ninja-build \
+      postgresql-server-dev-17 \
+      git \
+  && rm -rf /var/lib/apt/lists/* \
+  && cd /tmp \
+  && git clone https://github.com/duckdb/pg_duckdb.git \
+  && cd pg_duckdb \
+  # Invalidate any prior cached build so our flags take effect
+  && rm -rf third_party/duckdb/build/release \
+  # Don't fetch remote extensions like httpfs, and turn httpfs off entirely \
+  # disable the following: sanitizers, shell, python, unit test,  \
+  # does not automagically load extensions at runtime \
+  # does not automagicaly try to install extensions from the internet \
+  #
+  && export DUCKDB_EXTENSION_REMOTE_URLS="" \
+  && make CMAKE_BUILD_FLAGS="\
+       -G Ninja \
+       -DENABLE_SANITIZER=FALSE \
+       -DENABLE_UBSAN=0 \
+       -DBUILD_SHELL=0 \
+       -DBUILD_PYTHON=0 \
+       -DBUILD_UNITTESTS=0 \
+       -DENABLE_EXTENSION_AUTOLOADING=0 \
+       -DENABLE_EXTENSION_AUTOINSTALL=0 \
+       -DDUCKDB_EXTENSION_CONFIGS=../pg_duckdb_extensions.cmake \
+       -DOVERRIDE_GIT_DESCRIBE=v1.3.2 \
+       -DCMAKE_BUILD_TYPE=Release \
+       -DBUILD_HTTPFS=OFF" \
+  && make install \
+  && cd /tmp && rm -rf pg_duckdb \
+  # Strip build toolchain to keep image small
+  && apt-get purge -y --auto-remove \
+       build-essential libreadline-dev zlib1g-dev flex bison libxml2-dev \
+       libxslt-dev libssl-dev libxml2-utils xsltproc pkg-config libc++-dev \
+       libc++abi-dev libglib2.0-dev cmake libstdc++-12-dev liblz4-dev \
+       ninja-build git \
+  && rm -rf /var/lib/apt/lists/*
 
 # Remove tools
 RUN apt-get purge -y --auto-remove \
