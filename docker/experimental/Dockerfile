@@ -37,29 +37,69 @@ COPY docker/experimental/extensions.json /tmp/extensions.json
 # Generate plain version map for verification
 RUN jq -r '.extensions[] | "\(.name) \(.version)"' /tmp/extensions.json > /usr/local/share/extensions-versions.txt
 
+
+# Install pinned package versions (skip postgresql-contrib-17 pinning)
+# postgresql-contrib-17 is a virtual package so it does not get a proper version
+RUN PINNED_PKGS=$(jq -r '.extensions[] | select(.package != "postgresql-contrib-17" and .package != "source") | "\(.package)=\(.package_version)"' /tmp/extensions.json | sort -u | xargs) && \
+    echo "Installing pinned packages: $PINNED_PKGS" && \
+    apt-get install -y --no-install-recommends $PINNED_PKGS postgresql-contrib-17 && \
+    rm -rf /var/lib/apt/lists/*
+
+# Install PostGIS extensions and additional dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    postgresql-17-postgis-3 \
+    postgresql-17-postgis-3-scripts \
+    libgdal32 \
+    libgeos-c1v5 \
+    libproj25 \
+    libjson-c5 \
+    libprotobuf-c1 \
+    && rm -rf /var/lib/apt/lists/*
+
+# Download and install PostGIS tools manually for ARM64
+# Use pinned package version matching the SQL extension version (3.5.3)
+RUN ARCH=$(dpkg --print-architecture) && \
+    if [ "$ARCH" = "arm64" ]; then \
+        POSTGIS_PKG_VERSION=3.5.3+dfsg-1~exp1.pgdg120+1 && \
+        apt-get update && \
+        mkdir -p /tmp/postgis-tools && \
+        cd /tmp/postgis-tools && \
+        apt-get download postgis=${POSTGIS_PKG_VERSION} && \
+        dpkg-deb -x postgis_*.deb . && \
+        cp -r usr/bin/* /usr/bin/ || true && \
+        apt-get install -y --no-install-recommends \
+            libgdal32 \
+            gdal-data \
+            libgeos-c1v5 \
+            libproj25 \
+            libjson-c5 \
+            libprotobuf-c1 \
+            || true && \
+        cd / && rm -rf /tmp/postgis-tools && \
+        rm -rf /var/lib/apt/lists/*; \
+    else \
+        apt-get update && \
+        apt-get install -y --no-install-recommends postgis && \
+        rm -rf /var/lib/apt/lists/*; \
+    fi
+
+# Test if PostGIS tools are available and working
+RUN which shp2pgsql || echo "shp2pgsql not found" && \
+    which pgsql2shp || echo "pgsql2shp not found" && \
+    which raster2pgsql || echo "raster2pgsql not found"
+
 # Build pg_duckdb from source (DuckDB v1.3.2, no httpfs)
 RUN apt-get update && apt-get install -y --no-install-recommends \
-      build-essential \
-      libreadline-dev \
-      zlib1g-dev \
-      flex \
-      bison \
-      libxml2-dev \
-      libxslt-dev \
-      libssl-dev \
-      libxml2-utils \
-      xsltproc \
-      pkg-config \
-      libc++-dev \
-      libc++abi-dev \
-      libglib2.0-dev \
-      libtinfo6 \
-      cmake \
-      libstdc++-12-dev \
-      liblz4-dev \
-      ninja-build \
-      postgresql-server-dev-17 \
-      git \
+    build-essential \
+    zlib1g-dev \
+    cmake \
+    ninja-build \
+    git \
+    pkg-config \
+    ccache \
+    libssl-dev \
+    liblz4-dev \
+    postgresql-server-dev-17 \
   && rm -rf /var/lib/apt/lists/* \
   && cd /tmp \
   && git clone https://github.com/duckdb/pg_duckdb.git \
@@ -83,10 +123,16 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
   && cd /tmp && rm -rf pg_duckdb \
   # Strip build toolchain to keep image small
   && apt-get purge -y --auto-remove \
-       build-essential libreadline-dev zlib1g-dev flex bison libxml2-dev \
-       libxslt-dev libssl-dev libxml2-utils xsltproc pkg-config libc++-dev \
-       libc++abi-dev libglib2.0-dev cmake libstdc++-12-dev liblz4-dev \
-       ninja-build git \
+       build-essential \
+       zlib1g-dev \
+       ccache \
+       libssl-dev \
+       pkg-config \
+       cmake \
+       liblz4-dev \
+       ninja-build \
+       git \
+       postgresql-server-dev-17 \
   && rm -rf /var/lib/apt/lists/*
 
 # Remove tools
