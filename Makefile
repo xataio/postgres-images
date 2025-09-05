@@ -2,15 +2,15 @@
 
 # Configuration
 REGISTRY ?= ghcr.io
-IMAGE_NAME ?= xataio/postgres-images/cnpg-postgres-plus
+IMAGE_NAME ?= xataio/postgres-images/xata-exp-img
 CNPG_BASE ?= ghcr.io/cloudnative-pg/postgresql:17-minimal-bookworm
-DOCKERFILE_DIR ?= docker/custom-postgres
+DOCKERFILE_DIR ?= docker/experimental
 DOCKERFILE ?= $(DOCKERFILE_DIR)/Dockerfile
 PLATFORMS ?= linux/amd64,linux/arm64
 DATE_TAG := $(shell date +%Y%m%d)
 CONFIG_FILE := $(DOCKERFILE_DIR)/extensions.json
 DESCRIPTION ?= CNPG PostgreSQL with additional extensions and tools
-IMAGE_TAG ?= latest # Default tag; CI overrides with commit SHA
+IMAGE_TAG ?= dev # Default tag; CI overrides with commit SHA
 
 # Derived variables
 FULL_IMAGE_NAME := $(REGISTRY)/$(IMAGE_NAME)
@@ -50,8 +50,6 @@ build-local: get-pg-version get-base-digest ## Build image locally for testing
 	@echo "Building local image (tags: latest, $(PG_VERSION), $(PG_VERSION)-$(DATE_TAG), $(IMAGE_TAG))..."
 	docker build \
 		-f $(DOCKERFILE) \
-		-t $(FULL_IMAGE_NAME):latest \
-		-t $(FULL_IMAGE_NAME):$(PG_VERSION) \
 		-t $(FULL_IMAGE_NAME):$(PG_VERSION)-$(DATE_TAG) \
 		-t $(FULL_IMAGE_NAME):$(IMAGE_TAG) \
 		--label "base.digest=$(BASE_DIGEST)" \
@@ -144,8 +142,6 @@ build-multiarch: get-pg-version get-base-digest setup-buildx ## Build multi-arch
 	docker buildx build \
 		-f $(DOCKERFILE) \
 		--platform $(PLATFORMS) \
-		-t $(FULL_IMAGE_NAME):latest \
-		-t $(FULL_IMAGE_NAME):$(PG_VERSION) \
 		-t $(FULL_IMAGE_NAME):$(PG_VERSION)-$(DATE_TAG) \
 		-t $(FULL_IMAGE_NAME):$(IMAGE_TAG) \
 		--label "base.digest=$(BASE_DIGEST)" \
@@ -161,8 +157,6 @@ push-multiarch: get-pg-version get-base-digest setup-buildx ## Build and push mu
 	docker buildx build \
 		-f $(DOCKERFILE) \
 		--platform $(PLATFORMS) \
-		-t $(FULL_IMAGE_NAME):latest \
-		-t $(FULL_IMAGE_NAME):$(PG_VERSION) \
 		-t $(FULL_IMAGE_NAME):$(PG_VERSION)-$(DATE_TAG) \
 		-t $(FULL_IMAGE_NAME):$(IMAGE_TAG) \
 		--label "base.digest=$(BASE_DIGEST)" \
