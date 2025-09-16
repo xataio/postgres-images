@@ -23,7 +23,24 @@ on:
     - cron: '0 2 * * 3' # Every Wednesday at 2 AM UTC
 
 jobs:
+  # Summary job that requires all matrix jobs to complete successfully
   build-test-publish:
+    name: build-test-publish
+    runs-on: ubuntu-latest
+    needs: [build-test-publish-matrix]   # depends on ALL matrix children
+    if: always()                         # still runs if some children fail/cancel
+    steps:
+      - name: Check matrix job results
+        run: |
+          results="${{ join(needs.*.result, ',') }}"
+          echo "Matrix job results: $results"
+          if [[ "$results" == *failure* || "$results" == *cancelled* ]]; then
+            echo "One or more matrix jobs failed"
+            exit 1
+          fi
+          echo "All matrix jobs completed successfully"
+
+  build-test-publish-matrix:
     runs-on: ubuntu-latest
     strategy:
       matrix:
