@@ -1,6 +1,6 @@
 # PostgreSQL CNPG Custom Image Makefile
 PG_MAJOR ?= 17
-PG_TAG ?= $(if $(filter $(PG_MAJOR),18),18rc1,17.6)
+PG_TAG   ?= $(if $(filter $(PG_MAJOR),18),18rc1,$(PG_MAJOR))
 
 POSTGIS_CLI_VERSION_17 ?= 3.6.0+dfsg-1.pgdg12+1
 
@@ -18,6 +18,13 @@ IMAGE_TAG ?= latest # Default tag; CI overrides with commit SHA
 
 # Derived variables
 FULL_IMAGE_NAME := $(REGISTRY)/$(IMAGE_NAME)
+
+
+# Common tag set used by build commands
+DOCKER_TAGS = \
+	-t $(FULL_IMAGE_NAME):$(PG_VERSION) \
+	-t $(FULL_IMAGE_NAME):$(PG_VERSION)-$(DATE_TAG) \
+	-t $(FULL_IMAGE_NAME):$(IMAGE_TAG)
 
 # extract names where preload_required==true, wrap each in single-quotes,
 # then join them with commas
@@ -52,13 +59,10 @@ get-base-digest: pull-base ## Get base image digest
 
 .PHONY: build-local
 build-local: get-pg-version get-base-digest ## Build image locally for testing
-	@echo "Building local image (tags: latest, $(PG_VERSION), $(PG_VERSION)-$(DATE_TAG), $(IMAGE_TAG))..."
+	@echo "Building local image (tags: $(PG_VERSION), $(PG_VERSION)-$(DATE_TAG), $(IMAGE_TAG))..."
 	docker build \
 		-f $(DOCKERFILE) \
-		-t $(FULL_IMAGE_NAME):latest \
-		-t $(FULL_IMAGE_NAME):$(PG_VERSION) \
-		-t $(FULL_IMAGE_NAME):$(PG_VERSION)-$(DATE_TAG) \
-		-t $(FULL_IMAGE_NAME):$(IMAGE_TAG) \
+		$(DOCKER_TAGS) \
 		--label "base.digest=$(BASE_DIGEST)" \
 		--label "org.opencontainers.image.source=https://github.com/xataio/postgres-images" \
 		--label "org.opencontainers.image.description=$(DESCRIPTION)" \
@@ -152,10 +156,7 @@ build-multiarch: get-pg-version get-base-digest setup-buildx ## Build multi-arch
 	docker buildx build \
 		-f $(DOCKERFILE) \
 		--platform $(PLATFORMS) \
-		-t $(FULL_IMAGE_NAME):latest \
-		-t $(FULL_IMAGE_NAME):$(PG_VERSION) \
-		-t $(FULL_IMAGE_NAME):$(PG_VERSION)-$(DATE_TAG) \
-		-t $(FULL_IMAGE_NAME):$(IMAGE_TAG) \
+		$(DOCKER_TAGS) \
 		--label "base.digest=$(BASE_DIGEST)" \
 		--label "org.opencontainers.image.source=https://github.com/xataio/postgres-images" \
 		--label "org.opencontainers.image.description=$(DESCRIPTION)" \
@@ -172,10 +173,7 @@ push-multiarch: get-pg-version get-base-digest setup-buildx ## Build and push mu
 	docker buildx build \
 		-f $(DOCKERFILE) \
 		--platform $(PLATFORMS) \
-		-t $(FULL_IMAGE_NAME):latest \
-		-t $(FULL_IMAGE_NAME):$(PG_VERSION) \
-		-t $(FULL_IMAGE_NAME):$(PG_VERSION)-$(DATE_TAG) \
-		-t $(FULL_IMAGE_NAME):$(IMAGE_TAG) \
+		$(DOCKER_TAGS) \
 		--label "base.digest=$(BASE_DIGEST)" \
 		--label "org.opencontainers.image.source=https://github.com/xataio/postgres-images" \
 		--label "org.opencontainers.image.description=$(DESCRIPTION)" \
@@ -191,10 +189,10 @@ push-multiarch: get-pg-version get-base-digest setup-buildx ## Build and push mu
 	@echo "Platforms: $(PLATFORMS)"
 
 .PHONY: check-base-updated
-check-base-updated: get-base-digest ## Check if base image has been updated
-	@echo "Checking if base image has been updated..."
-	@if docker pull $(FULL_IMAGE_NAME):latest 2>/dev/null; then \
-		EXISTING_DIGEST=$$(docker image inspect $(FULL_IMAGE_NAME):latest --format '{{index .Config.Labels "base.digest"}}' 2>/dev/null || echo ""); \
+check-base-updated: get-base-digest get-pg-version ## Check if base image has been updated
+	@echo "Checking if base image has been updated (reference tag: $(PG_VERSION))..."
+	@if docker pull $(FULL_IMAGE_NAME):$(PG_VERSION) 2>/dev/null; then \
+		EXISTING_DIGEST=$$(docker image inspect $(FULL_IMAGE_NAME):$(PG_VERSION) --format '{{index .Config.Labels "base.digest"}}' 2>/dev/null || echo ""); \
 		if [ "$$EXISTING_DIGEST" = "$(BASE_DIGEST)" ]; then \
 			echo "Base image unchanged, no rebuild needed"; \
 			exit 1; \
@@ -202,7 +200,7 @@ check-base-updated: get-base-digest ## Check if base image has been updated
 			echo "Base image updated, rebuild needed"; \
 		fi; \
 	else \
-		echo "No existing image found, build needed"; \
+		echo "No existing image with tag $(PG_VERSION) found, build needed"; \
 	fi
 
 .PHONY: clean
