@@ -1,6 +1,13 @@
 ARG CNPG_BASE=ghcr.io/cloudnative-pg/postgresql:17-minimal-bookworm
 FROM ${CNPG_BASE}
 
+# Build-time knobs (overridden by Makefile)
+# PG_MAJOR is used for package names/paths (17, 18, etc.)
+ARG PG_MAJOR=17
+# Per-major extension manifest (set by Makefile)
+ARG CONFIG_FILE=docker/custom-postgres/extensions.${PG_MAJOR}.json
+ARG POSTGIS_CLI_VERSION_17=
+
 USER root
 
 # Install missing tools that minimal image doesn't have
@@ -32,23 +39,48 @@ RUN CODENAME=$(grep VERSION_CODENAME /etc/os-release | cut -d= -f2 | tr -d '"') 
     wget --quiet -O - https://www.postgresql.org/media/keys/ACCC4CF8.asc | gpg --dearmor -o /etc/apt/trusted.gpg.d/postgresql.gpg && \
     apt-get update
 
-# Copy extensions.json into image
-COPY docker/custom-postgres/extensions.json /tmp/extensions.json
+# Copy extensions file into image
+COPY ${CONFIG_FILE} /tmp/extensions.json
 # Generate plain version map for verification
 RUN jq -r '.extensions[] | "\(.name) \(.version)"' /tmp/extensions.json > /usr/local/share/extensions-versions.txt
 
 
-# Install pinned package versions (skip postgresql-contrib-17 pinning)
-# postgresql-contrib-17 is a virtual package so it does not get a proper version
-RUN PINNED_PKGS=$(jq -r '.extensions[] | select(.package != "postgresql-contrib-17") | "\(.package)=\(.package_version)"' /tmp/extensions.json | sort -u | xargs) && \
-    echo "Installing pinned packages: $PINNED_PKGS" && \
-    apt-get install -y --no-install-recommends $PINNED_PKGS postgresql-contrib-17 && \
-    rm -rf /var/lib/apt/lists/*
+
+# Install pinned package versions (skip contrib virtual and ignore blank pins)
+# - postgresql-contrib-${PG_MAJOR} is virtual so it does not get a proper version
+# - for RC builds we allow empty package_version to pull the latest
+# Assumes: ARG PG_MAJOR and /tmp/extensions.json already COPY'd
+# Requires: jq installed earlier in the image
+# Assumes: ARG PG_MAJOR and /tmp/extensions.json already COPY'd
+# Requires: jq installed earlier
+# Assumes: ARG PG_MAJOR and /tmp/extensions.json already COPY'd; jq is installed
+RUN set -e; \
+  VIRTUAL="postgresql-contrib-${PG_MAJOR}"; \
+  if [ "${PG_MAJOR}" -lt 18 ]; then \
+    # PG16/17: only pinned packages (skip virtual contrib)
+    PINNED_PKGS="$(jq -r --arg v "$VIRTUAL" \
+      '.extensions[] | select(.package != $v) | select(.package_version and (.package_version != "")) | "\(.package)=\(.package_version)"' \
+      /tmp/extensions.json | sort -u | tr '\n' ' ' )"; \
+    echo "Installing pinned (PG${PG_MAJOR}): ${PINNED_PKGS}"; \
+    if [ -n "${PINNED_PKGS}" ]; then \
+      apt-get update && apt-get install -y --no-install-recommends ${PINNED_PKGS}; \
+    fi; \
+  else \
+    # PG18: all listed packages unpinned (skip virtual contrib)
+    PKGS="$(jq -r --arg v "$VIRTUAL" \
+      '[.extensions[].package] | unique | map(select(. != $v)) | .[]' \
+      /tmp/extensions.json | sort -u | tr '\n' ' ' )"; \
+    echo "Installing unpinned (PG${PG_MAJOR}), skipping virtual: ${PKGS}"; \
+    if [ -n "${PKGS}" ]; then \
+      apt-get update && apt-get install -y --no-install-recommends ${PKGS}; \
+    fi; \
+  fi; \
+  rm -rf /var/lib/apt/lists/*
 
 # Install PostGIS extensions and additional dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    postgresql-17-postgis-3 \
-    postgresql-17-postgis-3-scripts \
+    postgresql-${PG_MAJOR}-postgis-3 \
+    postgresql-${PG_MAJOR}-postgis-3-scripts \
     libgdal32 \
     libgeos-c1v5 \
     libproj25 \
@@ -64,9 +96,19 @@ RUN ARCH=$(dpkg --print-architecture) && \
         apt-get update && \
         mkdir -p /tmp/postgis-tools && \
         cd /tmp/postgis-tools && \
-        apt-get download postgis=${POSTGIS_PKG_VERSION} && \
-        dpkg-deb -x postgis_*.deb . && \
-        cp -r usr/bin/* /usr/bin/ || true && \
+        # For PG17 we prefer a pinned CLI version when provided; for others (e.g. 18-rc1) use latest if available.
+        if [ "$PG_MAJOR" = "17" ] && [ -n "$POSTGIS_CLI_VERSION_17" ]; then \
+          echo "Downloading pinned postgis CLI for PG17: ${POSTGIS_CLI_VERSION_17}"; \
+          apt-get download postgis=${POSTGIS_CLI_VERSION_17} && \
+          dpkg-deb -x postgis_*.deb . && cp -r usr/bin/* /usr/bin/ || true; \
+        else \
+          echo "Attempting unpinned postgis CLI download (RC-friendly)"; \
+          if apt-get download postgis >/dev/null 2>&1; then \
+            dpkg-deb -x postgis_*.deb . && cp -r usr/bin/* /usr/bin/ || true; \
+          else \
+            echo "postgis CLI not available; skipping shp2pgsql/pgsql2shp/raster2pgsql"; \
+          fi; \
+        fi && \
         apt-get install -y --no-install-recommends \
             libgdal32 \
             gdal-data \

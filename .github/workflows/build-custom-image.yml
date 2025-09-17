@@ -10,7 +10,7 @@ on:
       cnpg_base:
         description: 'CNPG base image'
         required: true
-        default: 'standard'
+        default: 'minimal'
         type: choice
         options:
           - 'standard'
@@ -23,15 +23,43 @@ on:
     - cron: '0 2 * * 3' # Every Wednesday at 2 AM UTC
 
 jobs:
+  # Summary job that requires all matrix jobs to complete successfully
   build-test-publish:
+    name: build-test-publish
     runs-on: ubuntu-latest
+    needs: [build-test-publish-matrix]   # depends on ALL matrix children
+    if: always()                         # still runs if some children fail/cancel
+    steps:
+      - name: Check matrix job results
+        run: |
+          results="${{ join(needs.*.result, ',') }}"
+          echo "Matrix job results: $results"
+          if [[ "$results" == *failure* || "$results" == *cancelled* ]]; then
+            echo "One or more matrix jobs failed"
+            exit 1
+          fi
+          echo "All matrix jobs completed successfully"
+
+  build-test-publish-matrix:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - pg: 17
+            base_minimal: ghcr.io/cloudnative-pg/postgresql:17-minimal-bookworm
+            base_standard: ghcr.io/cloudnative-pg/postgresql:17-standard-bookworm
+            default_base: ghcr.io/cloudnative-pg/postgresql:17-minimal-bookworm
+            sha_suffix: ""          # bare <sha> for PG17
+          - pg: 18
+            base_minimal: ghcr.io/cloudnative-pg/postgresql:18rc1-minimal-bookworm
+            base_standard: ghcr.io/cloudnative-pg/postgresql:18rc1-standard-bookworm
+            default_base: ghcr.io/cloudnative-pg/postgresql:18rc1-minimal-bookworm
+            sha_suffix: "-pg18"     # avoid <sha> collision for PG18
     env:
       REGISTRY: ghcr.io
       PLATFORMS: linux/amd64,linux/arm64
       IMAGE_NAME: xataio/postgres-images/cnpg-postgres-plus
       DOCKERFILE_DIR: docker/custom-postgres
-      DEFAULT_CNPG_BASE: ghcr.io/cloudnative-pg/postgresql:17-minimal-bookworm
-      IMAGE_TAG: ${{ github.sha }}
 
     steps:
       - name: Checkout repository
@@ -54,24 +82,33 @@ jobs:
             if [[ -n "${{ github.event.inputs.custom_cnpg_base }}" ]]; then
               echo "base=${{ github.event.inputs.custom_cnpg_base }}" >> $GITHUB_OUTPUT
             elif [[ "${{ github.event.inputs.cnpg_base }}" == "minimal" ]]; then
-              echo "base=ghcr.io/cloudnative-pg/postgresql:17-minimal-bookworm" >> $GITHUB_OUTPUT
+              echo "base=${{ matrix.base_minimal }}" >> $GITHUB_OUTPUT
             else
-              echo "base=ghcr.io/cloudnative-pg/postgresql:17-standard-bookworm" >> $GITHUB_OUTPUT
+              echo "base=${{ matrix.base_standard }}" >> $GITHUB_OUTPUT
             fi
           else
-            echo "base=${{ env.DEFAULT_CNPG_BASE }}" >> $GITHUB_OUTPUT
+            echo "base=${{ matrix.default_base }}" >> $GITHUB_OUTPUT
           fi
+
+      - name: Compute tags (per row)
+        id: tags
+        run: |
+          DATE=$(date -u +%Y%m%d)
+          echo "date=$DATE" >> $GITHUB_OUTPUT
+          echo "image_tag=${{ github.sha }}${{ matrix.sha_suffix }}" >> $GITHUB_OUTPUT
 
       - name: Show build information
         run: |
           echo "Building CNPG Postgres Plus image"
+          echo "PG major: ${{ matrix.pg }}"
           echo "CNPG base image: ${{ steps.cnpg_base.outputs.base }}"
-          echo "Image tag: ${IMAGE_TAG}"
+          echo "IMAGE_TAG for this row: ${{ steps.tags.outputs.image_tag }}"
           make show-info \
             DOCKERFILE_DIR="${DOCKERFILE_DIR}" \
             IMAGE_NAME="${IMAGE_NAME}" \
             CNPG_BASE="${{ steps.cnpg_base.outputs.base }}" \
-            IMAGE_TAG=${IMAGE_TAG}
+            PG_MAJOR=${{ matrix.pg }} \
+            IMAGE_TAG=${{ steps.tags.outputs.image_tag }}
 
       # only trigger scheduled weekly build if the CNPG image changed
       - name: Check if base image changed (schedule only)
@@ -82,13 +119,13 @@ jobs:
             DOCKERFILE_DIR="${DOCKERFILE_DIR}" \
             IMAGE_NAME="${IMAGE_NAME}" \
             CNPG_BASE="${{ steps.cnpg_base.outputs.base }}" \
-            IMAGE_TAG=latest; then
+            PG_MAJOR=${{ matrix.pg }}; then
             echo "changed=true" >> $GITHUB_OUTPUT
           else
             echo "changed=false" >> $GITHUB_OUTPUT
           fi
 
-      # for any other build it does not matter if the base changed or not
+      # Build & test
       - name: Build and test image
         if: github.event_name != 'schedule'
         run: |
@@ -96,9 +133,10 @@ jobs:
             DOCKERFILE_DIR="${DOCKERFILE_DIR}" \
             IMAGE_NAME="${IMAGE_NAME}" \
             CNPG_BASE="${{ steps.cnpg_base.outputs.base }}" \
-            IMAGE_TAG=${IMAGE_TAG}
+            PG_MAJOR=${{ matrix.pg }} \
+            IMAGE_TAG=${{ steps.tags.outputs.image_tag }}
 
-      # build for scheduled runs only if base changed
+      # Build & test (schedule, only if base changed)
       - name: Build and test image (schedule)
         if: github.event_name == 'schedule' && steps.check-base.outputs.changed == 'true'
         run: |
@@ -106,7 +144,8 @@ jobs:
             DOCKERFILE_DIR="${DOCKERFILE_DIR}" \
             IMAGE_NAME="${IMAGE_NAME}" \
             CNPG_BASE="${{ steps.cnpg_base.outputs.base }}" \
-            IMAGE_TAG=latest
+            PG_MAJOR=${{ matrix.pg }} \
+            IMAGE_TAG=${{ steps.tags.outputs.image_tag }}
 
       # only run snyk if it is not a scheduled run or, for scheduled runs, if something changed and we had to actually build the image
       - name: Run Snyk to check Docker image for vulnerabilities
@@ -116,7 +155,7 @@ jobs:
         env:
           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
         with:
-          image: ghcr.io/${{ env.IMAGE_NAME }}:${{ github.event_name == 'schedule' && 'latest' || env.IMAGE_TAG }}
+          image: ghcr.io/${{ env.IMAGE_NAME }}:${{ steps.tags.outputs.image_tag }}
           args: --severity-threshold=high --file=${{ env.DOCKERFILE_DIR }}/Dockerfile --sarif-file-output=snyk.sarif
 
       - name: Upload Snyk SARIF to Code Scanning
@@ -126,23 +165,23 @@ jobs:
         with:
           sarif_file: snyk.sarif
 
-      # PRs (same-repo only): push **sha** tag (multi-arch). No latest / 17.5 / 17.5-date.
-      # PRs from forks - don't push
+      # PRs (same-repo only): push SHA tag(s) only (no version/date tags)
       - name: Push multiarch image (PRs → sha only)
         if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.fork == false
         run: |
           docker buildx build \
             --platform "${PLATFORMS}" \
             -f "${DOCKERFILE_DIR}/Dockerfile" \
-            -t "ghcr.io/${IMAGE_NAME}:${{ github.sha }}" \
+            -t "ghcr.io/${IMAGE_NAME}:${{ steps.tags.outputs.image_tag }}" \
             --label "org.opencontainers.image.source=https://github.com/${{ github.repository }}" \
-            --label "org.opencontainers.image.description=CNPG PostgreSQL image (PR build)" \
+            --label "org.opencontainers.image.description=CNPG PostgreSQL image (PR build PG${{ matrix.pg }})" \
             --label "org.opencontainers.image.licenses=PostgreSQL" \
             --build-arg CNPG_BASE="${{ steps.cnpg_base.outputs.base }}" \
+            --build-arg PG_MAJOR=${{ matrix.pg }} \
             --push \
             .
 
-      # Main pushes and manual runs: (full tags, IMAGE_TAG=latest)
+      # Main pushes & manual runs: push full tag set (version + date + sha[-pg18])
       - name: Push multiarch image (full tags)
         if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
         run: |
@@ -150,9 +189,10 @@ jobs:
             DOCKERFILE_DIR="${DOCKERFILE_DIR}" \
             IMAGE_NAME="${IMAGE_NAME}" \
             CNPG_BASE="${{ steps.cnpg_base.outputs.base }}" \
-            IMAGE_TAG=${IMAGE_TAG}
+            PG_MAJOR=${{ matrix.pg }} \
+            IMAGE_TAG=${{ steps.tags.outputs.image_tag }}
 
-      # Scheduled run: run only if base changed (full tags, IMAGE_TAG=latest)
+      # Scheduled run: push only if base changed
       - name: Push multiarch image for scheduled build
         if: github.event_name == 'schedule' && steps.check-base.outputs.changed == 'true'
         run: |
@@ -160,4 +200,5 @@ jobs:
             DOCKERFILE_DIR="${DOCKERFILE_DIR}" \
             IMAGE_NAME="${IMAGE_NAME}" \
             CNPG_BASE="${{ steps.cnpg_base.outputs.base }}" \
-            IMAGE_TAG=latest
+            PG_MAJOR=${{ matrix.pg }} \
+            IMAGE_TAG=${{ steps.tags.outputs.image_tag }}

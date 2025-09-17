@@ -1,19 +1,30 @@
 # PostgreSQL CNPG Custom Image Makefile
+PG_MAJOR ?= 17
+PG_TAG   ?= $(if $(filter $(PG_MAJOR),18),18rc1,$(PG_MAJOR))
+
+POSTGIS_CLI_VERSION_17 ?= 3.6.0+dfsg-1.pgdg12+1
 
 # Configuration
 REGISTRY ?= ghcr.io
 IMAGE_NAME ?= xataio/postgres-images/cnpg-postgres-plus
-CNPG_BASE ?= ghcr.io/cloudnative-pg/postgresql:17-minimal-bookworm
+CNPG_BASE ?= ghcr.io/cloudnative-pg/postgresql:$(PG_TAG)-minimal-bookworm
 DOCKERFILE_DIR ?= docker/custom-postgres
 DOCKERFILE ?= $(DOCKERFILE_DIR)/Dockerfile
 PLATFORMS ?= linux/amd64,linux/arm64
 DATE_TAG := $(shell date +%Y%m%d)
-CONFIG_FILE := $(DOCKERFILE_DIR)/extensions.json
+CONFIG_FILE ?= $(DOCKERFILE_DIR)/extensions.$(PG_MAJOR).json
 DESCRIPTION ?= CNPG PostgreSQL with additional extensions and tools
 IMAGE_TAG ?= latest # Default tag; CI overrides with commit SHA
 
 # Derived variables
 FULL_IMAGE_NAME := $(REGISTRY)/$(IMAGE_NAME)
+
+
+# Common tag set used by build commands
+DOCKER_TAGS = \
+	-t $(FULL_IMAGE_NAME):$(PG_VERSION) \
+	-t $(FULL_IMAGE_NAME):$(PG_VERSION)-$(DATE_TAG) \
+	-t $(FULL_IMAGE_NAME):$(IMAGE_TAG)
 
 # extract names where preload_required==true, wrap each in single-quotes,
 # then join them with commas
@@ -38,7 +49,8 @@ pull-base: ## Pull the base CNPG PostgreSQL image
 .PHONY: get-pg-version
 get-pg-version: pull-base ## Get PostgreSQL version from base image
 	$(eval PG_VERSION := $(shell docker run --rm $(CNPG_BASE) postgres -V | awk '{print $$3}'))
-	@echo "PostgreSQL version: $(PG_VERSION)"
+	@echo "PostgreSQL major target: $(PG_MAJOR)"
+	@echo "PostgreSQL version (from base): $(PG_VERSION)"
 
 .PHONY: get-base-digest
 get-base-digest: pull-base ## Get base image digest
@@ -47,18 +59,18 @@ get-base-digest: pull-base ## Get base image digest
 
 .PHONY: build-local
 build-local: get-pg-version get-base-digest ## Build image locally for testing
-	@echo "Building local image (tags: latest, $(PG_VERSION), $(PG_VERSION)-$(DATE_TAG), $(IMAGE_TAG))..."
+	@echo "Building local image (tags: $(PG_VERSION), $(PG_VERSION)-$(DATE_TAG), $(IMAGE_TAG))..."
 	docker build \
 		-f $(DOCKERFILE) \
-		-t $(FULL_IMAGE_NAME):latest \
-		-t $(FULL_IMAGE_NAME):$(PG_VERSION) \
-		-t $(FULL_IMAGE_NAME):$(PG_VERSION)-$(DATE_TAG) \
-		-t $(FULL_IMAGE_NAME):$(IMAGE_TAG) \
+		$(DOCKER_TAGS) \
 		--label "base.digest=$(BASE_DIGEST)" \
 		--label "org.opencontainers.image.source=https://github.com/xataio/postgres-images" \
 		--label "org.opencontainers.image.description=$(DESCRIPTION)" \
 		--label "org.opencontainers.image.licenses=PostgreSQL" \
 		--build-arg CNPG_BASE=$(CNPG_BASE) \
+		--build-arg PG_MAJOR=$(PG_MAJOR) \
+		--build-arg CONFIG_FILE=$(CONFIG_FILE) \
+		--build-arg POSTGIS_CLI_VERSION_17=$(POSTGIS_CLI_VERSION_17) \
 		.
 
 .PHONY: test
@@ -144,15 +156,15 @@ build-multiarch: get-pg-version get-base-digest setup-buildx ## Build multi-arch
 	docker buildx build \
 		-f $(DOCKERFILE) \
 		--platform $(PLATFORMS) \
-		-t $(FULL_IMAGE_NAME):latest \
-		-t $(FULL_IMAGE_NAME):$(PG_VERSION) \
-		-t $(FULL_IMAGE_NAME):$(PG_VERSION)-$(DATE_TAG) \
-		-t $(FULL_IMAGE_NAME):$(IMAGE_TAG) \
+		$(DOCKER_TAGS) \
 		--label "base.digest=$(BASE_DIGEST)" \
 		--label "org.opencontainers.image.source=https://github.com/xataio/postgres-images" \
 		--label "org.opencontainers.image.description=$(DESCRIPTION)" \
 		--label "org.opencontainers.image.licenses=PostgreSQL" \
 		--build-arg CNPG_BASE=$(CNPG_BASE) \
+		--build-arg PG_MAJOR=$(PG_MAJOR) \
+		--build-arg CONFIG_FILE=$(CONFIG_FILE) \
+		--build-arg POSTGIS_CLI_VERSION_17=$(POSTGIS_CLI_VERSION_17) \
 		.
 
 .PHONY: push-multiarch
@@ -161,15 +173,15 @@ push-multiarch: get-pg-version get-base-digest setup-buildx ## Build and push mu
 	docker buildx build \
 		-f $(DOCKERFILE) \
 		--platform $(PLATFORMS) \
-		-t $(FULL_IMAGE_NAME):latest \
-		-t $(FULL_IMAGE_NAME):$(PG_VERSION) \
-		-t $(FULL_IMAGE_NAME):$(PG_VERSION)-$(DATE_TAG) \
-		-t $(FULL_IMAGE_NAME):$(IMAGE_TAG) \
+		$(DOCKER_TAGS) \
 		--label "base.digest=$(BASE_DIGEST)" \
 		--label "org.opencontainers.image.source=https://github.com/xataio/postgres-images" \
 		--label "org.opencontainers.image.description=$(DESCRIPTION)" \
 		--label "org.opencontainers.image.licenses=PostgreSQL" \
 		--build-arg CNPG_BASE=$(CNPG_BASE) \
+		--build-arg PG_MAJOR=$(PG_MAJOR) \
+		--build-arg CONFIG_FILE=$(CONFIG_FILE) \
+		--build-arg POSTGIS_CLI_VERSION_17=$(POSTGIS_CLI_VERSION_17) \
 		--push \
 		.
 	@echo "Multi-architecture image pushed to $(FULL_IMAGE_NAME)"
@@ -177,10 +189,10 @@ push-multiarch: get-pg-version get-base-digest setup-buildx ## Build and push mu
 	@echo "Platforms: $(PLATFORMS)"
 
 .PHONY: check-base-updated
-check-base-updated: get-base-digest ## Check if base image has been updated
-	@echo "Checking if base image has been updated..."
-	@if docker pull $(FULL_IMAGE_NAME):latest 2>/dev/null; then \
-		EXISTING_DIGEST=$$(docker image inspect $(FULL_IMAGE_NAME):latest --format '{{index .Config.Labels "base.digest"}}' 2>/dev/null || echo ""); \
+check-base-updated: get-base-digest get-pg-version ## Check if base image has been updated
+	@echo "Checking if base image has been updated (reference tag: $(PG_VERSION))..."
+	@if docker pull $(FULL_IMAGE_NAME):$(PG_VERSION) 2>/dev/null; then \
+		EXISTING_DIGEST=$$(docker image inspect $(FULL_IMAGE_NAME):$(PG_VERSION) --format '{{index .Config.Labels "base.digest"}}' 2>/dev/null || echo ""); \
 		if [ "$$EXISTING_DIGEST" = "$(BASE_DIGEST)" ]; then \
 			echo "Base image unchanged, no rebuild needed"; \
 			exit 1; \
@@ -188,7 +200,7 @@ check-base-updated: get-base-digest ## Check if base image has been updated
 			echo "Base image updated, rebuild needed"; \
 		fi; \
 	else \
-		echo "No existing image found, build needed"; \
+		echo "No existing image with tag $(PG_VERSION) found, build needed"; \
 	fi
 
 .PHONY: clean
@@ -205,12 +217,15 @@ show-info: get-pg-version get-base-digest ## Show build information
 	@echo "Image Name: $(IMAGE_NAME)"
 	@echo "Full Image: $(FULL_IMAGE_NAME)"
 	@echo "Base Image: $(CNPG_BASE)"
+	@echo "PG Major (target): $(PG_MAJOR)"
+	@echo "CNPG Base Tag: $(PG_TAG)"
 	@echo "PostgreSQL Version: $(PG_VERSION)"
 	@echo "Base Digest: $(BASE_DIGEST)"
 	@echo "Date Tag: $(DATE_TAG)"
 	@echo "Platforms: $(PLATFORMS)"
 	@echo "Dockerfile: $(DOCKERFILE)"
 	@echo "Image Tag: $(IMAGE_TAG)"
+	@echo "Config File: $(CONFIG_FILE)"
 
 # CI-friendly target that mirrors the GitHub Actions logic
 .PHONY: ci-build
@@ -230,3 +245,14 @@ ci-build: ## CI build process (build, test, verify, and conditionally push)
 scan: ## Run Snyk vulnerability scan (on demand)
 	@echo "Running Snyk container scan for $(FULL_IMAGE_NAME):$(IMAGE_TAG)..."
 	@snyk container test $(FULL_IMAGE_NAME):$(IMAGE_TAG) --severity-threshold=high
+
+# Convenience: build/push both majors
+.PHONY: build-both
+build-both:
+	$(MAKE) build-and-test PG_MAJOR=17 IMAGE_TAG=pg17
+	$(MAKE) build-and-test PG_MAJOR=18 IMAGE_TAG=pg18-rc1
+
+.PHONY: push-both
+push-both:
+	$(MAKE) push-multiarch PG_MAJOR=17 IMAGE_TAG=pg17
+	$(MAKE) push-multiarch PG_MAJOR=18 IMAGE_TAG=pg18-rc1
