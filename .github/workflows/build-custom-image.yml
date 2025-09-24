@@ -1,4 +1,4 @@
-name: Build CNPG Postgres Plus Image
+name: Build CNPG Postgres Images
 
 on:
   push:
@@ -16,19 +16,101 @@ on:
           - 'standard'
           - 'minimal'
       custom_cnpg_base:
-        description: 'Custom CNPG base image (optional - overrides the choice above)'
+        description: 'Custom CNPG base image (optional)'
         required: false
         type: string
+      target_folder:
+        description: 'Target Docker folder (optional - builds all if empty)'
+        required: false
+        type: choice
+        options:
+          - ''
+          - 'docker/custom-postgres'
+          - 'docker/experimental'
   schedule:
     - cron: '0 2 * * 3' # Every Wednesday at 2 AM UTC
 
 jobs:
-  # Summary job that requires all matrix jobs to complete successfully
+  # Detect which folders to build
+  detect-changes:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Detect changed Docker folders
+        id: set-matrix
+        run: |
+          # Define folder configurations
+          declare -A folders=(
+            ["docker/custom-postgres"]='{"pg_versions":[17,18],"image_suffix":"","description":"CNPG PostgreSQL with additional extensions"}'
+            ["docker/experimental"]='{"pg_versions":[17],"image_suffix":"-exp","description":"CNPG PostgreSQL variant"}'
+          )
+          
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            if [[ -n "${{ github.event.inputs.target_folder }}" ]]; then
+              # Manual trigger with specific folder
+              folder="${{ github.event.inputs.target_folder }}"
+              config="${folders[$folder]}"
+              matrix="{\"include\":[{\"folder\":\"$folder\",\"config\":$config}]}"
+            else
+              # Manual trigger - build all folders
+              matrix='{"include":['
+              for folder in "${!folders[@]}"; do
+                config="${folders[$folder]}"
+                matrix+="{\"folder\":\"$folder\",\"config\":$config},"
+              done
+              matrix="${matrix%,}]}"
+            fi
+          elif [[ "${{ github.event_name }}" == "schedule" ]]; then
+            # Scheduled - build all folders
+            matrix='{"include":['
+            for folder in "${!folders[@]}"; do
+              config="${folders[$folder]}"
+              matrix+="{\"folder\":\"$folder\",\"config\":$config},"
+            done
+            matrix="${matrix%,}]}"
+          else
+            # Push/PR - detect changed folders
+            changed_folders=()
+            for folder in "${!folders[@]}"; do
+              if git diff --name-only HEAD~1 HEAD | grep -q "^$folder/"; then
+                changed_folders+=("$folder")
+              fi
+            done
+          
+            if [[ ${#changed_folders[@]} -eq 0 ]]; then
+              # No docker folders changed, build all (fallback)
+              matrix='{"include":['
+              for folder in "${!folders[@]}"; do
+                config="${folders[$folder]}"
+                matrix+="{\"folder\":\"$folder\",\"config\":$config},"
+              done
+              matrix="${matrix%,}]}"
+            else
+              # Build only changed folders
+              matrix='{"include":['
+              for folder in "${changed_folders[@]}"; do
+                config="${folders[$folder]}"
+                matrix+="{\"folder\":\"$folder\",\"config\":$config},"
+              done
+              matrix="${matrix%,}]}"
+            fi
+          fi
+          
+          echo "matrix=$matrix" >> $GITHUB_OUTPUT
+          echo "Generated matrix: $matrix"
+
+  # Summary job
   build-test-publish:
     name: build-test-publish
     runs-on: ubuntu-latest
-    needs: [build-test-publish-matrix]   # depends on ALL matrix children
-    if: always()                         # still runs if some children fail/cancel
+    needs: [build-test-publish-matrix]
+    if: always()
     steps:
       - name: Check matrix job results
         run: |
@@ -42,24 +124,12 @@ jobs:
 
   build-test-publish-matrix:
     runs-on: ubuntu-latest
+    needs: detect-changes
     strategy:
-      matrix:
-        include:
-          - pg: 17
-            base_minimal: ghcr.io/cloudnative-pg/postgresql:17-minimal-bookworm
-            base_standard: ghcr.io/cloudnative-pg/postgresql:17-standard-bookworm
-            default_base: ghcr.io/cloudnative-pg/postgresql:17-minimal-bookworm
-            sha_suffix: ""          # bare <sha> for PG17
-          - pg: 18
-            base_minimal: ghcr.io/cloudnative-pg/postgresql:18rc1-minimal-bookworm
-            base_standard: ghcr.io/cloudnative-pg/postgresql:18rc1-standard-bookworm
-            default_base: ghcr.io/cloudnative-pg/postgresql:18rc1-minimal-bookworm
-            sha_suffix: "-pg18"     # avoid <sha> collision for PG18
+      matrix: ${{ fromJSON(needs.detect-changes.outputs.matrix) }}
     env:
       REGISTRY: ghcr.io
       PLATFORMS: linux/amd64,linux/arm64
-      IMAGE_NAME: xataio/postgres-images/cnpg-postgres-plus
-      DOCKERFILE_DIR: docker/custom-postgres
 
     steps:
       - name: Checkout repository
@@ -75,130 +145,173 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Determine CNPG base image
-        id: cnpg_base
+      - name: Set environment variables
         run: |
-          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
-            if [[ -n "${{ github.event.inputs.custom_cnpg_base }}" ]]; then
-              echo "base=${{ github.event.inputs.custom_cnpg_base }}" >> $GITHUB_OUTPUT
-            elif [[ "${{ github.event.inputs.cnpg_base }}" == "minimal" ]]; then
-              echo "base=${{ matrix.base_minimal }}" >> $GITHUB_OUTPUT
+          # Parse matrix config
+          pg_versions='${{ toJSON(matrix.config.pg_versions) }}'
+          image_suffix='${{ matrix.config.image_suffix }}'
+          description='${{ matrix.config.description }}'
+          
+          # Set base image name
+          base_name="xataio/postgres-images/cnpg-postgres-plus"
+          if [[ -n "$image_suffix" ]]; then
+            echo "IMAGE_NAME=${base_name}${image_suffix}" >> $GITHUB_ENV
+          else
+            echo "IMAGE_NAME=${base_name}" >> $GITHUB_ENV
+          fi
+          
+          echo "DOCKERFILE_DIR=${{ matrix.folder }}" >> $GITHUB_ENV
+          echo "DESCRIPTION=${description}" >> $GITHUB_ENV
+
+      # Create a sub-matrix for PG versions
+      # Build each PG version for this folder
+      - name: Build and process PG versions
+        run: |
+          # Get PG versions for this folder
+          pg_versions='${{ toJSON(matrix.config.pg_versions) }}'
+          echo "Building PG versions: $pg_versions for folder: ${{ matrix.folder }}"
+          
+          # Process each PG version
+          for pg_major in $(echo "$pg_versions" | jq -r '.[]'); do
+            echo "=== Processing PG ${pg_major} ==="
+          
+            # Set version-specific variables
+            if [[ "$pg_major" == "17" ]]; then
+              base_minimal="ghcr.io/cloudnative-pg/postgresql:17-minimal-bookworm"
+              base_standard="ghcr.io/cloudnative-pg/postgresql:17-standard-bookworm"
+              default_base="ghcr.io/cloudnative-pg/postgresql:17-minimal-bookworm"
+              sha_suffix=""
             else
-              echo "base=${{ matrix.base_standard }}" >> $GITHUB_OUTPUT
+              base_minimal="ghcr.io/cloudnative-pg/postgresql:18rc1-minimal-bookworm"
+              base_standard="ghcr.io/cloudnative-pg/postgresql:18rc1-standard-bookworm"  
+              default_base="ghcr.io/cloudnative-pg/postgresql:18rc1-minimal-bookworm"
+              sha_suffix="-pg18"
             fi
-          else
-            echo "base=${{ matrix.default_base }}" >> $GITHUB_OUTPUT
-          fi
+          
+            # Determine CNPG base image
+            if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+              if [[ -n "${{ github.event.inputs.custom_cnpg_base }}" ]]; then
+                cnpg_base="${{ github.event.inputs.custom_cnpg_base }}"
+              elif [[ "${{ github.event.inputs.cnpg_base }}" == "minimal" ]]; then
+                cnpg_base="$base_minimal"
+              else
+                cnpg_base="$base_standard"
+              fi
+            else
+              cnpg_base="$default_base"
+            fi
+          
+            # Create image tag (add folder suffix if specified)
+            folder_suffix="${{ matrix.config.image_suffix }}"
+            image_tag="${{ github.sha }}${sha_suffix}${folder_suffix}"
+          
+            echo "CNPG Base: $cnpg_base"
+            echo "Image Tag: $image_tag"
+            echo "Folder: ${{ matrix.folder }}"
+          
+            # Show build info
+            make show-info \
+              DOCKERFILE_DIR="${{ env.DOCKERFILE_DIR }}" \
+              IMAGE_NAME="${{ env.IMAGE_NAME }}" \
+              CNPG_BASE="$cnpg_base" \
+              PG_MAJOR="$pg_major" \
+              IMAGE_TAG="$image_tag"
+          
+            # For scheduled builds, check if base image changed
+            should_build=true
+            if [[ "${{ github.event_name }}" == "schedule" ]]; then
+              if ! make check-base-updated \
+                DOCKERFILE_DIR="${{ env.DOCKERFILE_DIR }}" \
+                IMAGE_NAME="${{ env.IMAGE_NAME }}" \
+                CNPG_BASE="$cnpg_base" \
+                PG_MAJOR="$pg_major"; then
+                echo "Base image unchanged for PG${pg_major}, skipping build..."
+                should_build=false
+              fi
+            fi
+          
+            if [[ "$should_build" == "true" ]]; then
+              # Build and test
+              echo "Building and testing PG${pg_major}..."
+              make build-and-test \
+                DOCKERFILE_DIR="${{ env.DOCKERFILE_DIR }}" \
+                IMAGE_NAME="${{ env.IMAGE_NAME }}" \
+                CNPG_BASE="$cnpg_base" \
+                PG_MAJOR="$pg_major" \
+                IMAGE_TAG="$image_tag"
+          
+              # Run Snyk scan
+              echo "Running Snyk scan..."
+              continue_build=true
+            fi
+          
+            # Export variables for next steps
+            echo "PG${pg_major}_CNPG_BASE=$cnpg_base" >> $GITHUB_ENV
+            echo "PG${pg_major}_IMAGE_TAG=$image_tag" >> $GITHUB_ENV
+            echo "PG${pg_major}_SHOULD_BUILD=$should_build" >> $GITHUB_ENV
+          done
 
-      - name: Compute tags (per row)
-        id: tags
-        run: |
-          DATE=$(date -u +%Y%m%d)
-          echo "date=$DATE" >> $GITHUB_OUTPUT
-          echo "image_tag=${{ github.sha }}${{ matrix.sha_suffix }}" >> $GITHUB_OUTPUT
-
-      - name: Show build information
-        run: |
-          echo "Building CNPG Postgres Plus image"
-          echo "PG major: ${{ matrix.pg }}"
-          echo "CNPG base image: ${{ steps.cnpg_base.outputs.base }}"
-          echo "IMAGE_TAG for this row: ${{ steps.tags.outputs.image_tag }}"
-          make show-info \
-            DOCKERFILE_DIR="${DOCKERFILE_DIR}" \
-            IMAGE_NAME="${IMAGE_NAME}" \
-            CNPG_BASE="${{ steps.cnpg_base.outputs.base }}" \
-            PG_MAJOR=${{ matrix.pg }} \
-            IMAGE_TAG=${{ steps.tags.outputs.image_tag }}
-
-      # only trigger scheduled weekly build if the CNPG image changed
-      - name: Check if base image changed (schedule only)
-        if: github.event_name == 'schedule'
-        id: check-base
-        run: |
-          if make check-base-updated \
-            DOCKERFILE_DIR="${DOCKERFILE_DIR}" \
-            IMAGE_NAME="${IMAGE_NAME}" \
-            CNPG_BASE="${{ steps.cnpg_base.outputs.base }}" \
-            PG_MAJOR=${{ matrix.pg }}; then
-            echo "changed=true" >> $GITHUB_OUTPUT
-          else
-            echo "changed=false" >> $GITHUB_OUTPUT
-          fi
-
-      # Build & test
-      - name: Build and test image
-        if: github.event_name != 'schedule'
-        run: |
-          make build-and-test \
-            DOCKERFILE_DIR="${DOCKERFILE_DIR}" \
-            IMAGE_NAME="${IMAGE_NAME}" \
-            CNPG_BASE="${{ steps.cnpg_base.outputs.base }}" \
-            PG_MAJOR=${{ matrix.pg }} \
-            IMAGE_TAG=${{ steps.tags.outputs.image_tag }}
-
-      # Build & test (schedule, only if base changed)
-      - name: Build and test image (schedule)
-        if: github.event_name == 'schedule' && steps.check-base.outputs.changed == 'true'
-        run: |
-          make build-and-test \
-            DOCKERFILE_DIR="${DOCKERFILE_DIR}" \
-            IMAGE_NAME="${IMAGE_NAME}" \
-            CNPG_BASE="${{ steps.cnpg_base.outputs.base }}" \
-            PG_MAJOR=${{ matrix.pg }} \
-            IMAGE_TAG=${{ steps.tags.outputs.image_tag }}
-
-      # only run snyk if it is not a scheduled run or, for scheduled runs, if something changed and we had to actually build the image
-      - name: Run Snyk to check Docker image for vulnerabilities
-        if: github.event_name != 'schedule' || steps.check-base.outputs.changed == 'true'
-        uses: snyk/actions/docker@master
+      # Run Snyk scan for built images
+      - name: Run Snyk scans
+        if: github.event_name != 'schedule' || env.PG17_SHOULD_BUILD == 'true' || env.PG18_SHOULD_BUILD == 'true'
         continue-on-error: true
+        run: |
+          pg_versions='${{ toJSON(matrix.config.pg_versions) }}'
+          for pg_major in $(echo "$pg_versions" | jq -r '.[]'); do
+            should_build_var="PG${pg_major}_SHOULD_BUILD"
+            image_tag_var="PG${pg_major}_IMAGE_TAG"
+          
+            if [[ "${!should_build_var}" == "true" ]]; then
+              echo "Running Snyk scan for PG${pg_major}..."
+              if command -v snyk >/dev/null 2>&1; then
+                snyk container test "${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${!image_tag_var}" \
+                  --severity-threshold=high \
+                  --file="${{ env.DOCKERFILE_DIR }}/Dockerfile" \
+                  --sarif-file-output="snyk-pg${pg_major}.sarif" || true
+              else
+                echo "Snyk not available, skipping scan for PG${pg_major}"
+              fi
+            fi
+          done
         env:
           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
-        with:
-          image: ghcr.io/${{ env.IMAGE_NAME }}:${{ steps.tags.outputs.image_tag }}
-          args: --severity-threshold=high --file=${{ env.DOCKERFILE_DIR }}/Dockerfile --sarif-file-output=snyk.sarif
 
-      - name: Upload Snyk SARIF to Code Scanning
-        if: github.event_name != 'schedule' || steps.check-base.outputs.changed == 'true'
-        uses: github/codeql-action/upload-sarif@v3
-        continue-on-error: true
-        with:
-          sarif_file: snyk.sarif
-
-      # PRs (same-repo only): push SHA tag(s) only (no version/date tags)
-      - name: Push multiarch image (PRs → sha only)
-        if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.fork == false
+      # Push images based on trigger type
+      - name: Push images
         run: |
-          docker buildx build \
-            --platform "${PLATFORMS}" \
-            -f "${DOCKERFILE_DIR}/Dockerfile" \
-            -t "ghcr.io/${IMAGE_NAME}:${{ steps.tags.outputs.image_tag }}" \
-            --label "org.opencontainers.image.source=https://github.com/${{ github.repository }}" \
-            --label "org.opencontainers.image.description=CNPG PostgreSQL image (PR build PG${{ matrix.pg }})" \
-            --label "org.opencontainers.image.licenses=PostgreSQL" \
-            --build-arg CNPG_BASE="${{ steps.cnpg_base.outputs.base }}" \
-            --build-arg PG_MAJOR=${{ matrix.pg }} \
-            --push \
-            .
-
-      # Main pushes & manual runs: push full tag set (version + date + sha[-pg18])
-      - name: Push multiarch image (full tags)
-        if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
-        run: |
-          make push-multiarch \
-            DOCKERFILE_DIR="${DOCKERFILE_DIR}" \
-            IMAGE_NAME="${IMAGE_NAME}" \
-            CNPG_BASE="${{ steps.cnpg_base.outputs.base }}" \
-            PG_MAJOR=${{ matrix.pg }} \
-            IMAGE_TAG=${{ steps.tags.outputs.image_tag }}
-
-      # Scheduled run: push only if base changed
-      - name: Push multiarch image for scheduled build
-        if: github.event_name == 'schedule' && steps.check-base.outputs.changed == 'true'
-        run: |
-          make push-multiarch \
-            DOCKERFILE_DIR="${DOCKERFILE_DIR}" \
-            IMAGE_NAME="${IMAGE_NAME}" \
-            CNPG_BASE="${{ steps.cnpg_base.outputs.base }}" \
-            PG_MAJOR=${{ matrix.pg }} \
-            IMAGE_TAG=${{ steps.tags.outputs.image_tag }}
+          pg_versions='${{ toJSON(matrix.config.pg_versions) }}'
+          
+          for pg_major in $(echo "$pg_versions" | jq -r '.[]'); do
+            should_build_var="PG${pg_major}_SHOULD_BUILD"
+            cnpg_base_var="PG${pg_major}_CNPG_BASE"
+            image_tag_var="PG${pg_major}_IMAGE_TAG"
+          
+            if [[ "${!should_build_var}" == "true" ]]; then
+              echo "Pushing PG${pg_major} image..."
+          
+              if [[ "${{ github.event_name }}" == "pull_request" && "${{ github.event.pull_request.head.repo.fork }}" == "false" ]]; then
+                # PR builds - SHA tag only
+                docker buildx build \
+                  --platform "${{ env.PLATFORMS }}" \
+                  -f "${{ env.DOCKERFILE_DIR }}/Dockerfile" \
+                  -t "${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${!image_tag_var}" \
+                  --label "org.opencontainers.image.source=https://github.com/${{ github.repository }}" \
+                  --label "org.opencontainers.image.description=${{ env.DESCRIPTION }} (PR build PG${pg_major})" \
+                  --label "org.opencontainers.image.licenses=PostgreSQL" \
+                  --build-arg CNPG_BASE="${!cnpg_base_var}" \
+                  --build-arg PG_MAJOR="$pg_major" \
+                  --push \
+                  .
+              elif [[ "${{ github.event_name }}" == "push" || "${{ github.event_name }}" == "workflow_dispatch" || "${{ github.event_name }}" == "schedule" ]]; then
+                # Full builds - all tags
+                make push-multiarch \
+                  DOCKERFILE_DIR="${{ env.DOCKERFILE_DIR }}" \
+                  IMAGE_NAME="${{ env.IMAGE_NAME }}" \
+                  CNPG_BASE="${!cnpg_base_var}" \
+                  PG_MAJOR="$pg_major" \
+                  IMAGE_TAG="${!image_tag_var}"
+              fi
+            else
+              echo "Skipping push for PG${pg_major} (not built)"
+            fi
+          done
