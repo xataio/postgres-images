@@ -133,8 +133,8 @@ RUN which shp2pgsql || echo "shp2pgsql not found" && \
 # Install xatautils extension
 RUN ARCH=$(dpkg --print-architecture) && \
     XATA_VERSION=v0.0.0-test && \
-    wget -O /tmp/xatautils.deb \
-      "https://github.com/xataio/xata-utils/releases/download/${XATA_VERSION}/xatautils-${XATA_VERSION}-pg${PG_MAJOR}-${ARCH}-linux-gnu.deb" && \
+    wget --method=GET -O /tmp/xatautils.deb \
+    "https://github.com/xataio/xata-utils/releases/download/${XATA_VERSION}/xatautils-${XATA_VERSION}-pg${PG_MAJOR}-${ARCH}-linux-gnu.deb" && \
     dpkg -i /tmp/xatautils.deb && \
     rm /tmp/xatautils.deb
 
