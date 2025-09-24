@@ -47,8 +47,8 @@ jobs:
         run: |
           # Define folder configurations
           declare -A folders=(
-            ["docker/custom-postgres"]='{"pg_versions":[17,18],"image_suffix":"","description":"CNPG PostgreSQL with additional extensions"}'
-            ["docker/experimental"]='{"pg_versions":[17],"image_suffix":"-exp","description":"CNPG PostgreSQL variant"}'
+            ["docker/custom-postgres"]='{"pg_versions":[17,18],"image_name":"xataio/postgres-images/cnpg-postgres-plus","description":"CNPG PostgreSQL with additional extensions"}'
+            ["docker/experimental"]='{"pg_versions":[17],"image_name":"xataio/postgres-images/experimental","description":"My custom PostgreSQL experimental"}'
           )
           
           if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
@@ -149,17 +149,10 @@ jobs:
         run: |
           # Parse matrix config
           pg_versions='${{ toJSON(matrix.config.pg_versions) }}'
-          image_suffix='${{ matrix.config.image_suffix }}'
+          image_name='${{ matrix.config.image_name }}'
           description='${{ matrix.config.description }}'
           
-          # Set base image name
-          base_name="xataio/postgres-images/cnpg-postgres-plus"
-          if [[ -n "$image_suffix" ]]; then
-            echo "IMAGE_NAME=${base_name}${image_suffix}" >> $GITHUB_ENV
-          else
-            echo "IMAGE_NAME=${base_name}" >> $GITHUB_ENV
-          fi
-          
+          echo "IMAGE_NAME=${image_name}" >> $GITHUB_ENV
           echo "DOCKERFILE_DIR=${{ matrix.folder }}" >> $GITHUB_ENV
           echo "DESCRIPTION=${description}" >> $GITHUB_ENV
 
@@ -201,9 +194,8 @@ jobs:
               cnpg_base="$default_base"
             fi
           
-            # Create image tag (add folder suffix if specified)
-            folder_suffix="${{ matrix.config.image_suffix }}"
-            image_tag="${{ github.sha }}${sha_suffix}${folder_suffix}"
+            # Create image tag
+            image_tag="${{ github.sha }}${sha_suffix}"
           
             echo "CNPG Base: $cnpg_base"
             echo "Image Tag: $image_tag"
