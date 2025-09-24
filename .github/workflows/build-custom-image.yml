@@ -145,6 +145,44 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      # Test organization token access
+      - name: Test organization token access
+        env:
+          GITHUB_TOKEN: ${{ secrets.GIT_TOKEN }}
+        run: |
+          echo "Testing GIT_TOKEN access to xataio/xata-utils..."
+          
+          # Test repository access
+          response=$(curl -s -o /dev/null -w "%{http_code}" \
+            -H "Authorization: token $GITHUB_TOKEN" \
+            https://api.github.com/repos/xataio/xata-utils)
+          
+          echo "Repository access response: $response"
+          
+          if [ "$response" = "200" ]; then
+            echo "Repository accessible"
+          
+            # Test the specific release
+            echo "Testing release v0.0.0-test..."
+            release_response=$(curl -s -H "Authorization: token $GITHUB_TOKEN" \
+                 -H "Accept: application/vnd.github.v3+json" \
+                 https://api.github.com/repos/xataio/xata-utils/releases/tags/v0.0.0-test)
+          
+            if echo "$release_response" | jq -e '.tag_name' >/dev/null 2>&1; then
+              echo "Release v0.0.0-test found"
+            else
+              echo "Release v0.0.0-test not found"
+              echo "Available releases:"
+              curl -s -H "Authorization: token $GITHUB_TOKEN" \
+                   -H "Accept: application/vnd.github.v3+json" \
+                   https://api.github.com/repos/xataio/xata-utils/releases \
+              | jq -r '.[].tag_name' | head -5
+            fi
+          else
+            echo "Repository not accessible (HTTP $response)"
+            exit 1
+          fi
+
       - name: Set environment variables
         run: |
           # Parse matrix config
@@ -201,8 +239,8 @@ jobs:
             echo "Image Tag: $image_tag"
             echo "Folder: ${{ matrix.folder }}"
           
-            # Show build info using make (with GitHub token)
-            GITHUB_TOKEN="${{ secrets.GITHUB_TOKEN }}" make show-info \
+            # Show build info using make (with organization token)
+            GITHUB_TOKEN="${{ secrets.GIT_TOKEN }}" make show-info \
               DOCKERFILE_DIR="${{ env.DOCKERFILE_DIR }}" \
               IMAGE_NAME="${{ env.IMAGE_NAME }}" \
               CNPG_BASE="$cnpg_base" \
@@ -212,7 +250,7 @@ jobs:
             # For scheduled builds, check if base image changed
             should_build=true
             if [[ "${{ github.event_name }}" == "schedule" ]]; then
-              if ! GITHUB_TOKEN="${{ secrets.GITHUB_TOKEN }}" make check-base-updated \
+              if ! GITHUB_TOKEN="${{ secrets.GIT_TOKEN }}" make check-base-updated \
                 DOCKERFILE_DIR="${{ env.DOCKERFILE_DIR }}" \
                 IMAGE_NAME="${{ env.IMAGE_NAME }}" \
                 CNPG_BASE="$cnpg_base" \
@@ -223,9 +261,9 @@ jobs:
             fi
           
             if [[ "$should_build" == "true" ]]; then
-              # Build and test using make with GitHub token
+              # Build and test using make with organization token
               echo "Building and testing PG${pg_major}..."
-              GITHUB_TOKEN="${{ secrets.GITHUB_TOKEN }}" make build-and-test \
+              GITHUB_TOKEN="${{ secrets.GIT_TOKEN }}" make build-and-test \
                 DOCKERFILE_DIR="${{ env.DOCKERFILE_DIR }}" \
                 IMAGE_NAME="${{ env.IMAGE_NAME }}" \
                 CNPG_BASE="$cnpg_base" \
@@ -278,8 +316,8 @@ jobs:
               echo "Pushing PG${pg_major} image..."
           
               if [[ "${{ github.event_name }}" == "pull_request" && "${{ github.event.pull_request.head.repo.fork }}" == "false" ]]; then
-                # PR builds - SHA tag only using Docker secrets
-                echo "${{ secrets.GITHUB_TOKEN }}" | docker buildx build \
+                # PR builds - SHA tag only using Docker secrets with organization token
+                echo "${{ secrets.GIT_TOKEN }}" | docker buildx build \
                   --platform "${{ env.PLATFORMS }}" \
                   -f "${{ env.DOCKERFILE_DIR }}/Dockerfile" \
                   -t "${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${!image_tag_var}" \
@@ -292,8 +330,8 @@ jobs:
                   --push \
                   .
               elif [[ "${{ github.event_name }}" == "push" || "${{ github.event_name }}" == "workflow_dispatch" || "${{ github.event_name }}" == "schedule" ]]; then
-                # Full builds - all tags using make with GitHub token
-                GITHUB_TOKEN="${{ secrets.GITHUB_TOKEN }}" make push-multiarch \
+                # Full builds - all tags using make with organization token
+                GITHUB_TOKEN="${{ secrets.GIT_TOKEN }}" make push-multiarch \
                   DOCKERFILE_DIR="${{ env.DOCKERFILE_DIR }}" \
                   IMAGE_NAME="${{ env.IMAGE_NAME }}" \
                   CNPG_BASE="${!cnpg_base_var}" \
