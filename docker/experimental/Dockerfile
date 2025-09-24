@@ -1,3 +1,4 @@
+# syntax=docker/dockerfile:1
 ARG CNPG_BASE=ghcr.io/cloudnative-pg/postgresql:17-minimal-bookworm
 FROM ${CNPG_BASE}
 
@@ -130,11 +131,36 @@ RUN which shp2pgsql || echo "shp2pgsql not found" && \
     which pgsql2shp || echo "pgsql2shp not found" && \
     which raster2pgsql || echo "raster2pgsql not found"
 
-# Install xatautils extension
-RUN ARCH=$(dpkg --print-architecture) && \
+# Install xatautils extension using Docker secrets for GitHub token
+RUN --mount=type=secret,id=github_token \
+    ARCH=$(dpkg --print-architecture) && \
     XATA_VERSION=v0.0.0-test && \
-    wget --method=GET -O /tmp/xatautils.deb \
-    "https://github.com/xataio/xata-utils/releases/download/${XATA_VERSION}/xatautils-${XATA_VERSION}-pg${PG_MAJOR}-${ARCH}-linux-gnu.deb" && \
+    ASSET_NAME="xatautils-${XATA_VERSION}-pg${PG_MAJOR}-${ARCH}-linux-gnu.deb" && \
+    if [ ! -f "/run/secrets/github_token" ]; then \
+        echo "ERROR: GitHub token secret is required to access private xata-utils repository"; \
+        exit 1; \
+    fi && \
+    GITHUB_TOKEN=$(cat /run/secrets/github_token) && \
+    echo "Downloading xatautils extension: ${ASSET_NAME}..." && \
+    # First, get the release info to find the asset download URL
+    RELEASE_INFO=$(wget --header="Authorization: token $GITHUB_TOKEN" \
+                        --header="Accept: application/vnd.github.v3+json" \
+                        -O- -q \
+                        "https://api.github.com/repos/xataio/xata-utils/releases/tags/${XATA_VERSION}") && \
+    # Extract the asset download URL for the specific file we need
+    DOWNLOAD_URL=$(echo "$RELEASE_INFO" | jq -r ".assets[] | select(.name==\"$ASSET_NAME\") | .url") && \
+    if [ -z "$DOWNLOAD_URL" ] || [ "$DOWNLOAD_URL" = "null" ]; then \
+        echo "ERROR: Asset ${ASSET_NAME} not found in release ${XATA_VERSION}"; \
+        echo "Available assets:"; \
+        echo "$RELEASE_INFO" | jq -r '.assets[].name'; \
+        exit 1; \
+    fi && \
+    echo "Downloading from: $DOWNLOAD_URL" && \
+    # Download the asset using the GitHub API
+    wget --header="Authorization: token $GITHUB_TOKEN" \
+         --header="Accept: application/octet-stream" \
+         -O /tmp/xatautils.deb \
+         "$DOWNLOAD_URL" && \
     dpkg -i /tmp/xatautils.deb && \
     rm /tmp/xatautils.deb
 

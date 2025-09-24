@@ -201,8 +201,8 @@ jobs:
             echo "Image Tag: $image_tag"
             echo "Folder: ${{ matrix.folder }}"
           
-            # Show build info
-            make show-info \
+            # Show build info using make (with GitHub token)
+            GITHUB_TOKEN="${{ secrets.GITHUB_TOKEN }}" make show-info \
               DOCKERFILE_DIR="${{ env.DOCKERFILE_DIR }}" \
               IMAGE_NAME="${{ env.IMAGE_NAME }}" \
               CNPG_BASE="$cnpg_base" \
@@ -212,7 +212,7 @@ jobs:
             # For scheduled builds, check if base image changed
             should_build=true
             if [[ "${{ github.event_name }}" == "schedule" ]]; then
-              if ! make check-base-updated \
+              if ! GITHUB_TOKEN="${{ secrets.GITHUB_TOKEN }}" make check-base-updated \
                 DOCKERFILE_DIR="${{ env.DOCKERFILE_DIR }}" \
                 IMAGE_NAME="${{ env.IMAGE_NAME }}" \
                 CNPG_BASE="$cnpg_base" \
@@ -223,18 +223,14 @@ jobs:
             fi
           
             if [[ "$should_build" == "true" ]]; then
-              # Build and test
+              # Build and test using make with GitHub token
               echo "Building and testing PG${pg_major}..."
-              make build-and-test \
+              GITHUB_TOKEN="${{ secrets.GITHUB_TOKEN }}" make build-and-test \
                 DOCKERFILE_DIR="${{ env.DOCKERFILE_DIR }}" \
                 IMAGE_NAME="${{ env.IMAGE_NAME }}" \
                 CNPG_BASE="$cnpg_base" \
                 PG_MAJOR="$pg_major" \
                 IMAGE_TAG="$image_tag"
-          
-              # Run Snyk scan
-              echo "Running Snyk scan..."
-              continue_build=true
             fi
           
             # Export variables for next steps
@@ -282,8 +278,8 @@ jobs:
               echo "Pushing PG${pg_major} image..."
           
               if [[ "${{ github.event_name }}" == "pull_request" && "${{ github.event.pull_request.head.repo.fork }}" == "false" ]]; then
-                # PR builds - SHA tag only
-                docker buildx build \
+                # PR builds - SHA tag only using Docker secrets
+                echo "${{ secrets.GITHUB_TOKEN }}" | docker buildx build \
                   --platform "${{ env.PLATFORMS }}" \
                   -f "${{ env.DOCKERFILE_DIR }}/Dockerfile" \
                   -t "${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${!image_tag_var}" \
@@ -292,11 +288,12 @@ jobs:
                   --label "org.opencontainers.image.licenses=PostgreSQL" \
                   --build-arg CNPG_BASE="${!cnpg_base_var}" \
                   --build-arg PG_MAJOR="$pg_major" \
+                  --secret id=github_token,src=/dev/stdin \
                   --push \
                   .
               elif [[ "${{ github.event_name }}" == "push" || "${{ github.event_name }}" == "workflow_dispatch" || "${{ github.event_name }}" == "schedule" ]]; then
-                # Full builds - all tags
-                make push-multiarch \
+                # Full builds - all tags using make with GitHub token
+                GITHUB_TOKEN="${{ secrets.GITHUB_TOKEN }}" make push-multiarch \
                   DOCKERFILE_DIR="${{ env.DOCKERFILE_DIR }}" \
                   IMAGE_NAME="${{ env.IMAGE_NAME }}" \
                   CNPG_BASE="${!cnpg_base_var}" \
