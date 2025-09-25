@@ -16,9 +16,16 @@ CONFIG_FILE ?= $(DOCKERFILE_DIR)/extensions.$(PG_MAJOR).json
 DESCRIPTION ?= CNPG PostgreSQL with additional extensions and tools
 IMAGE_TAG ?= latest # Default tag; CI overrides with commit SHA
 
+# GitHub token for private repository access
+GITHUB_TOKEN ?= $(shell echo $$GITHUB_TOKEN)
+
+# Validate GitHub token is available
+ifndef GITHUB_TOKEN
+$(warning GITHUB_TOKEN is not set - this will cause builds to fail when accessing private xata-utils repository)
+endif
+
 # Derived variables
 FULL_IMAGE_NAME := $(REGISTRY)/$(IMAGE_NAME)
-
 
 # Common tag set used by build commands
 DOCKER_TAGS = \
@@ -57,10 +64,29 @@ get-base-digest: pull-base ## Get base image digest
 	$(eval BASE_DIGEST := $(shell docker image inspect $(CNPG_BASE) --format '{{.Id}}'))
 	@echo "Base image digest: $(BASE_DIGEST)"
 
+.PHONY: check-github-token
+check-github-token: ## Check if GitHub token is set
+	@if [ -z "$(GITHUB_TOKEN)" ]; then \
+		echo "ERROR: GITHUB_TOKEN environment variable is required for accessing private xata-utils repository"; \
+		echo "Please set GITHUB_TOKEN with a token that has read access to the xataio/xata-utils repository"; \
+		echo ""; \
+		echo "Example:"; \
+		echo "  export GITHUB_TOKEN=\"ghp_your_token_here\""; \
+		echo "  make build-local"; \
+		echo ""; \
+		echo "Token requirements:"; \
+		echo "  - 'repo' scope for private repository access"; \
+		echo "  - Read access to xataio/xata-utils repository"; \
+		exit 1; \
+	else \
+		echo "✓ GitHub token is set (length: $$(echo '$(GITHUB_TOKEN)' | wc -c) chars)"; \
+		echo "✓ Ready to access private xata-utils repository"; \
+	fi
+
 .PHONY: build-local
-build-local: get-pg-version get-base-digest ## Build image locally for testing
+build-local: get-pg-version get-base-digest check-github-token ## Build image locally for testing
 	@echo "Building local image (tags: $(PG_VERSION), $(PG_VERSION)-$(DATE_TAG), $(IMAGE_TAG))..."
-	docker build \
+	@echo "$(GITHUB_TOKEN)" | docker build \
 		-f $(DOCKERFILE) \
 		$(DOCKER_TAGS) \
 		--label "base.digest=$(BASE_DIGEST)" \
@@ -71,6 +97,7 @@ build-local: get-pg-version get-base-digest ## Build image locally for testing
 		--build-arg PG_MAJOR=$(PG_MAJOR) \
 		--build-arg CONFIG_FILE=$(CONFIG_FILE) \
 		--build-arg POSTGIS_CLI_VERSION_17=$(POSTGIS_CLI_VERSION_17) \
+		--secret id=github_token,src=/dev/stdin \
 		.
 
 .PHONY: test
@@ -151,9 +178,9 @@ setup-buildx: ## Setup Docker buildx for multi-platform builds
 	fi
 
 .PHONY: build-multiarch
-build-multiarch: get-pg-version get-base-digest setup-buildx ## Build multi-architecture image (no push)
+build-multiarch: get-pg-version get-base-digest check-github-token setup-buildx ## Build multi-architecture image (no push)
 	@echo "Building multi-architecture image (tags: latest, $(PG_VERSION), $(PG_VERSION)-$(DATE_TAG), $(IMAGE_TAG))..."
-	docker buildx build \
+	@echo "$(GITHUB_TOKEN)" | docker buildx build \
 		-f $(DOCKERFILE) \
 		--platform $(PLATFORMS) \
 		$(DOCKER_TAGS) \
@@ -165,12 +192,13 @@ build-multiarch: get-pg-version get-base-digest setup-buildx ## Build multi-arch
 		--build-arg PG_MAJOR=$(PG_MAJOR) \
 		--build-arg CONFIG_FILE=$(CONFIG_FILE) \
 		--build-arg POSTGIS_CLI_VERSION_17=$(POSTGIS_CLI_VERSION_17) \
+		--secret id=github_token,src=/dev/stdin \
 		.
 
 .PHONY: push-multiarch
-push-multiarch: get-pg-version get-base-digest setup-buildx ## Build and push multi-architecture image
+push-multiarch: get-pg-version get-base-digest check-github-token setup-buildx ## Build and push multi-architecture image
 	@echo "Building and pushing multi-architecture image (tags: latest, $(PG_VERSION), $(PG_VERSION)-$(DATE_TAG), $(IMAGE_TAG))..."
-	docker buildx build \
+	@echo "$(GITHUB_TOKEN)" | docker buildx build \
 		-f $(DOCKERFILE) \
 		--platform $(PLATFORMS) \
 		$(DOCKER_TAGS) \
@@ -182,6 +210,7 @@ push-multiarch: get-pg-version get-base-digest setup-buildx ## Build and push mu
 		--build-arg PG_MAJOR=$(PG_MAJOR) \
 		--build-arg CONFIG_FILE=$(CONFIG_FILE) \
 		--build-arg POSTGIS_CLI_VERSION_17=$(POSTGIS_CLI_VERSION_17) \
+		--secret id=github_token,src=/dev/stdin \
 		--push \
 		.
 	@echo "Multi-architecture image pushed to $(FULL_IMAGE_NAME)"
@@ -226,10 +255,11 @@ show-info: get-pg-version get-base-digest ## Show build information
 	@echo "Dockerfile: $(DOCKERFILE)"
 	@echo "Image Tag: $(IMAGE_TAG)"
 	@echo "Config File: $(CONFIG_FILE)"
+	@echo "GitHub Token: $(if $(GITHUB_TOKEN),SET,NOT SET)"
 
 # CI-friendly target that mirrors the GitHub Actions logic
 .PHONY: ci-build
-ci-build: ## CI build process (build, test, verify, and conditionally push)
+ci-build: check-github-token ## CI build process (build, test, verify, and conditionally push)
 	@echo "Starting CI build process..."
 	@if $(MAKE) check-base-updated 2>/dev/null; then \
 		echo "Base image updated, proceeding with build..."; \
@@ -248,11 +278,40 @@ scan: ## Run Snyk vulnerability scan (on demand)
 
 # Convenience: build/push both majors
 .PHONY: build-both
-build-both:
+build-both: check-github-token
+	@echo "Building both PG versions with GitHub token..."
 	$(MAKE) build-and-test PG_MAJOR=17 IMAGE_TAG=pg17
 	$(MAKE) build-and-test PG_MAJOR=18 IMAGE_TAG=pg18-rc1
 
 .PHONY: push-both
-push-both:
+push-both: check-github-token
+	@echo "Pushing both PG versions with GitHub token..."
 	$(MAKE) push-multiarch PG_MAJOR=17 IMAGE_TAG=pg17
 	$(MAKE) push-multiarch PG_MAJOR=18 IMAGE_TAG=pg18-rc1
+
+# Test GitHub token access to xata-utils repository
+.PHONY: test-github-access
+test-github-access: check-github-token ## Test GitHub token access to xata-utils repository
+	@echo "Testing GitHub token access to xataio/xata-utils repository..."
+	@if curl -s -H "Authorization: token $(GITHUB_TOKEN)" \
+		-H "Accept: application/vnd.github.v3+json" \
+		"https://api.github.com/repos/xataio/xata-utils" >/dev/null 2>&1; then \
+		echo "✓ GitHub token has access to xataio/xata-utils repository"; \
+	else \
+		echo "✗ GitHub token does NOT have access to xataio/xata-utils repository"; \
+		echo "Please ensure:"; \
+		echo "  1. Token has 'repo' scope"; \
+		echo "  2. Token has access to xataio organization"; \
+		echo "  3. Token has read access to xata-utils repository"; \
+		exit 1; \
+	fi
+
+# Build experimental image
+.PHONY: build-experimental
+build-experimental: check-github-token ## Build experimental image locally
+	@echo "Building experimental PostgreSQL image..."
+	$(MAKE) build-and-test \
+		DOCKERFILE_DIR=docker/experimental \
+		IMAGE_NAME=xataio/postgres-images/experimental \
+		PG_MAJOR=17 \
+		IMAGE_TAG=experimental-local

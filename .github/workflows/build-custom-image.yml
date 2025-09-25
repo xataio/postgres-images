@@ -1,4 +1,4 @@
-name: Build CNPG Postgres Plus Image
+name: Build CNPG Postgres Images
 
 on:
   push:
@@ -16,50 +16,105 @@ on:
           - 'standard'
           - 'minimal'
       custom_cnpg_base:
-        description: 'Custom CNPG base image (optional - overrides the choice above)'
+        description: 'Custom CNPG base image (optional)'
         required: false
         type: string
+      target_folder:
+        description: 'Target Docker folder (optional - builds all if empty)'
+        required: false
+        type: choice
+        options:
+          - ''
+          - 'docker/custom-postgres'
+          - 'docker/experimental'
   schedule:
     - cron: '0 2 * * 3' # Every Wednesday at 2 AM UTC
 
 jobs:
-  # Summary job that requires all matrix jobs to complete successfully
-  build-test-publish:
-    name: build-test-publish
+  # Detect which folders to build
+  detect-changes:
     runs-on: ubuntu-latest
-    needs: [build-test-publish-matrix]   # depends on ALL matrix children
-    if: always()                         # still runs if some children fail/cancel
+    outputs:
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
     steps:
-      - name: Check matrix job results
-        run: |
-          results="${{ join(needs.*.result, ',') }}"
-          echo "Matrix job results: $results"
-          if [[ "$results" == *failure* || "$results" == *cancelled* ]]; then
-            echo "One or more matrix jobs failed"
-            exit 1
-          fi
-          echo "All matrix jobs completed successfully"
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
-  build-test-publish-matrix:
+      - name: Detect changed Docker folders
+        id: set-matrix
+        run: |
+          # Define folder configurations
+          declare -A folders=(
+            ["docker/custom-postgres"]='{"pg_versions":[17,18],"image_name":"xataio/postgres-images/cnpg-postgres-plus","description":"CNPG PostgreSQL with additional extensions"}'
+            ["docker/experimental"]='{"pg_versions":[17],"image_name":"xataio/postgres-images/experimental","description":"My custom PostgreSQL experimental"}'
+          )
+          
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            if [[ -n "${{ github.event.inputs.target_folder }}" ]]; then
+              # Manual trigger with specific folder
+              folder="${{ github.event.inputs.target_folder }}"
+              config="${folders[$folder]}"
+              matrix="{\"include\":[{\"folder\":\"$folder\",\"config\":$config}]}"
+            else
+              # Manual trigger - build all folders
+              matrix='{"include":['
+              for folder in "${!folders[@]}"; do
+                config="${folders[$folder]}"
+                matrix+="{\"folder\":\"$folder\",\"config\":$config},"
+              done
+              matrix="${matrix%,}]}"
+            fi
+          elif [[ "${{ github.event_name }}" == "schedule" ]]; then
+            # Scheduled - build all folders
+            matrix='{"include":['
+            for folder in "${!folders[@]}"; do
+              config="${folders[$folder]}"
+              matrix+="{\"folder\":\"$folder\",\"config\":$config},"
+            done
+            matrix="${matrix%,}]}"
+          else
+            # Push/PR - detect changed folders
+            changed_folders=()
+            for folder in "${!folders[@]}"; do
+              if git diff --name-only HEAD~1 HEAD | grep -q "^$folder/"; then
+                changed_folders+=("$folder")
+              fi
+            done
+          
+            if [[ ${#changed_folders[@]} -eq 0 ]]; then
+              # No docker folders changed, build all (fallback)
+              matrix='{"include":['
+              for folder in "${!folders[@]}"; do
+                config="${folders[$folder]}"
+                matrix+="{\"folder\":\"$folder\",\"config\":$config},"
+              done
+              matrix="${matrix%,}]}"
+            else
+              # Build only changed folders
+              matrix='{"include":['
+              for folder in "${changed_folders[@]}"; do
+                config="${folders[$folder]}"
+                matrix+="{\"folder\":\"$folder\",\"config\":$config},"
+              done
+              matrix="${matrix%,}]}"
+            fi
+          fi
+          
+          echo "matrix=$matrix" >> $GITHUB_OUTPUT
+          echo "Generated matrix: $matrix"
+
+  # Build AMD64 images
+  build-test-publish-amd64:
     runs-on: ubuntu-latest
+    needs: detect-changes
     strategy:
-      matrix:
-        include:
-          - pg: 17
-            base_minimal: ghcr.io/cloudnative-pg/postgresql:17-minimal-bookworm
-            base_standard: ghcr.io/cloudnative-pg/postgresql:17-standard-bookworm
-            default_base: ghcr.io/cloudnative-pg/postgresql:17-minimal-bookworm
-            sha_suffix: ""          # bare <sha> for PG17
-          - pg: 18
-            base_minimal: ghcr.io/cloudnative-pg/postgresql:18rc1-minimal-bookworm
-            base_standard: ghcr.io/cloudnative-pg/postgresql:18rc1-standard-bookworm
-            default_base: ghcr.io/cloudnative-pg/postgresql:18rc1-minimal-bookworm
-            sha_suffix: "-pg18"     # avoid <sha> collision for PG18
+      matrix: ${{ fromJSON(needs.detect-changes.outputs.matrix) }}
     env:
       REGISTRY: ghcr.io
-      PLATFORMS: linux/amd64,linux/arm64
-      IMAGE_NAME: xataio/postgres-images/cnpg-postgres-plus
-      DOCKERFILE_DIR: docker/custom-postgres
+      PLATFORMS: linux/amd64
+      ARCH: amd64
 
     steps:
       - name: Checkout repository
@@ -75,130 +130,486 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Determine CNPG base image
-        id: cnpg_base
+      # Test organization token access
+      - name: Test organization token access
+        env:
+          GITHUB_TOKEN: ${{ secrets.GIT_TOKEN }}
         run: |
-          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
-            if [[ -n "${{ github.event.inputs.custom_cnpg_base }}" ]]; then
-              echo "base=${{ github.event.inputs.custom_cnpg_base }}" >> $GITHUB_OUTPUT
-            elif [[ "${{ github.event.inputs.cnpg_base }}" == "minimal" ]]; then
-              echo "base=${{ matrix.base_minimal }}" >> $GITHUB_OUTPUT
+          echo "Testing GIT_TOKEN access to xataio/xata-utils..."
+          
+          # Test repository access
+          response=$(curl -s -o /dev/null -w "%{http_code}" \
+            -H "Authorization: token $GITHUB_TOKEN" \
+            https://api.github.com/repos/xataio/xata-utils)
+          
+          echo "Repository access response: $response"
+          
+          if [ "$response" = "200" ]; then
+            echo "Repository accessible"
+          
+            # Test the specific release
+            echo "Testing release v0.0.0-test..."
+            release_response=$(curl -s -H "Authorization: token $GITHUB_TOKEN" \
+                 -H "Accept: application/vnd.github.v3+json" \
+                 https://api.github.com/repos/xataio/xata-utils/releases/tags/v0.0.0-test)
+          
+            if echo "$release_response" | jq -e '.tag_name' >/dev/null 2>&1; then
+              echo "Release v0.0.0-test found"
             else
-              echo "base=${{ matrix.base_standard }}" >> $GITHUB_OUTPUT
+              echo "Release v0.0.0-test not found"
+              echo "Available releases:"
+              curl -s -H "Authorization: token $GITHUB_TOKEN" \
+                   -H "Accept: application/vnd.github.v3+json" \
+                   https://api.github.com/repos/xataio/xata-utils/releases \
+              | jq -r '.[].tag_name' | head -5
             fi
           else
-            echo "base=${{ matrix.default_base }}" >> $GITHUB_OUTPUT
+            echo "Repository not accessible (HTTP $response)"
+            exit 1
           fi
 
-      - name: Compute tags (per row)
-        id: tags
+      - name: Set environment variables
         run: |
-          DATE=$(date -u +%Y%m%d)
-          echo "date=$DATE" >> $GITHUB_OUTPUT
-          echo "image_tag=${{ github.sha }}${{ matrix.sha_suffix }}" >> $GITHUB_OUTPUT
+          # Parse matrix config
+          pg_versions='${{ toJSON(matrix.config.pg_versions) }}'
+          image_name='${{ matrix.config.image_name }}'
+          description='${{ matrix.config.description }}'
+          
+          echo "IMAGE_NAME=${image_name}" >> $GITHUB_ENV
+          echo "DOCKERFILE_DIR=${{ matrix.folder }}" >> $GITHUB_ENV
+          echo "DESCRIPTION=${description}" >> $GITHUB_ENV
 
-      - name: Show build information
+      # Build each PG version for this folder
+      - name: Build and process PG versions
         run: |
-          echo "Building CNPG Postgres Plus image"
-          echo "PG major: ${{ matrix.pg }}"
-          echo "CNPG base image: ${{ steps.cnpg_base.outputs.base }}"
-          echo "IMAGE_TAG for this row: ${{ steps.tags.outputs.image_tag }}"
-          make show-info \
-            DOCKERFILE_DIR="${DOCKERFILE_DIR}" \
-            IMAGE_NAME="${IMAGE_NAME}" \
-            CNPG_BASE="${{ steps.cnpg_base.outputs.base }}" \
-            PG_MAJOR=${{ matrix.pg }} \
-            IMAGE_TAG=${{ steps.tags.outputs.image_tag }}
+          # Get PG versions for this folder
+          pg_versions='${{ toJSON(matrix.config.pg_versions) }}'
+          echo "Building PG versions: $pg_versions for folder: ${{ matrix.folder }} (AMD64)"
+          
+          # Process each PG version
+          for pg_major in $(echo "$pg_versions" | jq -r '.[]'); do
+            echo "=== Processing PG ${pg_major} (AMD64) ==="
+          
+            # Set version-specific variables
+            if [[ "$pg_major" == "17" ]]; then
+              base_minimal="ghcr.io/cloudnative-pg/postgresql:17-minimal-bookworm"
+              base_standard="ghcr.io/cloudnative-pg/postgresql:17-standard-bookworm"
+              default_base="ghcr.io/cloudnative-pg/postgresql:17-minimal-bookworm"
+              sha_suffix="-amd64"
+            else
+              base_minimal="ghcr.io/cloudnative-pg/postgresql:18rc1-minimal-bookworm"
+              base_standard="ghcr.io/cloudnative-pg/postgresql:18rc1-standard-bookworm"  
+              default_base="ghcr.io/cloudnative-pg/postgresql:18rc1-minimal-bookworm"
+              sha_suffix="-pg18-amd64"
+            fi
+          
+            # Determine CNPG base image
+            if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+              if [[ -n "${{ github.event.inputs.custom_cnpg_base }}" ]]; then
+                cnpg_base="${{ github.event.inputs.custom_cnpg_base }}"
+              elif [[ "${{ github.event.inputs.cnpg_base }}" == "minimal" ]]; then
+                cnpg_base="$base_minimal"
+              else
+                cnpg_base="$base_standard"
+              fi
+            else
+              cnpg_base="$default_base"
+            fi
+          
+            # Create image tag
+            image_tag="${{ github.sha }}${sha_suffix}"
+          
+            echo "CNPG Base: $cnpg_base"
+            echo "Image Tag: $image_tag"
+            echo "Folder: ${{ matrix.folder }}"
+          
+            # Show build info using make (with organization token)
+            GITHUB_TOKEN="${{ secrets.GIT_TOKEN }}" make show-info \
+              DOCKERFILE_DIR="${{ env.DOCKERFILE_DIR }}" \
+              IMAGE_NAME="${{ env.IMAGE_NAME }}" \
+              CNPG_BASE="$cnpg_base" \
+              PG_MAJOR="$pg_major" \
+              IMAGE_TAG="$image_tag"
+          
+            # For scheduled builds, check if base image changed
+            should_build=true
+            if [[ "${{ github.event_name }}" == "schedule" ]]; then
+              if ! GITHUB_TOKEN="${{ secrets.GIT_TOKEN }}" make check-base-updated \
+                DOCKERFILE_DIR="${{ env.DOCKERFILE_DIR }}" \
+                IMAGE_NAME="${{ env.IMAGE_NAME }}" \
+                CNPG_BASE="$cnpg_base" \
+                PG_MAJOR="$pg_major"; then
+                echo "Base image unchanged for PG${pg_major}, skipping build..."
+                should_build=false
+              fi
+            fi
+          
+            if [[ "$should_build" == "true" ]]; then
+              # Build and test using make with organization token
+              echo "Building and testing PG${pg_major} (AMD64)..."
+              GITHUB_TOKEN="${{ secrets.GIT_TOKEN }}" make build-and-test \
+                DOCKERFILE_DIR="${{ env.DOCKERFILE_DIR }}" \
+                IMAGE_NAME="${{ env.IMAGE_NAME }}" \
+                CNPG_BASE="$cnpg_base" \
+                PG_MAJOR="$pg_major" \
+                IMAGE_TAG="$image_tag" \
+                PLATFORM="linux/amd64"
+            fi
+          
+            # Export variables for next steps
+            echo "PG${pg_major}_CNPG_BASE=$cnpg_base" >> $GITHUB_ENV
+            echo "PG${pg_major}_IMAGE_TAG=$image_tag" >> $GITHUB_ENV
+            echo "PG${pg_major}_SHOULD_BUILD=$should_build" >> $GITHUB_ENV
+          done
 
-      # only trigger scheduled weekly build if the CNPG image changed
-      - name: Check if base image changed (schedule only)
-        if: github.event_name == 'schedule'
-        id: check-base
+      # Push AMD64 images
+      - name: Push images
         run: |
-          if make check-base-updated \
-            DOCKERFILE_DIR="${DOCKERFILE_DIR}" \
-            IMAGE_NAME="${IMAGE_NAME}" \
-            CNPG_BASE="${{ steps.cnpg_base.outputs.base }}" \
-            PG_MAJOR=${{ matrix.pg }}; then
-            echo "changed=true" >> $GITHUB_OUTPUT
-          else
-            echo "changed=false" >> $GITHUB_OUTPUT
-          fi
+          pg_versions='${{ toJSON(matrix.config.pg_versions) }}'
+          for pg_major in $(echo "$pg_versions" | jq -r '.[]'); do
+            should_build_var="PG${pg_major}_SHOULD_BUILD"
+            cnpg_base_var="PG${pg_major}_CNPG_BASE"
+            image_tag_var="PG${pg_major}_IMAGE_TAG"
+          
+            if [[ "${!should_build_var}" == "true" ]]; then
+              echo "Pushing PG${pg_major} image (AMD64)..."
+          
+              # Test GitHub token access before pushing
+              echo "Testing GitHub token access before push..."
+              GITHUB_TOKEN="${{ secrets.GIT_TOKEN }}" make test-github-access \
+                DOCKERFILE_DIR="${{ env.DOCKERFILE_DIR }}" \
+                IMAGE_NAME="${{ env.IMAGE_NAME }}"
+          
+              if [[ "${{ github.event_name }}" == "pull_request" && "${{ github.event.pull_request.head.repo.fork }}" == "false" ]]; then
+                # PR builds - SHA tag only using Docker secrets with organization token
+                GITHUB_TOKEN="${{ secrets.GIT_TOKEN }}"
+                echo "$GITHUB_TOKEN" | docker buildx build \
+                  --platform "${{ env.PLATFORMS }}" \
+                  -f "${{ env.DOCKERFILE_DIR }}/Dockerfile" \
+                  -t "${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${!image_tag_var}" \
+                  --label "org.opencontainers.image.source=https://github.com/${{ github.repository }}" \
+                  --label "org.opencontainers.image.description=${{ env.DESCRIPTION }} (PR build PG${pg_major} AMD64)" \
+                  --label "org.opencontainers.image.licenses=PostgreSQL" \
+                  --build-arg CNPG_BASE="${!cnpg_base_var}" \
+                  --build-arg PG_MAJOR="$pg_major" \
+                  --secret id=github_token,src=/dev/stdin \
+                  --push \
+                  .
+              elif [[ "${{ github.event_name }}" == "push" || "${{ github.event_name }}" == "workflow_dispatch" || "${{ github.event_name }}" == "schedule" ]]; then
+                # Full builds - using make with organization token
+                GITHUB_TOKEN="${{ secrets.GIT_TOKEN }}" make push-multiarch \
+                  DOCKERFILE_DIR="${{ env.DOCKERFILE_DIR }}" \
+                  IMAGE_NAME="${{ env.IMAGE_NAME }}" \
+                  CNPG_BASE="${!cnpg_base_var}" \
+                  PG_MAJOR="$pg_major" \
+                  IMAGE_TAG="${!image_tag_var}" \
+                  PLATFORM="linux/amd64"
+              fi
+            else
+              echo "Skipping push for PG${pg_major} (not built)"
+            fi
+          done
 
-      # Build & test
-      - name: Build and test image
-        if: github.event_name != 'schedule'
-        run: |
-          make build-and-test \
-            DOCKERFILE_DIR="${DOCKERFILE_DIR}" \
-            IMAGE_NAME="${IMAGE_NAME}" \
-            CNPG_BASE="${{ steps.cnpg_base.outputs.base }}" \
-            PG_MAJOR=${{ matrix.pg }} \
-            IMAGE_TAG=${{ steps.tags.outputs.image_tag }}
+  # Build ARM64 images
+  build-test-publish-arm64:
+    runs-on:
+      group: arm-runners
+    needs: detect-changes
+    strategy:
+      matrix: ${{ fromJSON(needs.detect-changes.outputs.matrix) }}
+    env:
+      REGISTRY: ghcr.io
+      PLATFORMS: linux/arm64
+      ARCH: arm64
 
-      # Build & test (schedule, only if base changed)
-      - name: Build and test image (schedule)
-        if: github.event_name == 'schedule' && steps.check-base.outputs.changed == 'true'
-        run: |
-          make build-and-test \
-            DOCKERFILE_DIR="${DOCKERFILE_DIR}" \
-            IMAGE_NAME="${IMAGE_NAME}" \
-            CNPG_BASE="${{ steps.cnpg_base.outputs.base }}" \
-            PG_MAJOR=${{ matrix.pg }} \
-            IMAGE_TAG=${{ steps.tags.outputs.image_tag }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-      # only run snyk if it is not a scheduled run or, for scheduled runs, if something changed and we had to actually build the image
-      - name: Run Snyk to check Docker image for vulnerabilities
-        if: github.event_name != 'schedule' || steps.check-base.outputs.changed == 'true'
-        uses: snyk/actions/docker@master
-        continue-on-error: true
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # Test organization token access
+      - name: Test organization token access
         env:
-          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GIT_TOKEN }}
+        run: |
+          echo "Testing GIT_TOKEN access to xataio/xata-utils..."
+          
+          # Test repository access
+          response=$(curl -s -o /dev/null -w "%{http_code}" \
+            -H "Authorization: token $GITHUB_TOKEN" \
+            https://api.github.com/repos/xataio/xata-utils)
+          
+          echo "Repository access response: $response"
+          
+          if [ "$response" = "200" ]; then
+            echo "Repository accessible"
+          
+            # Test the specific release
+            echo "Testing release v0.0.0-test..."
+            release_response=$(curl -s -H "Authorization: token $GITHUB_TOKEN" \
+                 -H "Accept: application/vnd.github.v3+json" \
+                 https://api.github.com/repos/xataio/xata-utils/releases/tags/v0.0.0-test)
+          
+            if echo "$release_response" | jq -e '.tag_name' >/dev/null 2>&1; then
+              echo "Release v0.0.0-test found"
+            else
+              echo "Release v0.0.0-test not found"
+              echo "Available releases:"
+              curl -s -H "Authorization: token $GITHUB_TOKEN" \
+                   -H "Accept: application/vnd.github.v3+json" \
+                   https://api.github.com/repos/xataio/xata-utils/releases \
+              | jq -r '.[].tag_name' | head -5
+            fi
+          else
+            echo "Repository not accessible (HTTP $response)"
+            exit 1
+          fi
+
+      - name: Set environment variables
+        run: |
+          # Parse matrix config
+          pg_versions='${{ toJSON(matrix.config.pg_versions) }}'
+          image_name='${{ matrix.config.image_name }}'
+          description='${{ matrix.config.description }}'
+          
+          echo "IMAGE_NAME=${image_name}" >> $GITHUB_ENV
+          echo "DOCKERFILE_DIR=${{ matrix.folder }}" >> $GITHUB_ENV
+          echo "DESCRIPTION=${description}" >> $GITHUB_ENV
+
+      # Build each PG version for this folder
+      - name: Build and process PG versions
+        run: |
+          # Get PG versions for this folder
+          pg_versions='${{ toJSON(matrix.config.pg_versions) }}'
+          echo "Building PG versions: $pg_versions for folder: ${{ matrix.folder }} (ARM64)"
+          
+          # Process each PG version
+          for pg_major in $(echo "$pg_versions" | jq -r '.[]'); do
+            echo "=== Processing PG ${pg_major} (ARM64) ==="
+          
+            # Set version-specific variables
+            if [[ "$pg_major" == "17" ]]; then
+              base_minimal="ghcr.io/cloudnative-pg/postgresql:17-minimal-bookworm"
+              base_standard="ghcr.io/cloudnative-pg/postgresql:17-standard-bookworm"
+              default_base="ghcr.io/cloudnative-pg/postgresql:17-minimal-bookworm"
+              sha_suffix="-arm64"
+            else
+              base_minimal="ghcr.io/cloudnative-pg/postgresql:18rc1-minimal-bookworm"
+              base_standard="ghcr.io/cloudnative-pg/postgresql:18rc1-standard-bookworm"  
+              default_base="ghcr.io/cloudnative-pg/postgresql:18rc1-minimal-bookworm"
+              sha_suffix="-pg18-arm64"
+            fi
+          
+            # Determine CNPG base image
+            if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+              if [[ -n "${{ github.event.inputs.custom_cnpg_base }}" ]]; then
+                cnpg_base="${{ github.event.inputs.custom_cnpg_base }}"
+              elif [[ "${{ github.event.inputs.cnpg_base }}" == "minimal" ]]; then
+                cnpg_base="$base_minimal"
+              else
+                cnpg_base="$base_standard"
+              fi
+            else
+              cnpg_base="$default_base"
+            fi
+          
+            # Create image tag
+            image_tag="${{ github.sha }}${sha_suffix}"
+          
+            echo "CNPG Base: $cnpg_base"
+            echo "Image Tag: $image_tag"
+            echo "Folder: ${{ matrix.folder }}"
+          
+            # Show build info using make (with organization token)
+            GITHUB_TOKEN="${{ secrets.GIT_TOKEN }}" make show-info \
+              DOCKERFILE_DIR="${{ env.DOCKERFILE_DIR }}" \
+              IMAGE_NAME="${{ env.IMAGE_NAME }}" \
+              CNPG_BASE="$cnpg_base" \
+              PG_MAJOR="$pg_major" \
+              IMAGE_TAG="$image_tag"
+          
+            # For scheduled builds, check if base image changed
+            should_build=true
+            if [[ "${{ github.event_name }}" == "schedule" ]]; then
+              if ! GITHUB_TOKEN="${{ secrets.GIT_TOKEN }}" make check-base-updated \
+                DOCKERFILE_DIR="${{ env.DOCKERFILE_DIR }}" \
+                IMAGE_NAME="${{ env.IMAGE_NAME }}" \
+                CNPG_BASE="$cnpg_base" \
+                PG_MAJOR="$pg_major"; then
+                echo "Base image unchanged for PG${pg_major}, skipping build..."
+                should_build=false
+              fi
+            fi
+          
+            if [[ "$should_build" == "true" ]]; then
+              # Build and test using make with organization token
+              echo "Building and testing PG${pg_major} (ARM64)..."
+              GITHUB_TOKEN="${{ secrets.GIT_TOKEN }}" make build-and-test \
+                DOCKERFILE_DIR="${{ env.DOCKERFILE_DIR }}" \
+                IMAGE_NAME="${{ env.IMAGE_NAME }}" \
+                CNPG_BASE="$cnpg_base" \
+                PG_MAJOR="$pg_major" \
+                IMAGE_TAG="$image_tag" \
+                PLATFORM="linux/arm64"
+            fi
+          
+            # Export variables for next steps
+            echo "PG${pg_major}_CNPG_BASE=$cnpg_base" >> $GITHUB_ENV
+            echo "PG${pg_major}_IMAGE_TAG=$image_tag" >> $GITHUB_ENV
+            echo "PG${pg_major}_SHOULD_BUILD=$should_build" >> $GITHUB_ENV
+          done
+
+      # Push ARM64 images
+      - name: Push images
+        run: |
+          pg_versions='${{ toJSON(matrix.config.pg_versions) }}'
+          
+          for pg_major in $(echo "$pg_versions" | jq -r '.[]'); do
+            should_build_var="PG${pg_major}_SHOULD_BUILD"
+            cnpg_base_var="PG${pg_major}_CNPG_BASE"
+            image_tag_var="PG${pg_major}_IMAGE_TAG"
+          
+            if [[ "${!should_build_var}" == "true" ]]; then
+              echo "Pushing PG${pg_major} image (ARM64)..."
+          
+              # Test GitHub token access before pushing
+              echo "Testing GitHub token access before push..."
+              GITHUB_TOKEN="${{ secrets.GIT_TOKEN }}" make test-github-access \
+                DOCKERFILE_DIR="${{ env.DOCKERFILE_DIR }}" \
+                IMAGE_NAME="${{ env.IMAGE_NAME }}"
+          
+              if [[ "${{ github.event_name }}" == "pull_request" && "${{ github.event.pull_request.head.repo.fork }}" == "false" ]]; then
+                # PR builds - SHA tag only using Docker secrets with organization token
+                GITHUB_TOKEN="${{ secrets.GIT_TOKEN }}"
+                echo "$GITHUB_TOKEN" | docker buildx build \
+                  --platform "${{ env.PLATFORMS }}" \
+                  -f "${{ env.DOCKERFILE_DIR }}/Dockerfile" \
+                  -t "${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${!image_tag_var}" \
+                  --label "org.opencontainers.image.source=https://github.com/${{ github.repository }}" \
+                  --label "org.opencontainers.image.description=${{ env.DESCRIPTION }} (PR build PG${pg_major} ARM64)" \
+                  --label "org.opencontainers.image.licenses=PostgreSQL" \
+                  --build-arg CNPG_BASE="${!cnpg_base_var}" \
+                  --build-arg PG_MAJOR="$pg_major" \
+                  --secret id=github_token,src=/dev/stdin \
+                  --push \
+                  .
+              elif [[ "${{ github.event_name }}" == "push" || "${{ github.event_name }}" == "workflow_dispatch" || "${{ github.event_name }}" == "schedule" ]]; then
+                # Full builds - using make with organization token
+                GITHUB_TOKEN="${{ secrets.GIT_TOKEN }}" make push-multiarch \
+                  DOCKERFILE_DIR="${{ env.DOCKERFILE_DIR }}" \
+                  IMAGE_NAME="${{ env.IMAGE_NAME }}" \
+                  CNPG_BASE="${!cnpg_base_var}" \
+                  PG_MAJOR="$pg_major" \
+                  IMAGE_TAG="${!image_tag_var}" \
+                  PLATFORM="linux/arm64"
+              fi
+            else
+              echo "Skipping push for PG${pg_major} (not built)"
+            fi
+          done
+
+  # Create multiarch manifests (combine AMD64 and ARM64 images)
+  create-manifest:
+    runs-on: ubuntu-latest
+    needs: [detect-changes, build-test-publish-amd64, build-test-publish-arm64]
+    if: github.event_name != 'pull_request'
+    strategy:
+      matrix: ${{ fromJSON(needs.detect-changes.outputs.matrix) }}
+    env:
+      REGISTRY: ghcr.io
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
         with:
-          image: ghcr.io/${{ env.IMAGE_NAME }}:${{ steps.tags.outputs.image_tag }}
-          args: --severity-threshold=high --file=${{ env.DOCKERFILE_DIR }}/Dockerfile --sarif-file-output=snyk.sarif
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Upload Snyk SARIF to Code Scanning
-        if: github.event_name != 'schedule' || steps.check-base.outputs.changed == 'true'
-        uses: github/codeql-action/upload-sarif@v3
-        continue-on-error: true
-        with:
-          sarif_file: snyk.sarif
-
-      # PRs (same-repo only): push SHA tag(s) only (no version/date tags)
-      - name: Push multiarch image (PRs → sha only)
-        if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.fork == false
+      - name: Set environment variables
         run: |
-          docker buildx build \
-            --platform "${PLATFORMS}" \
-            -f "${DOCKERFILE_DIR}/Dockerfile" \
-            -t "ghcr.io/${IMAGE_NAME}:${{ steps.tags.outputs.image_tag }}" \
-            --label "org.opencontainers.image.source=https://github.com/${{ github.repository }}" \
-            --label "org.opencontainers.image.description=CNPG PostgreSQL image (PR build PG${{ matrix.pg }})" \
-            --label "org.opencontainers.image.licenses=PostgreSQL" \
-            --build-arg CNPG_BASE="${{ steps.cnpg_base.outputs.base }}" \
-            --build-arg PG_MAJOR=${{ matrix.pg }} \
-            --push \
-            .
+          # Parse matrix config
+          pg_versions='${{ toJSON(matrix.config.pg_versions) }}'
+          image_name='${{ matrix.config.image_name }}'
+          
+          echo "IMAGE_NAME=${image_name}" >> $GITHUB_ENV
 
-      # Main pushes & manual runs: push full tag set (version + date + sha[-pg18])
-      - name: Push multiarch image (full tags)
-        if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+      - name: Create multiarch manifests
         run: |
-          make push-multiarch \
-            DOCKERFILE_DIR="${DOCKERFILE_DIR}" \
-            IMAGE_NAME="${IMAGE_NAME}" \
-            CNPG_BASE="${{ steps.cnpg_base.outputs.base }}" \
-            PG_MAJOR=${{ matrix.pg }} \
-            IMAGE_TAG=${{ steps.tags.outputs.image_tag }}
+          pg_versions='${{ toJSON(matrix.config.pg_versions) }}'
+          
+          for pg_major in $(echo "$pg_versions" | jq -r '.[]'); do
+            echo "=== Creating multiarch manifest for PG ${pg_major} ==="
+          
+            # Set version-specific variables for tag creation
+            if [[ "$pg_major" == "17" ]]; then
+              amd64_tag="${{ github.sha }}-amd64"
+              arm64_tag="${{ github.sha }}-arm64"
+              final_tag="${{ github.sha }}"
+            else
+              amd64_tag="${{ github.sha }}-pg18-amd64"
+              arm64_tag="${{ github.sha }}-pg18-arm64"  
+              final_tag="${{ github.sha }}-pg18"
+            fi
+          
+            # Create and push multiarch manifest
+            docker manifest create \
+              "${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${final_tag}" \
+              "${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${amd64_tag}" \
+              "${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${arm64_tag}"
+          
+            docker manifest push "${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${final_tag}"
+          
+            # Also create latest tag for PG17 on main branch
+            if [[ "${{ github.ref }}" == "refs/heads/main" && "$pg_major" == "17" ]]; then
+              docker manifest create \
+                "${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest" \
+                "${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${amd64_tag}" \
+                "${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${arm64_tag}"
+          
+              docker manifest push "${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest"
+            fi
+          
+            echo "Created multiarch manifest: ${{ env.IMAGE_NAME }}:${final_tag}"
+          done
 
-      # Scheduled run: push only if base changed
-      - name: Push multiarch image for scheduled build
-        if: github.event_name == 'schedule' && steps.check-base.outputs.changed == 'true'
+  # Summary job
+  build-test-publish:
+    name: build-test-publish
+    runs-on: ubuntu-latest
+    needs: [build-test-publish-amd64, build-test-publish-arm64, create-manifest]
+    if: always()
+    steps:
+      - name: Check job results
         run: |
-          make push-multiarch \
-            DOCKERFILE_DIR="${DOCKERFILE_DIR}" \
-            IMAGE_NAME="${IMAGE_NAME}" \
-            CNPG_BASE="${{ steps.cnpg_base.outputs.base }}" \
-            PG_MAJOR=${{ matrix.pg }} \
-            IMAGE_TAG=${{ steps.tags.outputs.image_tag }}
+          amd64_result="${{ needs.build-test-publish-amd64.result }}"
+          arm64_result="${{ needs.build-test-publish-arm64.result }}"
+          manifest_result="${{ needs.create-manifest.result }}"
+          
+          echo "AMD64 build result: $amd64_result"
+          echo "ARM64 build result: $arm64_result"
+          echo "Manifest creation result: $manifest_result"
+          
+          if [[ "$amd64_result" == "failure" || "$arm64_result" == "failure" ]]; then
+            echo "One or more build jobs failed"
+            exit 1
+          fi
+          
+          if [[ "${{ github.event_name }}" != "pull_request" && "$manifest_result" == "failure" ]]; then
+            echo "Manifest creation failed"
+            exit 1
+          fi
+          
+          echo "All jobs completed successfully"
