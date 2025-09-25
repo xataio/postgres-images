@@ -315,9 +315,16 @@ jobs:
             if [[ "${!should_build_var}" == "true" ]]; then
               echo "Pushing PG${pg_major} image..."
           
+              # Test GitHub token access before pushing
+              echo "Testing GitHub token access before push..."
+              GITHUB_TOKEN="${{ secrets.GIT_TOKEN }}" make test-github-access \
+                DOCKERFILE_DIR="${{ env.DOCKERFILE_DIR }}" \
+                IMAGE_NAME="${{ env.IMAGE_NAME }}"
+          
               if [[ "${{ github.event_name }}" == "pull_request" && "${{ github.event.pull_request.head.repo.fork }}" == "false" ]]; then
-                # PR builds - SHA tag only using Docker secrets with organization token
-                echo "${{ secrets.GIT_TOKEN }}" | docker buildx build \
+                # PR builds - SHA tag only using Docker secrets with organization token (matching Makefile pattern)
+                GITHUB_TOKEN="${{ secrets.GIT_TOKEN }}"
+                echo "$GITHUB_TOKEN" | docker buildx build \
                   --platform "${{ env.PLATFORMS }}" \
                   -f "${{ env.DOCKERFILE_DIR }}/Dockerfile" \
                   -t "${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${!image_tag_var}" \
