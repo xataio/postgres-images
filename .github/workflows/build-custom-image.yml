@@ -108,7 +108,7 @@ jobs:
   # Summary job
   build-test-publish:
     name: build-test-publish
-    runs-on: ubuntu-latest
+    runs-on: arm-runners
     needs: [build-test-publish-matrix]
     if: always()
     steps:
@@ -123,13 +123,13 @@ jobs:
           echo "All matrix jobs completed successfully"
 
   build-test-publish-matrix:
-    runs-on: ubuntu-24.04-arm
+    runs-on: arm-runners
     needs: detect-changes
     strategy:
       matrix: ${{ fromJSON(needs.detect-changes.outputs.matrix) }}
     env:
       REGISTRY: ghcr.io
-      PLATFORMS: linux/amd64,linux/arm64
+      PLATFORMS: linux/arm64
 
     steps:
       - name: Checkout repository
