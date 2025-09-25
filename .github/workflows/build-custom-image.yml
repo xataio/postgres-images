@@ -123,7 +123,7 @@ jobs:
           echo "All matrix jobs completed successfully"
 
   build-test-publish-matrix:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04-arm
     needs: detect-changes
     strategy:
       matrix: ${{ fromJSON(needs.detect-changes.outputs.matrix) }}
