@@ -108,7 +108,9 @@ jobs:
   # Summary job
   build-test-publish:
     name: build-test-publish
-    runs-on: arm-runners
+    runs-on:
+      group:
+        arm-runners
     needs: [build-test-publish-matrix]
     if: always()
     steps:
@@ -123,7 +125,9 @@ jobs:
           echo "All matrix jobs completed successfully"
 
   build-test-publish-matrix:
-    runs-on: arm-runners
+    runs-on:
+      group:
+        arm-runners
     needs: detect-changes
     strategy:
       matrix: ${{ fromJSON(needs.detect-changes.outputs.matrix) }}
