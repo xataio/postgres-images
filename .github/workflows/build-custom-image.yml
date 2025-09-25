@@ -297,7 +297,7 @@ jobs:
                   .
               elif [[ "${{ github.event_name }}" == "push" || "${{ github.event_name }}" == "workflow_dispatch" || "${{ github.event_name }}" == "schedule" ]]; then
                 # Full builds - using make with organization token
-                GITHUB_TOKEN="${{ secrets.GIT_TOKEN }}" make push-multiarch \
+                GITHUB_TOKEN="${{ secrets.GIT_TOKEN }}" make push-arch \
                   DOCKERFILE_DIR="${{ env.DOCKERFILE_DIR }}" \
                   IMAGE_NAME="${{ env.IMAGE_NAME }}" \
                   CNPG_BASE="${!cnpg_base_var}" \
@@ -504,7 +504,7 @@ jobs:
                   .
               elif [[ "${{ github.event_name }}" == "push" || "${{ github.event_name }}" == "workflow_dispatch" || "${{ github.event_name }}" == "schedule" ]]; then
                 # Full builds - using make with organization token
-                GITHUB_TOKEN="${{ secrets.GIT_TOKEN }}" make push-multiarch \
+                GITHUB_TOKEN="${{ secrets.GIT_TOKEN }}" make push-arch \
                   DOCKERFILE_DIR="${{ env.DOCKERFILE_DIR }}" \
                   IMAGE_NAME="${{ env.IMAGE_NAME }}" \
                   CNPG_BASE="${!cnpg_base_var}" \

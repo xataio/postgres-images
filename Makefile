@@ -195,8 +195,8 @@ build-multiarch: get-pg-version get-base-digest check-github-token setup-buildx 
 		--secret id=github_token,src=/dev/stdin \
 		.
 
-.PHONY: push-multiarch
-push-multiarch: get-pg-version get-base-digest check-github-token setup-buildx ## Build and push multi-architecture image
+.PHONY: push-arch
+push-arch: get-pg-version get-base-digest check-github-token setup-buildx ## Build and push multi-architecture image
 	@echo "Building and pushing multi-architecture image (tags: latest, $(PG_VERSION), $(PG_VERSION)-$(DATE_TAG), $(IMAGE_TAG))..."
 	@echo "$(GITHUB_TOKEN)" | docker buildx build \
 		-f $(DOCKERFILE) \
@@ -211,7 +211,7 @@ push-multiarch: get-pg-version get-base-digest check-github-token setup-buildx #
 		--build-arg CONFIG_FILE=$(CONFIG_FILE) \
 		--build-arg POSTGIS_CLI_VERSION_17=$(POSTGIS_CLI_VERSION_17) \
 		--secret id=github_token,src=/dev/stdin \
-		--push \
+		--output type=image,push=true \
 		.
 	@echo "Multi-architecture image pushed to $(FULL_IMAGE_NAME)"
 	@echo "Available tags: latest, $(PG_VERSION), $(PG_VERSION)-$(DATE_TAG), $(IMAGE_TAG)"
@@ -264,7 +264,7 @@ ci-build: check-github-token ## CI build process (build, test, verify, and condi
 	@if $(MAKE) check-base-updated 2>/dev/null; then \
 		echo "Base image updated, proceeding with build..."; \
 		$(MAKE) build-and-test && \
-		$(MAKE) push-multiarch; \
+		$(MAKE) push-arch; \
 	else \
 		echo "Base image unchanged, skipping build"; \
 	fi
@@ -286,8 +286,8 @@ build-both: check-github-token
 .PHONY: push-both
 push-both: check-github-token
 	@echo "Pushing both PG versions with GitHub token..."
-	$(MAKE) push-multiarch PG_MAJOR=17 IMAGE_TAG=pg17
-	$(MAKE) push-multiarch PG_MAJOR=18 IMAGE_TAG=pg18-rc1
+	$(MAKE) push-arch PG_MAJOR=17 IMAGE_TAG=pg17
+	$(MAKE) push-arch PG_MAJOR=18 IMAGE_TAG=pg18-rc1
 
 # Test GitHub token access to xata-utils repository
 .PHONY: test-github-access
