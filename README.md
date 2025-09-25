@@ -62,7 +62,7 @@ make build-local REGISTRY=localhost:5000 IMAGE_NAME=my-postgres
 make build-multiarch
 
 # Build and push to registry
-make push-multiarch
+make push-arch
 
 # Build for specific platforms
 make build-multiarch PLATFORMS=linux/amd64
@@ -85,7 +85,7 @@ make ci-build
 - `build-and-test` - Build locally and run tests
 - `setup-buildx` - Setup Docker buildx for multi-platform builds
 - `build-multiarch` - Build multi-architecture image (no push)
-- `push-multiarch` - Build and push multi-architecture image
+- `push-arch` - Build and push architecture image
 - `check-base-updated` - Check if base image has been updated
 - `clean` - Clean up Docker resources
 - `show-info` - Show build information
