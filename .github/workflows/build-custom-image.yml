@@ -25,7 +25,6 @@ on:
         type: choice
         options:
           - ''
-          - 'docker/custom-postgres'
           - 'docker/experimental'
   schedule:
     - cron: '0 2 * * 3' # Every Wednesday at 2 AM UTC
@@ -47,7 +46,6 @@ jobs:
         run: |
           # Define folder configurations
           declare -A folders=(
-            ["docker/custom-postgres"]='{"pg_versions":[17,18],"image_name":"xataio/postgres-images/cnpg-postgres-plus","description":"CNPG PostgreSQL with additional extensions"}'
             ["docker/experimental"]='{"pg_versions":[17],"image_name":"xataio/postgres-images/experimental","description":"My custom PostgreSQL experimental"}'
           )
           
