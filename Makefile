@@ -197,11 +197,11 @@ build-multiarch: get-pg-version get-base-digest check-github-token setup-buildx 
 
 .PHONY: push-arch
 push-arch: get-pg-version get-base-digest check-github-token setup-buildx ## Build and push multi-architecture image
-	@echo "Building and pushing multi-architecture image (tags: latest, $(PG_VERSION), $(PG_VERSION)-$(DATE_TAG), $(IMAGE_TAG))..."
+	@echo "Building and pushing multi-architecture image (tags: $(IMAGE_TAG))..."
 	@echo "$(GITHUB_TOKEN)" | docker buildx build \
 		-f $(DOCKERFILE) \
 		--platform $(PLATFORMS) \
-		$(DOCKER_TAGS) \
+		-t $(FULL_IMAGE_NAME):$(IMAGE_TAG) \
 		--label "base.digest=$(BASE_DIGEST)" \
 		--label "org.opencontainers.image.source=https://github.com/xataio/postgres-images" \
 		--label "org.opencontainers.image.description=$(DESCRIPTION)" \
@@ -213,9 +213,8 @@ push-arch: get-pg-version get-base-digest check-github-token setup-buildx ## Bui
 		--secret id=github_token,src=/dev/stdin \
 		--output type=image,push=true \
 		.
-	@echo "Multi-architecture image pushed to $(FULL_IMAGE_NAME)"
-	@echo "Available tags: latest, $(PG_VERSION), $(PG_VERSION)-$(DATE_TAG), $(IMAGE_TAG)"
-	@echo "Platforms: $(PLATFORMS)"
+
+	@echo "Pushed $(FULL_IMAGE_NAME):$(IMAGE_TAG) Platforms: $(PLATFORMS)"
 
 .PHONY: check-base-updated
 check-base-updated: get-base-digest get-pg-version ## Check if base image has been updated
