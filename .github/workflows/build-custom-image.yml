@@ -148,15 +148,15 @@ jobs:
             echo "Repository accessible"
           
             # Test the specific release
-            echo "Testing release v0.0.0-test..."
+            echo "Testing release v0.2.0..."
             release_response=$(curl -s -H "Authorization: token $GITHUB_TOKEN" \
                  -H "Accept: application/vnd.github.v3+json" \
-                 https://api.github.com/repos/xataio/xata-utils/releases/tags/v0.0.0-test)
+                 https://api.github.com/repos/xataio/xata-utils/releases/tags/v0.2.0)
           
             if echo "$release_response" | jq -e '.tag_name' >/dev/null 2>&1; then
-              echo "Release v0.0.0-test found"
+              echo "Release v0.2.0 found"
             else
-              echo "Release v0.0.0-test not found"
+              echo "Release v0.2.0 not found"
               echo "Available releases:"
               curl -s -H "Authorization: token $GITHUB_TOKEN" \
                    -H "Accept: application/vnd.github.v3+json" \
@@ -336,15 +336,15 @@ jobs:
             echo "Repository accessible"
           
             # Test the specific release
-            echo "Testing release v0.0.0-test..."
+            echo "Testing release v0.2.0..."
             release_response=$(curl -s -H "Authorization: token $GITHUB_TOKEN" \
                  -H "Accept: application/vnd.github.v3+json" \
-                 https://api.github.com/repos/xataio/xata-utils/releases/tags/v0.0.0-test)
+                 https://api.github.com/repos/xataio/xata-utils/releases/tags/v0.2.0)
           
             if echo "$release_response" | jq -e '.tag_name' >/dev/null 2>&1; then
-              echo "Release v0.0.0-test found"
+              echo "Release v0.2.0 found"
             else
-              echo "Release v0.0.0-test not found"
+              echo "Release v0.2.0 not found"
               echo "Available releases:"
               curl -s -H "Authorization: token $GITHUB_TOKEN" \
                    -H "Accept: application/vnd.github.v3+json" \

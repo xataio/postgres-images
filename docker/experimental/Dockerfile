@@ -134,7 +134,7 @@ RUN which shp2pgsql || echo "shp2pgsql not found" && \
 # Install xatautils extension using Docker secrets for GitHub token
 RUN --mount=type=secret,id=github_token \
     ARCH=$(dpkg --print-architecture) && \
-    XATA_VERSION=v0.0.0-test && \
+    XATA_VERSION=v0.2.0 && \
     ASSET_NAME="xatautils-${XATA_VERSION}-pg${PG_MAJOR}-${ARCH}-linux-gnu.deb" && \
     if [ ! -f "/run/secrets/github_token" ]; then \
         echo "ERROR: GitHub token secret is required to access private xata-utils repository"; \
@@ -148,7 +148,7 @@ RUN --mount=type=secret,id=github_token \
                         -O- -q \
                         "https://api.github.com/repos/xataio/xata-utils/releases/tags/${XATA_VERSION}") && \
     # Extract the asset download URL for the specific file we need
-    DOWNLOAD_URL=$(echo "$RELEASE_INFO" | jq -r ".assets[] | select(.name==\"$ASSET_NAME\") | .url") && \
+    DOWNLOAD_URL=$(printf '%s' "$RELEASE_INFO" | jq -r ".assets[] | select(.name==\"$ASSET_NAME\") | .url") && \
     if [ -z "$DOWNLOAD_URL" ] || [ "$DOWNLOAD_URL" = "null" ]; then \
         echo "ERROR: Asset ${ASSET_NAME} not found in release ${XATA_VERSION}"; \
         echo "Available assets:"; \
