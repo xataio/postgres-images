@@ -148,7 +148,7 @@ RUN --mount=type=secret,id=github_token \
                         -O- -q \
                         "https://api.github.com/repos/xataio/xata-utils/releases/tags/${XATA_VERSION}") && \
     # Extract the asset download URL for the specific file we need
-    DOWNLOAD_URL=$(echo "$RELEASE_INFO" | jq -r ".assets[] | select(.name==\"$ASSET_NAME\") | .url") && \
+    DOWNLOAD_URL=$(printf '%s' "$RELEASE_INFO" | jq -r ".assets[] | select(.name==\"$ASSET_NAME\") | .url") && \
     if [ -z "$DOWNLOAD_URL" ] || [ "$DOWNLOAD_URL" = "null" ]; then \
         echo "ERROR: Asset ${ASSET_NAME} not found in release ${XATA_VERSION}"; \
         echo "Available assets:"; \
