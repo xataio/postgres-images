@@ -1,6 +1,6 @@
 # PostgreSQL CNPG Custom Image Makefile
 PG_MAJOR ?= 17
-PG_TAG   ?= $(if $(filter $(PG_MAJOR),18),18rc1,$(PG_MAJOR))
+PG_TAG   ?= $(PG_MAJOR) #17->17, 18->18
 
 POSTGIS_CLI_VERSION_17 ?= 3.6.0+dfsg-1.pgdg12+1
 
@@ -280,13 +280,13 @@ scan: ## Run Snyk vulnerability scan (on demand)
 build-both: check-github-token
 	@echo "Building both PG versions with GitHub token..."
 	$(MAKE) build-and-test PG_MAJOR=17 IMAGE_TAG=pg17
-	$(MAKE) build-and-test PG_MAJOR=18 IMAGE_TAG=pg18-rc1
+	$(MAKE) build-and-test PG_MAJOR=18 IMAGE_TAG=pg18
 
 .PHONY: push-both
 push-both: check-github-token
 	@echo "Pushing both PG versions with GitHub token..."
 	$(MAKE) push-arch PG_MAJOR=17 IMAGE_TAG=pg17
-	$(MAKE) push-arch PG_MAJOR=18 IMAGE_TAG=pg18-rc1
+	$(MAKE) push-arch PG_MAJOR=18 IMAGE_TAG=pg18
 
 # Test GitHub token access to xata-utils repository
 .PHONY: test-github-access
