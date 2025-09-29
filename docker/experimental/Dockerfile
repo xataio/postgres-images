@@ -134,7 +134,7 @@ RUN which shp2pgsql || echo "shp2pgsql not found" && \
 # Install xatautils extension using Docker secrets for GitHub token
 RUN --mount=type=secret,id=github_token \
     ARCH=$(dpkg --print-architecture) && \
-    XATA_VERSION=v0.0.0-test && \
+    XATA_VERSION=v0.1.0 && \
     ASSET_NAME="xatautils-${XATA_VERSION}-pg${PG_MAJOR}-${ARCH}-linux-gnu.deb" && \
     if [ ! -f "/run/secrets/github_token" ]; then \
         echo "ERROR: GitHub token secret is required to access private xata-utils repository"; \
