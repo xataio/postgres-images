@@ -25,7 +25,6 @@ on:
         type: choice
         options:
           - ''
-          - 'docker/custom-postgres'
           - 'docker/experimental'
   schedule:
     - cron: '0 2 * * 3' # Every Wednesday at 2 AM UTC
@@ -47,7 +46,6 @@ jobs:
         run: |
           # Define folder configurations
           declare -A folders=(
-            ["docker/custom-postgres"]='{"pg_versions":[17,18],"image_name":"xataio/postgres-images/cnpg-postgres-plus","description":"CNPG PostgreSQL with additional extensions"}'
             ["docker/experimental"]='{"pg_versions":[17],"image_name":"xataio/postgres-images/experimental","description":"My custom PostgreSQL experimental"}'
           )
           
@@ -280,31 +278,13 @@ jobs:
                 DOCKERFILE_DIR="${{ env.DOCKERFILE_DIR }}" \
                 IMAGE_NAME="${{ env.IMAGE_NAME }}"
           
-              if [[ "${{ github.event_name }}" == "pull_request" && "${{ github.event.pull_request.head.repo.fork }}" == "false" ]]; then
-                # PR builds - SHA tag only using Docker secrets with organization token
-                GITHUB_TOKEN="${{ secrets.GIT_TOKEN }}"
-                echo "$GITHUB_TOKEN" | docker buildx build \
-                  --platform "${{ env.PLATFORMS }}" \
-                  -f "${{ env.DOCKERFILE_DIR }}/Dockerfile" \
-                  -t "${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${!image_tag_var}" \
-                  --label "org.opencontainers.image.source=https://github.com/${{ github.repository }}" \
-                  --label "org.opencontainers.image.description=${{ env.DESCRIPTION }} (PR build PG${pg_major} AMD64)" \
-                  --label "org.opencontainers.image.licenses=PostgreSQL" \
-                  --build-arg CNPG_BASE="${!cnpg_base_var}" \
-                  --build-arg PG_MAJOR="$pg_major" \
-                  --secret id=github_token,src=/dev/stdin \
-                  --push \
-                  .
-              elif [[ "${{ github.event_name }}" == "push" || "${{ github.event_name }}" == "workflow_dispatch" || "${{ github.event_name }}" == "schedule" ]]; then
-                # Full builds - using make with organization token
-                GITHUB_TOKEN="${{ secrets.GIT_TOKEN }}" make push-arch \
-                  DOCKERFILE_DIR="${{ env.DOCKERFILE_DIR }}" \
-                  IMAGE_NAME="${{ env.IMAGE_NAME }}" \
-                  CNPG_BASE="${!cnpg_base_var}" \
-                  PG_MAJOR="$pg_major" \
-                  IMAGE_TAG="${!image_tag_var}" \
-                  PLATFORM="linux/amd64"
-              fi
+              GITHUB_TOKEN="${{ secrets.GIT_TOKEN }}" make push-arch \
+              DOCKERFILE_DIR="${{ env.DOCKERFILE_DIR }}" \
+              IMAGE_NAME="${{ env.IMAGE_NAME }}" \
+              CNPG_BASE="${!cnpg_base_var}" \
+              PG_MAJOR="$pg_major" \
+              IMAGE_TAG="${!image_tag_var}" \
+              PLATFORMS="${{ env.PLATFORMS }}"
             else
               echo "Skipping push for PG${pg_major} (not built)"
             fi
@@ -487,31 +467,13 @@ jobs:
                 DOCKERFILE_DIR="${{ env.DOCKERFILE_DIR }}" \
                 IMAGE_NAME="${{ env.IMAGE_NAME }}"
           
-              if [[ "${{ github.event_name }}" == "pull_request" && "${{ github.event.pull_request.head.repo.fork }}" == "false" ]]; then
-                # PR builds - SHA tag only using Docker secrets with organization token
-                GITHUB_TOKEN="${{ secrets.GIT_TOKEN }}"
-                echo "$GITHUB_TOKEN" | docker buildx build \
-                  --platform "${{ env.PLATFORMS }}" \
-                  -f "${{ env.DOCKERFILE_DIR }}/Dockerfile" \
-                  -t "${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${!image_tag_var}" \
-                  --label "org.opencontainers.image.source=https://github.com/${{ github.repository }}" \
-                  --label "org.opencontainers.image.description=${{ env.DESCRIPTION }} (PR build PG${pg_major} ARM64)" \
-                  --label "org.opencontainers.image.licenses=PostgreSQL" \
-                  --build-arg CNPG_BASE="${!cnpg_base_var}" \
-                  --build-arg PG_MAJOR="$pg_major" \
-                  --secret id=github_token,src=/dev/stdin \
-                  --push \
-                  .
-              elif [[ "${{ github.event_name }}" == "push" || "${{ github.event_name }}" == "workflow_dispatch" || "${{ github.event_name }}" == "schedule" ]]; then
-                # Full builds - using make with organization token
-                GITHUB_TOKEN="${{ secrets.GIT_TOKEN }}" make push-arch \
-                  DOCKERFILE_DIR="${{ env.DOCKERFILE_DIR }}" \
-                  IMAGE_NAME="${{ env.IMAGE_NAME }}" \
-                  CNPG_BASE="${!cnpg_base_var}" \
-                  PG_MAJOR="$pg_major" \
-                  IMAGE_TAG="${!image_tag_var}" \
-                  PLATFORM="linux/arm64"
-              fi
+              GITHUB_TOKEN="${{ secrets.GIT_TOKEN }}" make push-arch \
+              DOCKERFILE_DIR="${{ env.DOCKERFILE_DIR }}" \
+              IMAGE_NAME="${{ env.IMAGE_NAME }}" \
+              CNPG_BASE="${!cnpg_base_var}" \
+              PG_MAJOR="$pg_major" \
+              IMAGE_TAG="${!image_tag_var}" \
+              PLATFORMS="${{ env.PLATFORMS }}"
             else
               echo "Skipping push for PG${pg_major} (not built)"
             fi
@@ -538,51 +500,60 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Set up Buildx (for imagetools)
+        uses: docker/setup-buildx-action@v3
+
       - name: Set environment variables
         run: |
           # Parse matrix config
           pg_versions='${{ toJSON(matrix.config.pg_versions) }}'
           image_name='${{ matrix.config.image_name }}'
-          
           echo "IMAGE_NAME=${image_name}" >> $GITHUB_ENV
 
       - name: Create multiarch manifests
         run: |
+          set -euo pipefail
           pg_versions='${{ toJSON(matrix.config.pg_versions) }}'
-          
+  
+          IMAGE="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}"
+          SHA="${{ github.sha }}"
+          DATE="$(date +%Y%m%d)"
+  
           for pg_major in $(echo "$pg_versions" | jq -r '.[]'); do
             echo "=== Creating multiarch manifest for PG ${pg_major} ==="
-          
-            # Set version-specific variables for tag creation
+  
             if [[ "$pg_major" == "17" ]]; then
-              amd64_tag="${{ github.sha }}-amd64"
-              arm64_tag="${{ github.sha }}-arm64"
-              final_tag="${{ github.sha }}"
+              AMD_TAG="${SHA}-amd64"
+              ARM_TAG="${SHA}-arm64"
+              FINAL_SHA_TAG="${SHA}"
             else
-              amd64_tag="${{ github.sha }}-pg18-amd64"
-              arm64_tag="${{ github.sha }}-pg18-arm64"  
-              final_tag="${{ github.sha }}-pg18"
+              AMD_TAG="${SHA}-pg18-amd64"
+              ARM_TAG="${SHA}-pg18-arm64"
+              FINAL_SHA_TAG="${SHA}-pg18"
             fi
-          
-            # Create and push multiarch manifest
-            docker manifest create \
-              "${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${final_tag}" \
-              "${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${amd64_tag}" \
-              "${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${arm64_tag}"
-          
-            docker manifest push "${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${final_tag}"
-          
-            # Also create latest tag for PG17 on main branch
+  
+            # Resolve the actual Postgres version from the built image (e.g., 17.6)
+            PG_VERSION="$(docker run --rm "${IMAGE}:${AMD_TAG}" postgres -V | awk '{print $3}')"
+            echo "Resolved PG_VERSION=${PG_VERSION}; DATE=${DATE}"
+  
+            # Create ONE multi-arch manifest and attach all desired tags
+            docker buildx imagetools create \
+              -t "${IMAGE}:${FINAL_SHA_TAG}" \
+              -t "${IMAGE}:${PG_VERSION}" \
+              -t "${IMAGE}:${PG_VERSION}-${DATE}" \
+              "${IMAGE}:${AMD_TAG}" \
+              "${IMAGE}:${ARM_TAG}"
+  
+            # Optional: also tag 'latest' on main for PG17
             if [[ "${{ github.ref }}" == "refs/heads/main" && "$pg_major" == "17" ]]; then
-              docker manifest create \
-                "${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest" \
-                "${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${amd64_tag}" \
-                "${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${arm64_tag}"
-          
-              docker manifest push "${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest"
+              docker buildx imagetools create \
+                -t "${IMAGE}:latest" \
+                "${IMAGE}:${AMD_TAG}" \
+                "${IMAGE}:${ARM_TAG}"
             fi
-          
-            echo "Created multiarch manifest: ${{ env.IMAGE_NAME }}:${final_tag}"
+  
+            echo "Created: ${IMAGE}:${FINAL_SHA_TAG}, ${IMAGE}:${PG_VERSION}, ${IMAGE}:${PG_VERSION}-${DATE}"
+            docker buildx imagetools inspect "${IMAGE}:${PG_VERSION}" >/dev/null
           done
 
   # Summary job
