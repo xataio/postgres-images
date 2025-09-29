@@ -197,9 +197,9 @@ jobs:
               default_base="ghcr.io/cloudnative-pg/postgresql:17-minimal-bookworm"
               sha_suffix="-amd64"
             else
-              base_minimal="ghcr.io/cloudnative-pg/postgresql:18rc1-minimal-bookworm"
-              base_standard="ghcr.io/cloudnative-pg/postgresql:18rc1-standard-bookworm"  
-              default_base="ghcr.io/cloudnative-pg/postgresql:18rc1-minimal-bookworm"
+              base_minimal="ghcr.io/cloudnative-pg/postgresql:18-minimal-bookworm"
+              base_standard="ghcr.io/cloudnative-pg/postgresql:18-standard-bookworm"  
+              default_base="ghcr.io/cloudnative-pg/postgresql:18-minimal-bookworm"
               sha_suffix="-pg18-amd64"
             fi
           
