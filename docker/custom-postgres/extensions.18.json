@@ -863,7 +863,7 @@
     },
     {
       "name": "pg_cron",
-      "package": "postgresql-17-cron",
+      "package": "postgresql-18-cron",
       "package_version": "1.6.7-1.pgdg12+1",
       "version": "1.6",
       "description": "Job scheduler for PostgreSQL",
@@ -880,24 +880,10 @@
       }
     },
     {
-      "name": "pglogical",
-      "package": "postgresql-17-pglogical",
-      "package_version": "2.4.5-1.pgdg120+1",
-      "version": "2.4.5",
-      "description": "Logical replication extension for PostgreSQL",
-      "docs_url": "https://github.com/2ndQuadrant/pglogical",
-      "preload_required": true,
-      "test_enabled": true,
-      "test_commands": [
-        "CREATE EXTENSION IF NOT EXISTS \"pglogical\";",
-        "SELECT pglogical.create_node(node_name := 'test_node', dsn := 'host=localhost port=5432 dbname=postgres');"
-      ]
-    },
-    {
       "name": "pgaudit",
-      "package": "postgresql-17-pgaudit",
-      "package_version": "17.1-1.pgdg120+1",
-      "version": "17.1",
+      "package": "postgresql-18-pgaudit",
+      "package_version": "18.0-1.pgdg12+1",
+      "version": "18.0",
       "description": "Audit logging extension for PostgreSQL",
       "docs_url": "https://github.com/pgaudit/pgaudit",
       "preload_required": true,
@@ -905,35 +891,6 @@
       "test_commands": [
         "CREATE EXTENSION IF NOT EXISTS \"pgaudit\";",
         "SHOW pgaudit.log;"
-      ]
-    },
-    {
-      "name": "hll",
-      "package": "postgresql-17-hll",
-      "package_version": "2.18-2.pgdg120+1",
-      "version": "2.18",
-      "description": "HyperLogLog data type for cardinality estimation",
-      "docs_url": "https://github.com/citusdata/postgresql-hll",
-      "preload_required": false,
-      "test_enabled": true,
-      "test_commands": [
-        "CREATE EXTENSION IF NOT EXISTS \"hll\";",
-        "CREATE TABLE test_hll (id INT, users hll); INSERT INTO test_hll VALUES (1, hll_empty());",
-        "SELECT hll_cardinality(users) FROM test_hll;"
-      ]
-    },
-    {
-      "name": "pg_partman",
-      "package": "postgresql-17-partman",
-      "package_version": "5.2.4-1.pgdg120+1",
-      "version": "5.2.4",
-      "description": "Partition management extension for PostgreSQL",
-      "docs_url": "https://github.com/pgpartman/pg_partman",
-      "preload_required": false,
-      "test_enabled": true,
-      "test_commands": [
-        "CREATE EXTENSION IF NOT EXISTS \"pg_partman\";",
-        "SELECT count(*) FROM public.part_config;"
       ]
     }
   ],
