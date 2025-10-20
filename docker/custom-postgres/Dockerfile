@@ -56,24 +56,12 @@ RUN jq -r '.extensions[] | "\(.name) \(.version)"' /tmp/extensions.json > /usr/l
 # Assumes: ARG PG_MAJOR and /tmp/extensions.json already COPY'd; jq is installed
 RUN set -e; \
   VIRTUAL="postgresql-contrib-${PG_MAJOR}"; \
-  if [ "${PG_MAJOR}" -lt 18 ]; then \
-    # PG16/17: only pinned packages (skip virtual contrib)
-    PINNED_PKGS="$(jq -r --arg v "$VIRTUAL" \
-      '.extensions[] | select(.package != $v) | select(.package_version and (.package_version != "")) | "\(.package)=\(.package_version)"' \
-      /tmp/extensions.json | sort -u | tr '\n' ' ' )"; \
-    echo "Installing pinned (PG${PG_MAJOR}): ${PINNED_PKGS}"; \
-    if [ -n "${PINNED_PKGS}" ]; then \
-      apt-get update && apt-get install -y --no-install-recommends ${PINNED_PKGS}; \
-    fi; \
-  else \
-    # PG18: all listed packages unpinned (skip virtual contrib)
-    PKGS="$(jq -r --arg v "$VIRTUAL" \
-      '[.extensions[].package] | unique | map(select(. != $v)) | .[]' \
-      /tmp/extensions.json | sort -u | tr '\n' ' ' )"; \
-    echo "Installing unpinned (PG${PG_MAJOR}), skipping virtual: ${PKGS}"; \
-    if [ -n "${PKGS}" ]; then \
-      apt-get update && apt-get install -y --no-install-recommends ${PKGS}; \
-    fi; \
+  PINNED_PKGS="$(jq -r --arg v "$VIRTUAL" \
+    '.extensions[] | select(.package != $v) | select(.package_version and (.package_version != "")) | "\(.package)=\(.package_version)"' \
+    /tmp/extensions.json | sort -u | tr '\n' ' ' )"; \
+  echo "Installing pinned (PG${PG_MAJOR}): ${PINNED_PKGS}"; \
+  if [ -n "${PINNED_PKGS}" ]; then \
+    apt-get update && apt-get install -y --no-install-recommends ${PINNED_PKGS}; \
   fi; \
   rm -rf /var/lib/apt/lists/*
 
