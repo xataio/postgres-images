@@ -142,6 +142,14 @@ test: ## Run tests on the built image
 		echo "No extensions require preloading, skipping shared_preload_libraries configuration"; \
 	fi
 
+	@echo "Verifying declared shared objects exist (file_check)…"
+	@jq -r '.extensions[] | select(.file_check and .file_check != "") | .file_check' $(CONFIG_FILE) \
+	  | while read -r path; do \
+	      echo " → checking $$path"; \
+	      docker exec pg-test bash -lc "[ -f $$path ] || { echo 'Missing: $$path'; exit 1; }"; \
+	    done
+
+
 	@echo "Testing all extensions from $(CONFIG_FILE)..."
 	@jq -r '.extensions[] | select(.test_enabled==true) | .name' $(CONFIG_FILE) | while read -r ext; do \
     	echo "Testing extension: $$ext"; \
