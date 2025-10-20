@@ -935,6 +935,15 @@
         "CREATE EXTENSION IF NOT EXISTS postgis_sfcgal;",
         "SELECT postgis_sfcgal_version();"
       ]
+    },
+    {
+      "name": "xatautils",
+      "version": "0.3.0",
+      "description": "Xata utilities (built from source)",
+      "docs_url": "https://github.com/xataio/xata-utils",
+      "preload_required": true,
+      "test_enabled": false,
+      "file_check": "/usr/lib/postgresql/17/lib/xatautils.so"
     }
   ],
   "postgres_config": [

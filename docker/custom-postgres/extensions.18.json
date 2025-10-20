@@ -178,7 +178,7 @@
     {
       "name": "wal2json",
       "package": "postgresql-18-wal2json",
-      "package_version": "",
+      "package_version": "2.6-3.pgdg12+1",
       "version": "2.6",
       "description": "Logical replication output plugin for JSON",
       "docs_url": "https://github.com/eulerto/wal2json",
@@ -196,7 +196,7 @@
     {
       "name": "hypopg",
       "package": "postgresql-18-hypopg",
-      "package_version": "",
+      "package_version": "1.4.2-2.pgdg12+1",
       "version": "1.4.2",
       "description": "Hypothetical indexes for query planning",
       "docs_url": "https://hypopg.readthedocs.io/",
@@ -252,7 +252,7 @@
     {
       "name": "postgis",
       "package": "postgresql-18-postgis-3",
-      "package_version": "",
+      "package_version": "3.6.0+dfsg-2.pgdg12+1",
       "version": "3.6.0",
       "description": "PostGIS geometry and geography spatial types and functions",
       "docs_url": "https://postgis.net/",
@@ -268,7 +268,7 @@
     {
       "name": "postgis_topology",
       "package": "postgresql-18-postgis-3",
-      "package_version": "",
+      "package_version": "3.6.0+dfsg-2.pgdg12+1",
       "version": "3.6.0",
       "description": "PostGIS topology spatial types and functions",
       "docs_url": "https://postgis.net/docs/Topology.html",
@@ -282,7 +282,7 @@
     {
       "name": "postgis_tiger_geocoder",
       "package": "postgresql-18-postgis-3-scripts",
-      "package_version": "",
+      "package_version": "3.6.0+dfsg-2.pgdg12+1",
       "version": "3.6.0",
       "description": "PostGIS tiger geocoder and reverse geocoder",
       "docs_url": "https://postgis.net/docs/Extras.html#Tiger_Geocoder",
@@ -309,7 +309,7 @@
     {
       "name": "ip4r",
       "package": "postgresql-18-ip4r",
-      "package_version": "",
+      "package_version": "2.4.2-4.pgdg12+1",
       "version": "2.4",
       "description": "IPv4 and IPv6 types and functions",
       "docs_url": "https://github.com/RhodiumToad/ip4r",
@@ -324,7 +324,7 @@
     {
       "name": "pg_hint_plan",
       "package": "postgresql-18-pg-hint-plan",
-      "package_version": "",
+      "package_version": "1.8.0-2.pgdg12+1",
       "version": "1.8.0",
       "description": "Query execution plan hinting",
       "docs_url": "https://github.com/ossc-db/pg_hint_plan",
@@ -338,7 +338,7 @@
     {
       "name": "pg_repack",
       "package": "postgresql-18-repack",
-      "package_version": "",
+      "package_version": "1.5.2-2.pgdg12+1",
       "version": "1.5.2",
       "description": "Remove bloat from tables and indexes without exclusive lock",
       "docs_url": "https://github.com/reorg/pg_repack",
@@ -353,7 +353,7 @@
     {
       "name": "pgrouting",
       "package": "postgresql-18-pgrouting",
-      "package_version": "",
+      "package_version": "3.8.0-2.pgdg12+1",
       "version": "3.8.0",
       "description": "Routing functionality for PostGIS/PostgreSQL",
       "docs_url": "https://docs.pgrouting.org/",
@@ -368,7 +368,7 @@
     {
       "name": "pgtap",
       "package": "postgresql-18-pgtap",
-      "package_version": "",
+      "package_version": "1.3.4-1.pgdg12+1",
       "version": "1.3.4",
       "description": "Unit testing framework for PostgreSQL",
       "docs_url": "https://pgtap.org/",
@@ -384,7 +384,7 @@
     {
       "name": "vector",
       "package": "postgresql-18-pgvector",
-      "package_version": "",
+      "package_version": "0.8.1-2.pgdg12+1",
       "version": "0.8.1",
       "description": "Vector similarity search for PostgreSQL",
       "docs_url": "https://github.com/pgvector/pgvector",
@@ -399,7 +399,7 @@
     {
       "name": "prefix",
       "package": "postgresql-18-prefix",
-      "package_version": "",
+      "package_version": "1.2.10-4.pgdg12+1",
       "version": "1.2.0",
       "description": "Prefix matching operator",
       "docs_url": "https://github.com/dimitri/prefix",
@@ -837,7 +837,7 @@
       "name": "postgis_raster",
       "package": "postgresql-18-postgis-3",
       "version": "3.6.0",
-      "package_version": "",
+      "package_version": "3.6.0+dfsg-2.pgdg12+1",
       "description": "PostGIS raster extension",
       "docs_url": "https://postgis.net/docs/RT_reference.html",
       "preload_required": false,
@@ -851,7 +851,7 @@
       "name": "postgis_sfcgal",
       "package": "postgresql-18-postgis-3",
       "version": "3.6.0",
-      "package_version": "",
+      "package_version": "3.6.0+dfsg-2.pgdg12+1",
       "description": "PostGIS SFCGAL support",
       "docs_url": "https://postgis.net/docs/SFCGAL_User_Manual.html",
       "preload_required": false,
@@ -864,7 +864,7 @@
     {
       "name": "pg_cron",
       "package": "postgresql-18-cron",
-      "package_version": "1.6.7-1.pgdg12+1",
+      "package_version": "1.6.7-2.pgdg12+1",
       "version": "1.6",
       "description": "Job scheduler for PostgreSQL",
       "docs_url": "https://github.com/citusdata/pg_cron",
@@ -882,7 +882,7 @@
     {
       "name": "pgaudit",
       "package": "postgresql-18-pgaudit",
-      "package_version": "18.0-1.pgdg12+1",
+      "package_version": "18.0-2.pgdg12+1",
       "version": "18.0",
       "description": "Audit logging extension for PostgreSQL",
       "docs_url": "https://github.com/pgaudit/pgaudit",
@@ -892,6 +892,15 @@
         "CREATE EXTENSION IF NOT EXISTS \"pgaudit\";",
         "SHOW pgaudit.log;"
       ]
+    },
+    {
+      "name": "xatautils",
+      "version": "0.3.0",
+      "description": "Xata utilities (built from source)",
+      "docs_url": "https://github.com/xataio/xata-utils",
+      "preload_required": true,
+      "test_enabled": false,
+      "file_check": "/usr/lib/postgresql/18/lib/xatautils.so"
     }
   ],
   "postgres_config": [
