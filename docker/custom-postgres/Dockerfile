@@ -194,11 +194,15 @@ while read -r name expected_version; do
         continue
     fi
 
-    actual_version=$(psql -tAc "SELECT default_version FROM pg_available_extensions WHERE name='${name}';" 2>/dev/null | xargs)
-    if [ -z "$actual_version" ]; then
-        mismatches+=("Extension '${name}' not found (expected ${expected_version})")
-    elif [ "$actual_version" != "$expected_version" ]; then
-        mismatches+=("Extension '${name}': expected ${expected_version}, found ${actual_version}")
+    if  [[ "$name" != "xatautils" ]]; then
+        actual_version=$(psql -tAc "SELECT default_version FROM pg_available_extensions WHERE name='${name}';" 2>/dev/null | xargs)
+        if [ -z "$actual_version" ]; then
+            mismatches+=("Extension '${name}' not found (expected ${expected_version})")
+        elif [ "$actual_version" != "$expected_version" ]; then
+            mismatches+=("Extension '${name}': expected ${expected_version}, found ${actual_version}")
+        fi
+    else
+        echo "Skipping SQL version check for ${name}"
     fi
 done < /usr/local/share/extensions-versions.txt
 

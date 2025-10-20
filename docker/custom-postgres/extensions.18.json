@@ -892,6 +892,15 @@
         "CREATE EXTENSION IF NOT EXISTS \"pgaudit\";",
         "SHOW pgaudit.log;"
       ]
+    },
+    {
+      "name": "xatautils",
+      "version": "0.3.0",
+      "description": "Xata utilities (built from source)",
+      "docs_url": "https://github.com/xataio/xata-utils",
+      "preload_required": true,
+      "test_enabled": false,
+      "file_check": "/usr/lib/postgresql/17/lib/xatautils.so"
     }
   ],
   "postgres_config": [
