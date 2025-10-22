@@ -27,6 +27,14 @@ on:
           - ''
           - 'docker/custom-postgres'
           - 'docker/experimental'
+      only_major:
+        description: 'Limit build to a single PG major (optional)'
+        required: false
+        type: choice
+        options:
+          - ''
+          - '17'
+          - '18'
   schedule:
     - cron: '0 2 * * 3' # Every Wednesday at 2 AM UTC
 
@@ -66,6 +74,25 @@ jobs:
               done
               matrix="${matrix%,}]}"
             fi
+
+            # Narrow to a single major if requested
+            if [[ -n "${{ github.event.inputs.only_major }}" ]]; then
+              matrix=$(jq \
+                --arg major "${{ github.event.inputs.only_major }}" '
+                  .include |= map(
+                    . as $item
+                    | if $major == "" then $item
+                      else ($item.config.pg_versions = [($major|tonumber)]) end
+                  )
+                ' <<<"$matrix")
+            fi
+
+            # Safety guard: if a custom base is provided, require only_major
+            if [[ -n "${{ github.event.inputs.custom_cnpg_base }}" && -z "${{ github.event.inputs.only_major }}" ]]; then
+              echo "ERROR: custom_cnpg_base was provided but only_major was not set. Refusing to build cross-major with a single custom base."
+              exit 1
+            fi
+
           elif [[ "${{ github.event_name }}" == "schedule" ]]; then
             # Scheduled - build all folders
             matrix='{"include":['
@@ -516,14 +543,14 @@ jobs:
         run: |
           set -euo pipefail
           pg_versions='${{ toJSON(matrix.config.pg_versions) }}'
-  
+          
           IMAGE="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}"
           SHA="${{ github.sha }}"
           DATE="$(date +%Y%m%d)"
-  
+          
           for pg_major in $(echo "$pg_versions" | jq -r '.[]'); do
             echo "=== Creating multiarch manifest for PG ${pg_major} ==="
-  
+          
             if [[ "$pg_major" == "17" ]]; then
               AMD_TAG="${SHA}-amd64"
               ARM_TAG="${SHA}-arm64"
@@ -533,11 +560,11 @@ jobs:
               ARM_TAG="${SHA}-pg18-arm64"
               FINAL_SHA_TAG="${SHA}-pg18"
             fi
-  
+          
             # Resolve the actual Postgres version from the built image (e.g., 17.6)
             PG_VERSION="$(docker run --rm "${IMAGE}:${AMD_TAG}" postgres -V | awk '{print $3}')"
             echo "Resolved PG_VERSION=${PG_VERSION}; DATE=${DATE}"
-  
+          
             # Create ONE multi-arch manifest and attach all desired tags
             docker buildx imagetools create \
               -t "${IMAGE}:${FINAL_SHA_TAG}" \
@@ -545,7 +572,7 @@ jobs:
               -t "${IMAGE}:${PG_VERSION}-${DATE}" \
               "${IMAGE}:${AMD_TAG}" \
               "${IMAGE}:${ARM_TAG}"
-  
+          
             # Optional: also tag 'latest' on main for PG17
             if [[ "${{ github.ref }}" == "refs/heads/main" && "$pg_major" == "17" ]]; then
               docker buildx imagetools create \
@@ -553,7 +580,7 @@ jobs:
                 "${IMAGE}:${AMD_TAG}" \
                 "${IMAGE}:${ARM_TAG}"
             fi
-  
+          
             echo "Created: ${IMAGE}:${FINAL_SHA_TAG}, ${IMAGE}:${PG_VERSION}, ${IMAGE}:${PG_VERSION}-${DATE}"
             docker buildx imagetools inspect "${IMAGE}:${PG_VERSION}" >/dev/null
           done
