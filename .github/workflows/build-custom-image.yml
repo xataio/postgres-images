@@ -128,7 +128,7 @@ jobs:
               matrix="${matrix%,}]}"
             fi
           fi
-          
+          matrix="$(jq -c . <<<"$matrix")"
           echo "matrix=$matrix" >> $GITHUB_OUTPUT
           echo "Generated matrix: $matrix"
 
