@@ -162,7 +162,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     ccache \
     libssl-dev \
     liblz4-dev \
-    postgresql-server-dev-17 \
+    postgresql-server-dev-${PG_MAJOR} \
   && rm -rf /var/lib/apt/lists/* \
   && cd /tmp \
   && git clone https://github.com/duckdb/pg_duckdb.git \
@@ -195,7 +195,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
        liblz4-dev \
        ninja-build \
        git \
-       postgresql-server-dev-17 \
+       postgresql-server-dev-${PG_MAJOR} \
   && rm -rf /var/lib/apt/lists/*
 
 
