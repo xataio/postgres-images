@@ -5,7 +5,7 @@ FROM ${CNPG_BASE}
 # PG_MAJOR is used for package names/paths (17, 18, etc.)
 ARG PG_MAJOR=17
 # Per-major extension manifest (set by Makefile)
-ARG CONFIG_FILE=docker/experimental/extensions.${PG_MAJOR}.json
+ARG CONFIG_FILE=docker/analytics/extensions.${PG_MAJOR}.json
 ARG POSTGIS_CLI_VERSION_17=
 
 USER root
@@ -150,6 +150,54 @@ RUN --mount=type=secret,id=github_token \
          "$DOWNLOAD_URL" && \
     dpkg -i /tmp/xatautils.deb && \
     rm /tmp/xatautils.deb
+
+# Build pg_duckdb from source (DuckDB v1.3.2, no httpfs)
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    zlib1g-dev \
+    cmake \
+    ninja-build \
+    git \
+    pkg-config \
+    ccache \
+    libssl-dev \
+    liblz4-dev \
+    postgresql-server-dev-17 \
+  && rm -rf /var/lib/apt/lists/* \
+  && cd /tmp \
+  && git clone https://github.com/duckdb/pg_duckdb.git \
+  && cd pg_duckdb \
+  # Don't fetch remote extensions like httpfs, and turn httpfs off entirely \
+  # disable the following: sanitizers, shell, python, unit test,  \
+  # does not automagically load extensions at runtime \
+  # does not automagically try to install extensions from the internet \
+  && export DUCKDB_EXTENSION_REMOTE_URLS="" \
+  && make GEN=ninja \
+    BUILD_SHELL=0 BUILD_PYTHON=0 BUILD_UNITTESTS=0 BUILD_HTTPFS=0 \
+    EXTENSION_CONFIGS="" \
+    CMAKE_VARS="\
+      -DENABLE_SANITIZER=FALSE  \
+      -DENABLE_UBSAN=0 \
+      -DENABLE_EXTENSION_AUTOLOADING=0  \
+      -DENABLE_EXTENSION_AUTOINSTALL=0 \
+      -DOVERRIDE_GIT_DESCRIBE=v1.3.2 \
+      -DCMAKE_BUILD_TYPE=Release" \
+  && make install \
+  && cd /tmp && rm -rf pg_duckdb \
+  # Strip build toolchain to keep image small
+  && apt-get purge -y --auto-remove \
+       build-essential \
+       zlib1g-dev \
+       ccache \
+       libssl-dev \
+       pkg-config \
+       cmake \
+       liblz4-dev \
+       ninja-build \
+       git \
+       postgresql-server-dev-17 \
+  && rm -rf /var/lib/apt/lists/*
+
 
 # Remove tools
 RUN apt-get purge -y --auto-remove \

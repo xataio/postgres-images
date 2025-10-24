@@ -27,6 +27,7 @@ on:
           - ''
           - 'docker/custom-postgres'
           - 'docker/experimental'
+          - 'docker/analytics'
       only_major:
         description: 'Limit build to a single PG major (optional)'
         required: false
@@ -57,6 +58,7 @@ jobs:
           declare -A folders=(
             ["docker/custom-postgres"]='{"pg_versions":[17,18],"image_name":"xataio/postgres-images/cnpg-postgres-plus","description":"CNPG PostgreSQL with additional extensions"}'
             ["docker/experimental"]='{"pg_versions":[17],"image_name":"xataio/postgres-images/experimental","description":"My custom PostgreSQL experimental"}'
+            ["docker/analytics"]='{"pg_versions":[17,18],"image_name":"xataio/postgres-images/xata-analytics","description":"CNPG PostgreSQL plus with added pg_duckdb"}'
           )
           
           if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
