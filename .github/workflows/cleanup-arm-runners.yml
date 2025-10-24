@@ -2,6 +2,8 @@
 name: Clean ARM64 Runner
 
 on:
+  pull_request:
+    types: [ opened, synchronize ]
   workflow_dispatch: 
     inputs:
       deep_clean:
