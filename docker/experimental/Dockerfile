@@ -7,8 +7,18 @@ ARG PG_MAJOR=17
 # Per-major extension manifest (set by Makefile)
 ARG CONFIG_FILE=docker/experimental/extensions.${PG_MAJOR}.json
 ARG POSTGIS_CLI_VERSION_17=
+ARG PG_DEV_VERSION=""
 
 USER root
+
+# Hold PostgreSQL packages at current version if pinning is requested
+RUN if [ -n "${PG_DEV_VERSION}" ]; then \
+        echo "=== Holding PostgreSQL at version ${PG_DEV_VERSION} ===" && \
+        echo "postgresql-${PG_MAJOR} hold" | dpkg --set-selections && \
+        echo "postgresql-${PG_MAJOR}-client hold" | dpkg --set-selections && \
+        echo "postgresql-client-common hold" | dpkg --set-selections && \
+        echo "postgresql-common hold" | dpkg --set-selections; \
+    fi
 
 # Install missing tools that minimal image doesn't have
 RUN apt-get update && apt-get install -y --no-install-recommends \

@@ -11,6 +11,15 @@ ARG PG_DEV_VERSION=""
 
 USER root
 
+# Hold PostgreSQL packages at current version if pinning is requested
+RUN if [ -n "${PG_DEV_VERSION}" ]; then \
+        echo "=== Holding PostgreSQL at version ${PG_DEV_VERSION} ===" && \
+        echo "postgresql-${PG_MAJOR} hold" | dpkg --set-selections && \
+        echo "postgresql-${PG_MAJOR}-client hold" | dpkg --set-selections && \
+        echo "postgresql-client-common hold" | dpkg --set-selections && \
+        echo "postgresql-common hold" | dpkg --set-selections; \
+    fi
+
 # Install missing tools that minimal image doesn't have
 RUN apt-get update && apt-get install -y --no-install-recommends \
     wget \
@@ -153,15 +162,7 @@ RUN --mount=type=secret,id=github_token \
     rm /tmp/xatautils.deb
 
 # Build pg_duckdb from source (DuckDB v1.3.2, no httpfs)
-RUN apt-get update && \
-    if [ -n "${PG_DEV_VERSION}" ]; then \
-      echo "postgresql-${PG_MAJOR} hold" | dpkg --set-selections; \
-      echo "postgresql-${PG_MAJOR}-client hold" | dpkg --set-selections; \
-      PG_DEV_PKG="postgresql-server-dev-${PG_MAJOR}=${PG_DEV_VERSION}"; \
-    else \
-      PG_DEV_PKG="postgresql-server-dev-${PG_MAJOR}"; \
-    fi && \
-    apt-get install -y --no-install-recommends \
+RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     zlib1g-dev \
     cmake \
@@ -171,7 +172,7 @@ RUN apt-get update && \
     ccache \
     libssl-dev \
     liblz4-dev \
-    ${PG_DEV_PKG} \
+    postgresql-server-dev-${PG_MAJOR} \
   && rm -rf /var/lib/apt/lists/* \
   && cd /tmp \
   && git clone https://github.com/duckdb/pg_duckdb.git \
