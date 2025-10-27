@@ -7,6 +7,7 @@ ARG PG_MAJOR=17
 # Per-major extension manifest (set by Makefile)
 ARG CONFIG_FILE=docker/analytics/extensions.${PG_MAJOR}.json
 ARG POSTGIS_CLI_VERSION_17=
+ARG PG_DEV_VERSION=""
 
 USER root
 
@@ -152,7 +153,13 @@ RUN --mount=type=secret,id=github_token \
     rm /tmp/xatautils.deb
 
 # Build pg_duckdb from source (DuckDB v1.3.2, no httpfs)
-RUN apt-get update && apt-get install -y --no-install-recommends \
+RUN apt-get update && \
+    if [ -n "${PG_DEV_VERSION}" ]; then \
+      PG_DEV_PKG="postgresql-server-dev-${PG_MAJOR}=${PG_DEV_VERSION}"; \
+    else \
+      PG_DEV_PKG="postgresql-server-dev-${PG_MAJOR}"; \
+    fi && \
+    apt-get install -y --no-install-recommends \
     build-essential \
     zlib1g-dev \
     cmake \
@@ -162,7 +169,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     ccache \
     libssl-dev \
     liblz4-dev \
-    postgresql-server-dev-${PG_MAJOR} \
+    ${PG_DEV_PKG} \
   && rm -rf /var/lib/apt/lists/* \
   && cd /tmp \
   && git clone https://github.com/duckdb/pg_duckdb.git \
@@ -195,7 +202,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
        liblz4-dev \
        ninja-build \
        git \
-       postgresql-server-dev-${PG_MAJOR} \
+       ${PG_DEV_PKG} \
   && rm -rf /var/lib/apt/lists/*
 
 
