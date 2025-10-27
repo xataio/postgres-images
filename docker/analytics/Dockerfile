@@ -155,6 +155,8 @@ RUN --mount=type=secret,id=github_token \
 # Build pg_duckdb from source (DuckDB v1.3.2, no httpfs)
 RUN apt-get update && \
     if [ -n "${PG_DEV_VERSION}" ]; then \
+      echo "postgresql-${PG_MAJOR} hold" | dpkg --set-selections; \
+      echo "postgresql-${PG_MAJOR}-client hold" | dpkg --set-selections; \
       PG_DEV_PKG="postgresql-server-dev-${PG_MAJOR}=${PG_DEV_VERSION}"; \
     else \
       PG_DEV_PKG="postgresql-server-dev-${PG_MAJOR}"; \
