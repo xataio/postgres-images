@@ -74,7 +74,7 @@ jobs:
             fi
 
             # Narrow to a single major if requested
-            if [[ -n "${{ github.event.inputs.only_major }}" ]]; then
+            if [[ -n "${{ github.event.inputs.only_version }}" ]]; then
               input_version="${{ github.event.inputs.only_version }}"
               
               # Extract major version (e.g., "17" from "17.5" or "17")
