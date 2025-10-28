@@ -27,14 +27,11 @@ on:
           - ''
           - 'docker/custom-postgres'
           - 'docker/experimental'
-      only_major:
-        description: 'Limit build to a single PG major (optional)'
+          - 'docker/analytics'
+      only_version:
+        description: 'Limit build to a single PG version (optional)'
         required: false
-        type: choice
-        options:
-          - ''
-          - '17'
-          - '18'
+        type: string
   schedule:
     - cron: '0 2 * * 3' # Every Wednesday at 2 AM UTC
 
@@ -57,6 +54,7 @@ jobs:
           declare -A folders=(
             ["docker/custom-postgres"]='{"pg_versions":[17,18],"image_name":"xataio/postgres-images/cnpg-postgres-plus","description":"CNPG PostgreSQL with additional extensions"}'
             ["docker/experimental"]='{"pg_versions":[17],"image_name":"xataio/postgres-images/experimental","description":"My custom PostgreSQL experimental"}'
+            ["docker/analytics"]='{"pg_versions":[17,18],"image_name":"xataio/postgres-images/xata-analytics","description":"CNPG PostgreSQL plus with added pg_duckdb"}'
           )
           
           if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
@@ -76,9 +74,13 @@ jobs:
             fi
 
             # Narrow to a single major if requested
-            if [[ -n "${{ github.event.inputs.only_major }}" ]]; then
+            if [[ -n "${{ github.event.inputs.only_version }}" ]]; then
+              input_version="${{ github.event.inputs.only_version }}"
+              
+              # Extract major version (e.g., "17" from "17.5" or "17")
+              major_version="${input_version%%.*}"
               matrix=$(jq \
-                --arg major "${{ github.event.inputs.only_major }}" '
+                --arg major "$major_version" '
                   .include |= map(
                     . as $item
                     | if $major == "" then $item
@@ -87,9 +89,9 @@ jobs:
                 ' <<<"$matrix")
             fi
 
-            # Safety guard: if a custom base is provided, require only_major
-            if [[ -n "${{ github.event.inputs.custom_cnpg_base }}" && -z "${{ github.event.inputs.only_major }}" ]]; then
-              echo "ERROR: custom_cnpg_base was provided but only_major was not set. Refusing to build cross-major with a single custom base."
+            # Safety guard: if a custom base is provided, require only_version
+            if [[ -n "${{ github.event.inputs.custom_cnpg_base }}" && -z "${{ github.event.inputs.only_version }}" ]]; then
+              echo "ERROR: custom_cnpg_base was provided but only_version was not set. Refusing to build cross-major with a single custom base."
               exit 1
             fi
 
@@ -197,6 +199,16 @@ jobs:
 
       - name: Set environment variables
         run: |
+          # Parse input version if provided
+          input_version="${{ github.event.inputs.only_version }}"
+          if [[ -n "$input_version" && "$input_version" == *.* ]]; then
+          # Contains dot, use as PG_DEV_VERSION with wildcard
+            pg_dev_version="${input_version}-*"
+          else
+            pg_dev_version=""
+          fi
+
+          echo "PG_DEV_VERSION=$pg_dev_version" >> $GITHUB_ENV
           # Parse matrix config
           pg_versions='${{ toJSON(matrix.config.pg_versions) }}'
           image_name='${{ matrix.config.image_name }}'
@@ -256,7 +268,8 @@ jobs:
               IMAGE_NAME="${{ env.IMAGE_NAME }}" \
               CNPG_BASE="$cnpg_base" \
               PG_MAJOR="$pg_major" \
-              IMAGE_TAG="$image_tag"
+              IMAGE_TAG="$image_tag" \
+              PG_DEV_VERSION="${{ env.PG_DEV_VERSION }}"
           
             # For scheduled builds, check if base image changed
             should_build=true
@@ -280,7 +293,8 @@ jobs:
                 CNPG_BASE="$cnpg_base" \
                 PG_MAJOR="$pg_major" \
                 IMAGE_TAG="$image_tag" \
-                PLATFORM="linux/amd64"
+                PLATFORM="linux/amd64" \
+                PG_DEV_VERSION="${{ env.PG_DEV_VERSION }}"
             fi
           
             # Export variables for next steps
@@ -385,6 +399,16 @@ jobs:
 
       - name: Set environment variables
         run: |
+          # Parse input version if provided
+          input_version="${{ github.event.inputs.only_version }}"
+          if [[ -n "$input_version" && "$input_version" == *.* ]]; then
+          # Contains dot, use as PG_DEV_VERSION with wildcard
+          pg_dev_version="${input_version}-*"
+          else
+          pg_dev_version=""
+          fi
+
+          echo "PG_DEV_VERSION=$pg_dev_version" >> $GITHUB_ENV
           # Parse matrix config
           pg_versions='${{ toJSON(matrix.config.pg_versions) }}'
           image_name='${{ matrix.config.image_name }}'
@@ -444,7 +468,8 @@ jobs:
               IMAGE_NAME="${{ env.IMAGE_NAME }}" \
               CNPG_BASE="$cnpg_base" \
               PG_MAJOR="$pg_major" \
-              IMAGE_TAG="$image_tag"
+              IMAGE_TAG="$image_tag" \
+              PG_DEV_VERSION="${{ env.PG_DEV_VERSION }}"
           
             # For scheduled builds, check if base image changed
             should_build=true
@@ -468,7 +493,8 @@ jobs:
                 CNPG_BASE="$cnpg_base" \
                 PG_MAJOR="$pg_major" \
                 IMAGE_TAG="$image_tag" \
-                PLATFORM="linux/arm64"
+                PLATFORM="linux/arm64" \
+                PG_DEV_VERSION="${{ env.PG_DEV_VERSION }}"
             fi
           
             # Export variables for next steps
