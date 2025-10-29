@@ -129,37 +129,41 @@ RUN which shp2pgsql || echo "shp2pgsql not found" && \
     which raster2pgsql || echo "raster2pgsql not found"
 
 # Install xatautils extension using Docker secrets for GitHub token
-#RUN --mount=type=secret,id=github_token \
-#    ARCH=$(dpkg --print-architecture) && \
-#    if [ ! -f "/run/secrets/github_token" ]; then \
-#        echo "ERROR: GitHub token secret is required to access private xata-utils repository"; \
-#        exit 1; \
-#    fi && \
-#    GITHUB_TOKEN=$(cat /run/secrets/github_token) && \
-#    # First, get the release info to find the asset download URL
-#    RELEASE_INFO=$(wget --header="Authorization: token $GITHUB_TOKEN" \
-#                        --header="Accept: application/vnd.github.v3+json" \
-#                        -O- -q \
-#                        "https://api.github.com/repos/xataio/xata-utils/releases/latest") && \
-#    # Extract the asset download URL for the specific file we need
-#    XATA_VERSION=$(printf '%s' "$RELEASE_INFO" | jq -r '.tag_name') && \
-#    ASSET_NAME="xatautils-${XATA_VERSION}-pg${PG_MAJOR}-${ARCH}-linux-gnu.deb" && \
-#    echo "Downloading xatautils extension: ${ASSET_NAME}..." && \
-#    DOWNLOAD_URL=$(printf '%s' "$RELEASE_INFO" | jq -r ".assets[] | select(.name==\"$ASSET_NAME\") | .url") && \
-#    if [ -z "$DOWNLOAD_URL" ] || [ "$DOWNLOAD_URL" = "null" ]; then \
-#        echo "ERROR: Asset ${ASSET_NAME} not found in release ${XATA_VERSION}"; \
-#        echo "Available assets:"; \
-#        echo "$RELEASE_INFO" | jq -r '.assets[].name'; \
-#        exit 1; \
-#    fi && \
-#    echo "Downloading from: $DOWNLOAD_URL" && \
-#    # Download the asset using the GitHub API
-#    wget --header="Authorization: token $GITHUB_TOKEN" \
-#         --header="Accept: application/octet-stream" \
-#         -O /tmp/xatautils.deb \
-#         "$DOWNLOAD_URL" && \
-#    dpkg -i /tmp/xatautils.deb && \
-#    rm /tmp/xatautils.deb
+RUN --mount=type=secret,id=github_token \
+    if [ "$PG_MAJOR" = "17" ] || [ "$PG_MAJOR" = "18" ]; then \
+        ARCH=$(dpkg --print-architecture) && \
+        if [ ! -f "/run/secrets/github_token" ]; then \
+            echo "ERROR: GitHub token secret is required to access private xata-utils repository"; \
+            exit 1; \
+        fi && \
+        GITHUB_TOKEN=$(cat /run/secrets/github_token) && \
+        # First, get the release info to find the asset download URL
+        RELEASE_INFO=$(wget --header="Authorization: token $GITHUB_TOKEN" \
+                            --header="Accept: application/vnd.github.v3+json" \
+                            -O- -q \
+                            "https://api.github.com/repos/xataio/xata-utils/releases/latest") && \
+        # Extract the asset download URL for the specific file we need
+        XATA_VERSION=$(printf '%s' "$RELEASE_INFO" | jq -r '.tag_name') && \
+        ASSET_NAME="xatautils-${XATA_VERSION}-pg${PG_MAJOR}-${ARCH}-linux-gnu.deb" && \
+        echo "Downloading xatautils extension: ${ASSET_NAME}..." && \
+        DOWNLOAD_URL=$(printf '%s' "$RELEASE_INFO" | jq -r ".assets[] | select(.name==\"$ASSET_NAME\") | .url") && \
+        if [ -z "$DOWNLOAD_URL" ] || [ "$DOWNLOAD_URL" = "null" ]; then \
+            echo "ERROR: Asset ${ASSET_NAME} not found in release ${XATA_VERSION}"; \
+            echo "Available assets:"; \
+            echo "$RELEASE_INFO" | jq -r '.assets[].name'; \
+            exit 1; \
+        fi && \
+        echo "Downloading from: $DOWNLOAD_URL" && \
+        # Download the asset using the GitHub API
+        wget --header="Authorization: token $GITHUB_TOKEN" \
+             --header="Accept: application/octet-stream" \
+             -O /tmp/xatautils.deb \
+             "$DOWNLOAD_URL" && \
+        dpkg -i /tmp/xatautils.deb && \
+        rm /tmp/xatautils.deb \
+    else \
+        echo "Skipping xatautils installation for PostgreSQL ${PG_MAJOR} (only available for PG 17 and 18)"; \
+    fi
 
 # Remove tools
 RUN apt-get purge -y --auto-remove \
