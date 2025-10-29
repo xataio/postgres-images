@@ -160,7 +160,7 @@ RUN --mount=type=secret,id=github_token \
              -O /tmp/xatautils.deb \
              "$DOWNLOAD_URL" && \
         dpkg -i /tmp/xatautils.deb && \
-        rm /tmp/xatautils.deb \
+        rm /tmp/xatautils.deb; \
     else \
         echo "Skipping xatautils installation for PostgreSQL ${PG_MAJOR} (only available for PG 17 and 18)"; \
     fi
