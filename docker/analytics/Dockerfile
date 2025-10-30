@@ -177,6 +177,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
   && cd /tmp \
   && git clone https://github.com/duckdb/pg_duckdb.git \
   && cd pg_duckdb \
+  && git checkout v1.0.0  \
   # Don't fetch remote extensions like httpfs, and turn httpfs off entirely \
   # disable the following: sanitizers, shell, python, unit test,  \
   # does not automagically load extensions at runtime \
