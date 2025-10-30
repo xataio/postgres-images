@@ -3,8 +3,8 @@
     {
       "name": "pg_partman",
       "package": "postgresql-17-partman",
-      "package_version": "5.3.0-1.pgdg12+1",
-      "version": "5.3.0",
+      "package_version": "5.3.1-1.pgdg12+1",
+      "version": "5.3.1",
       "description": "Partition management extension for PostgreSQL",
       "docs_url": "https://github.com/pgpartman/pg_partman",
       "preload_required": false,
@@ -341,8 +341,8 @@
     {
       "name": "hll",
       "package": "postgresql-17-hll",
-      "package_version": "2.18-3.pgdg12+1",
-      "version": "2.18",
+      "package_version": "2.19-1.pgdg12+1",
+      "version": "2.19",
       "description": "HyperLogLog data type for cardinality estimation",
       "docs_url": "https://github.com/citusdata/postgresql-hll",
       "preload_required": false,
@@ -385,8 +385,8 @@
     {
       "name": "pg_repack",
       "package": "postgresql-17-repack",
-      "package_version": "1.5.2-2.pgdg12+1",
-      "version": "1.5.2",
+      "package_version": "1.5.3-1.pgdg12+1",
+      "version": "1.5.3",
       "description": "Remove bloat from tables and indexes without exclusive lock",
       "docs_url": "https://github.com/reorg/pg_repack",
       "preload_required": false,
