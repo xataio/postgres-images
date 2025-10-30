@@ -385,8 +385,8 @@
     {
       "name": "pg_repack",
       "package": "postgresql-17-repack",
-      "package_version": "1.5.2-2.pgdg12+1",
-      "version": "1.5.2",
+      "package_version": "1.5.3-1.pgdg12+1",
+      "version": "1.5.3",
       "description": "Remove bloat from tables and indexes without exclusive lock",
       "docs_url": "https://github.com/reorg/pg_repack",
       "preload_required": false,
