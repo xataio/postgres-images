@@ -1,0 +1,45 @@
+
+name: Clean ARM64 Runner
+
+on:
+  pull_request:
+    types: [ opened, synchronize ]
+  workflow_dispatch: 
+    inputs:
+      deep_clean:
+        description: 'Perform deep clean'
+        required: false
+        default: 'false'
+        type: choice
+        options:
+        - 'true'
+        - 'false'
+
+jobs:
+  cleanup:
+    runs-on: 
+      group: arm-runners
+    
+    steps:
+    - name: Quick cleanup
+      run: |
+        echo "=== Before cleanup ==="
+        df -h
+        docker system df
+        
+        docker system prune -af --volumes
+        docker buildx prune -af
+        
+        echo "=== After cleanup ==="
+        df -h
+        docker system df
+    
+    - name: Deep cleanup
+      if: ${{ inputs.deep_clean == 'true' }}
+      run: |
+        docker stop $(docker ps -aq) || true
+        docker rm $(docker ps -aq) || true
+        docker rmi $(docker images -q) || true
+        docker volume prune -f
+        docker builder prune -af
+        sudo rm -rf /var/lib/docker/tmp/*
