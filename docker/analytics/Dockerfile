@@ -214,7 +214,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 RUN apt-get purge -y --auto-remove \
     wget \
     gnupg \
-    ca-certificates \
     jq \
     && rm -rf /var/lib/apt/lists/* \
     && rm -rf /etc/apt/sources.list.d/pgdg.list \
