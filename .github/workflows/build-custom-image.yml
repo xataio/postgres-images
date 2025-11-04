@@ -643,7 +643,7 @@ jobs:
                 ;;
             esac
   
-  # Resolve the actual Postgres version from the built image (e.g., 17.6)
+            # Resolve the actual Postgres version from the built image (e.g., 17.6)
             PG_VERSION="$(docker run --rm "${IMAGE}:${AMD_TAG}" postgres -V | awk '{print $3}')"
             echo "Resolved PG_VERSION=${PG_VERSION}; DATE=${DATE}"
           
