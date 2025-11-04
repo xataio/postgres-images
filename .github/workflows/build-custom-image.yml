@@ -603,17 +603,30 @@ jobs:
           for pg_major in $(echo "$pg_versions" | jq -r '.[]'); do
             echo "=== Creating multiarch manifest for PG ${pg_major} ==="
           
-            if [[ "$pg_major" == "17" ]]; then
-              AMD_TAG="${SHA}-amd64"
-              ARM_TAG="${SHA}-arm64"
-              FINAL_SHA_TAG="${SHA}"
-            else
-              AMD_TAG="${SHA}-pg18-amd64"
-              ARM_TAG="${SHA}-pg18-arm64"
-              FINAL_SHA_TAG="${SHA}-pg18"
-            fi
-          
-            # Resolve the actual Postgres version from the built image (e.g., 17.6)
+            # Pick the per-arch image tags produced by the build jobs
+            case "$pg_major" in
+              14)
+                AMD_TAG="${SHA}-pg14-amd64"
+                ARM_TAG="${SHA}-pg14-arm64"
+                FINAL_SHA_TAG="${SHA}-pg14"
+                ;;
+              17)
+                AMD_TAG="${SHA}-pg17-amd64"
+                ARM_TAG="${SHA}-pg17-arm64"
+                # 17 remains the "default" SHA tag with no suffix
+                FINAL_SHA_TAG="${SHA}"
+                ;;
+              18)
+                AMD_TAG="${SHA}-pg18-amd64"
+                ARM_TAG="${SHA}-pg18-arm64"
+                FINAL_SHA_TAG="${SHA}-pg18"
+                ;;
+              *)
+                echo "Unsupported PG version: $pg_major"; exit 1
+                ;;
+              esac
+  
+  # Resolve the actual Postgres version from the built image (e.g., 17.6)
             PG_VERSION="$(docker run --rm "${IMAGE}:${AMD_TAG}" postgres -V | awk '{print $3}')"
             echo "Resolved PG_VERSION=${PG_VERSION}; DATE=${DATE}"
           
