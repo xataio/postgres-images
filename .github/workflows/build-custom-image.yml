@@ -53,7 +53,7 @@ jobs:
           # Define folder configurations
           declare -A folders=(
             ["docker/custom-postgres"]='{"pg_versions":[17,18],"image_name":"xataio/postgres-images/cnpg-postgres-plus","description":"CNPG PostgreSQL with additional extensions"}'
-            ["docker/experimental"]='{"pg_versions":[17,18,14],"image_name":"xataio/postgres-images/experimental","description":"My custom PostgreSQL experimental"}'
+            ["docker/experimental"]='{"pg_versions":[17,18,14,15],"image_name":"xataio/postgres-images/experimental","description":"My custom PostgreSQL experimental"}'
             ["docker/analytics"]='{"pg_versions":[17,18],"image_name":"xataio/postgres-images/xata-analytics","description":"CNPG PostgreSQL plus with added pg_duckdb"}'
           )
           
@@ -236,6 +236,12 @@ jobs:
             base_standard="ghcr.io/cloudnative-pg/postgresql:14-standard-bookworm"
             default_base="$base_minimal"
             sha_suffix="-pg14-${{ env.ARCH }}"
+            ;;
+          15)
+            base_minimal="ghcr.io/cloudnative-pg/postgresql:15-minimal-bookworm"
+            base_standard="ghcr.io/cloudnative-pg/postgresql:15-standard-bookworm"
+            default_base="$base_minimal"
+            sha_suffix="-pg15-${{ env.ARCH }}"
             ;;
           17)
             base_minimal="ghcr.io/cloudnative-pg/postgresql:17-minimal-bookworm"
@@ -450,6 +456,12 @@ jobs:
               default_base="$base_minimal"
               sha_suffix="-pg14-${{ env.ARCH }}"
               ;;
+            15)
+              base_minimal="ghcr.io/cloudnative-pg/postgresql:15-minimal-bookworm"
+              base_standard="ghcr.io/cloudnative-pg/postgresql:15-standard-bookworm"
+              default_base="$base_minimal"
+              sha_suffix="-pg15-${{ env.ARCH }}"
+              ;;
             17)
               base_minimal="ghcr.io/cloudnative-pg/postgresql:17-minimal-bookworm"
               base_standard="ghcr.io/cloudnative-pg/postgresql:17-standard-bookworm"
@@ -609,6 +621,11 @@ jobs:
                 AMD_TAG="${SHA}-pg14-amd64"
                 ARM_TAG="${SHA}-pg14-arm64"
                 FINAL_SHA_TAG="${SHA}-pg14"
+                ;;
+              15)
+                AMD_TAG="${SHA}-pg15-amd64"
+                ARM_TAG="${SHA}-pg15-arm64"
+                FINAL_SHA_TAG="${SHA}-pg15"
                 ;;
               17)
                 AMD_TAG="${SHA}-pg17-amd64"
