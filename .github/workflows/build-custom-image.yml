@@ -641,7 +641,7 @@ jobs:
               *)
                 echo "Unsupported PG version: $pg_major"; exit 1
                 ;;
-              esac
+            esac
   
   # Resolve the actual Postgres version from the built image (e.g., 17.6)
             PG_VERSION="$(docker run --rm "${IMAGE}:${AMD_TAG}" postgres -V | awk '{print $3}')"
