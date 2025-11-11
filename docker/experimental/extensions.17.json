@@ -944,6 +944,20 @@
       "preload_required": true,
       "test_enabled": false,
       "file_check": "/usr/lib/postgresql/17/lib/xatautils.so"
+    },
+    {
+      "name": "pg_stat_monitor",
+      "package": "percona-pg-stat-monitor17",
+      "package_version": "",
+      "version": "2.2",
+      "description": "Percona's advanced query performance monitoring extension for PostgreSQL",
+      "docs_url": "https://docs.percona.com/pg-stat-monitor/",
+      "preload_required": true,
+      "test_enabled": true,
+      "test_commands": [
+        "CREATE EXTENSION IF NOT EXISTS pg_stat_monitor;",
+        "SELECT count(*) FROM pg_stat_monitor;"
+      ]
     }
   ],
   "postgres_config": [

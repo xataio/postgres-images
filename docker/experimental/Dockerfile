@@ -51,6 +51,26 @@ RUN CODENAME=$(grep VERSION_CODENAME /etc/os-release | cut -d= -f2 | tr -d '"') 
 
 # Copy extensions file into image
 COPY ${CONFIG_FILE} /tmp/extensions.json
+
+# Enable Percona repo/channel and install only percona-* packages from JSON, then disable Percona
+RUN set -eux; \
+    apt-get update && apt-get install -y --no-install-recommends curl lsb-release; \
+    CODENAME="$(. /etc/os-release; echo "$VERSION_CODENAME")"; \
+    wget -O /tmp/percona-release.deb "https://repo.percona.com/apt/percona-release_latest.${CODENAME}_all.deb"; \
+    dpkg -i /tmp/percona-release.deb; rm -f /tmp/percona-release.deb; \
+    percona-release setup -y "ppg-${PG_MAJOR}"; \
+    apt-get update; \
+    PERCONA_PKGS="$(jq -r \
+      '.extensions[] | select((.package // "") | startswith("percona-")) \
+       | if (.package_version and (.package_version != "")) then "\(.package)=\(.package_version)" else .package end' \
+      /tmp/extensions.json | sort -u | tr '\n' ' ' )"; \
+    echo "Percona packages to install: ${PERCONA_PKGS:-<none>}"; \
+    if [ -n "${PERCONA_PKGS}" ]; then \
+      apt-get install -y --no-install-recommends ${PERCONA_PKGS}; \
+    fi; \
+    rm -f /etc/apt/sources.list.d/percona*.list; \
+    apt-get update
+
 # Generate plain version map for verification
 RUN jq -r '.extensions[] | "\(.name) \(.version)"' /tmp/extensions.json > /usr/local/share/extensions-versions.txt
 
@@ -67,7 +87,7 @@ RUN jq -r '.extensions[] | "\(.name) \(.version)"' /tmp/extensions.json > /usr/l
 RUN set -e; \
   VIRTUAL="postgresql-contrib-${PG_MAJOR}"; \
   PINNED_PKGS="$(jq -r --arg v "$VIRTUAL" \
-    '.extensions[] | select(.package != $v) | select(.package_version and (.package_version != "")) | "\(.package)=\(.package_version)"' \
+     '.extensions[] | select(.package != $v) | select((.package? // "") | startswith("percona-") | not) | select(.package_version and (.package_version != "")) | "\(.package)=\(.package_version)"' \
     /tmp/extensions.json | sort -u | tr '\n' ' ' )"; \
   echo "Installing pinned (PG${PG_MAJOR}): ${PINNED_PKGS}"; \
   if [ -n "${PINNED_PKGS}" ]; then \
@@ -167,6 +187,8 @@ RUN apt-get purge -y --auto-remove \
     gnupg \
     ca-certificates \
     jq \
+    curl \
+    lsb-release \
     && rm -rf /var/lib/apt/lists/* \
     && rm -rf /etc/apt/sources.list.d/pgdg.list \
     && rm -rf /etc/apt/trusted.gpg.d/postgresql.gpg \
