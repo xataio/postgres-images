@@ -51,6 +51,30 @@ RUN CODENAME=$(grep VERSION_CODENAME /etc/os-release | cut -d= -f2 | tr -d '"') 
 
 # Copy extensions file into image
 COPY ${CONFIG_FILE} /tmp/extensions.json
+
+# Enable Percona repo/channel and install only percona-* packages from JSON, then disable Percona
+# Enable Percona ONLY for majors that have a channel; skip for PG18+
+RUN set -eux; \
+  if [ "${PG_MAJOR}" -ge 18 ]; then \
+    echo "Skipping Percona setup for PG${PG_MAJOR} (ppg-${PG_MAJOR} not available)"; \
+  else \
+    apt-get update && apt-get install -y --no-install-recommends curl lsb-release; \
+    CODENAME="$(. /etc/os-release; echo "$VERSION_CODENAME")"; \
+    wget -O /tmp/percona-release.deb "https://repo.percona.com/apt/percona-release_latest.${CODENAME}_all.deb"; \
+    dpkg -i /tmp/percona-release.deb; rm -f /tmp/percona-release.deb; \
+    percona-release setup -y "ppg-${PG_MAJOR}"; \
+    apt-get update; \
+    PERCONA_PKGS="$(jq -r '.extensions[] | select((.package? // "") | startswith("percona-")) \
+     | if (.package_version and (.package_version != "")) then "\(.package)=\(.package_version)" else .package end' \
+     /tmp/extensions.json | sort -u | tr '\n' ' ' )"; \
+    echo "Percona packages to install: ${PERCONA_PKGS:-<none>}"; \
+    if [ -n "${PERCONA_PKGS}" ]; then  \
+      apt-get install -y --no-install-recommends ${PERCONA_PKGS};  \
+    fi; \
+    rm -f /etc/apt/sources.list.d/percona*.list; \
+    apt-get update; \
+  fi
+
 # Generate plain version map for verification
 RUN jq -r '.extensions[] | "\(.name) \(.version)"' /tmp/extensions.json > /usr/local/share/extensions-versions.txt
 
@@ -67,7 +91,7 @@ RUN jq -r '.extensions[] | "\(.name) \(.version)"' /tmp/extensions.json > /usr/l
 RUN set -e; \
   VIRTUAL="postgresql-contrib-${PG_MAJOR}"; \
   PINNED_PKGS="$(jq -r --arg v "$VIRTUAL" \
-    '.extensions[] | select(.package != $v) | select(.package_version and (.package_version != "")) | "\(.package)=\(.package_version)"' \
+     '.extensions[] | select(.package != $v) | select((.package? // "") | startswith("percona-") | not) | select(.package_version and (.package_version != "")) | "\(.package)=\(.package_version)"' \
     /tmp/extensions.json | sort -u | tr '\n' ' ' )"; \
   echo "Installing pinned (PG${PG_MAJOR}): ${PINNED_PKGS}"; \
   if [ -n "${PINNED_PKGS}" ]; then \
@@ -90,7 +114,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # Use pinned package version matching the SQL extension version (3.5.3)
 RUN ARCH=$(dpkg --print-architecture) && \
     if [ "$ARCH" = "arm64" ]; then \
-        POSTGIS_PKG_VERSION=3.6.0+dfsg-2.pgdg12+1 && \
+        POSTGIS_PKG_VERSION=3.6.0+dfsg-3.pgdg12+1 && \
         apt-get update && \
         mkdir -p /tmp/postgis-tools && \
         cd /tmp/postgis-tools && \
@@ -162,15 +186,26 @@ RUN --mount=type=secret,id=github_token \
     rm /tmp/xatautils.deb;
 
 # Remove tools
-RUN apt-get purge -y --auto-remove \
-    wget \
-    gnupg \
-    ca-certificates \
-    jq \
-    && rm -rf /var/lib/apt/lists/* \
+RUN set -eux; \
+    if [ "${PG_MAJOR}" -ge 18 ]; then \
+      apt-get purge -y --auto-remove \
+        wget \
+        gnupg \
+        ca-certificates \
+        jq; \
+    else \
+      apt-get purge -y --auto-remove \
+        wget \
+        gnupg \
+        ca-certificates \
+        jq \
+        curl \
+        lsb-release; \
+    fi; \
+    rm -rf /var/lib/apt/lists/* \
     && rm -rf /etc/apt/sources.list.d/pgdg.list \
-    && rm -rf /etc/apt/trusted.gpg.d/postgresql.gpg \
-    && rm -rf /tmp/extensions.json \
+    && rm -rf  /etc/apt/trusted.gpg.d/postgresql.gpg \
+    && rm -rf  /tmp/extensions.json \
     && apt-get clean
 
 

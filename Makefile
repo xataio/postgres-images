@@ -2,7 +2,7 @@
 PG_MAJOR ?= 17
 PG_TAG   ?= $(PG_MAJOR) #17->17, 18->18
 
-POSTGIS_CLI_VERSION_17 ?= 3.6.0+dfsg-1.pgdg12+1
+POSTGIS_CLI_VERSION_17 ?= 3.5.2+dfsg-2.pgdg12+1
 
 # Configuration
 REGISTRY ?= ghcr.io
