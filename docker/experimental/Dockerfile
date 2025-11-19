@@ -118,19 +118,9 @@ RUN ARCH=$(dpkg --print-architecture) && \
         apt-get update && \
         mkdir -p /tmp/postgis-tools && \
         cd /tmp/postgis-tools && \
-        # For PG17 we prefer a pinned CLI version when provided; for others (e.g. 18-rc1) use latest if available.
-        if [ "$PG_MAJOR" = "17" ] && [ -n "$POSTGIS_CLI_VERSION_17" ]; then \
-          echo "Downloading pinned postgis CLI for PG17: ${POSTGIS_CLI_VERSION_17}"; \
-          apt-get download postgis=${POSTGIS_CLI_VERSION_17} && \
-          dpkg-deb -x postgis_*.deb . && cp -r usr/bin/* /usr/bin/ || true; \
-        else \
-          echo "Attempting unpinned postgis CLI download (RC-friendly)"; \
-          if apt-get download postgis >/dev/null 2>&1; then \
-            dpkg-deb -x postgis_*.deb . && cp -r usr/bin/* /usr/bin/ || true; \
-          else \
-            echo "postgis CLI not available; skipping shp2pgsql/pgsql2shp/raster2pgsql"; \
-          fi; \
-        fi && \
+        echo "Downloading pinned postgis CLI for PG17: ${POSTGIS_PKG_VERSION}"; \
+        apt-get download postgis=${POSTGIS_PKG_VERSION} && \
+        dpkg-deb -x postgis_*.deb . && cp -r usr/bin/* /usr/bin/ || true; \
         apt-get install -y --no-install-recommends \
             libgdal32 \
             gdal-data \
