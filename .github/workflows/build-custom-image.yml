@@ -52,8 +52,8 @@ jobs:
         run: |
           # Define folder configurations
           declare -A folders=(
-            ["docker/custom-postgres"]='{"pg_versions":[17,18],"image_name":"xataio/postgres-images/cnpg-postgres-plus","description":"CNPG PostgreSQL with additional extensions"}'
-            ["docker/experimental"]='{"pg_versions":[17,18,14,15],"image_name":"xataio/postgres-images/experimental","description":"My custom PostgreSQL experimental"}'
+            ["docker/custom-postgres"]='{"pg_versions":[17,18,14,15],"image_name":"xataio/postgres-images/cnpg-postgres-plus","description":"CNPG PostgreSQL with additional extensions"}'
+            ["docker/experimental"]='{"pg_versions":[17,18,16],"image_name":"xataio/postgres-images/experimental","description":"My custom PostgreSQL experimental"}'
             ["docker/analytics"]='{"pg_versions":[17,18],"image_name":"xataio/postgres-images/xata-analytics","description":"CNPG PostgreSQL plus with added pg_duckdb"}'
           )
           
@@ -242,6 +242,12 @@ jobs:
             base_standard="ghcr.io/cloudnative-pg/postgresql:15-standard-bookworm"
             default_base="$base_minimal"
             sha_suffix="-pg15-${{ env.ARCH }}"
+            ;;
+          16)
+            base_minimal="ghcr.io/cloudnative-pg/postgresql:16-minimal-bookworm"
+            base_standard="ghcr.io/cloudnative-pg/postgresql:16-standard-bookworm"
+            default_base="$base_minimal"
+            sha_suffix="-pg16-${{ env.ARCH }}"
             ;;
           17)
             base_minimal="ghcr.io/cloudnative-pg/postgresql:17-minimal-bookworm"
@@ -461,6 +467,12 @@ jobs:
               base_standard="ghcr.io/cloudnative-pg/postgresql:15-standard-bookworm"
               default_base="$base_minimal"
               sha_suffix="-pg15-${{ env.ARCH }}"
+              ;;
+            16)
+              base_minimal="ghcr.io/cloudnative-pg/postgresql:16-minimal-bookworm"
+              base_standard="ghcr.io/cloudnative-pg/postgresql:16-standard-bookworm"
+              default_base="$base_minimal"
+              sha_suffix="-pg16-${{ env.ARCH }}"
               ;;
             17)
               base_minimal="ghcr.io/cloudnative-pg/postgresql:17-minimal-bookworm"

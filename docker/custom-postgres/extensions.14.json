@@ -2,7 +2,7 @@
   "extensions": [
     {
       "name": "pg_partman",
-      "package": "postgresql-17-partman",
+      "package": "postgresql-14-partman",
       "package_version": "5.3.1-2.pgdg12+1",
       "version": "5.3.1",
       "description": "Partition management extension for PostgreSQL",
@@ -16,7 +16,7 @@
     },
     {
       "name": "pg_trgm",
-      "package": "postgresql-contrib-17",
+      "package": "postgresql-contrib-14",
       "package_version": "",
       "version": "1.6",
       "description": "Trigram matching for similarity searches",
@@ -31,7 +31,7 @@
     },
     {
       "name": "pgcrypto",
-      "package": "postgresql-contrib-17",
+      "package": "postgresql-contrib-14",
       "package_version": "",
       "version": "1.3",
       "description": "Cryptographic functions",
@@ -45,7 +45,7 @@
     },
     {
       "name": "citext",
-      "package": "postgresql-contrib-17",
+      "package": "postgresql-contrib-14",
       "package_version": "",
       "version": "1.6",
       "description": "Case-insensitive text data type",
@@ -60,7 +60,7 @@
     },
     {
       "name": "hstore",
-      "package": "postgresql-contrib-17",
+      "package": "postgresql-contrib-14",
       "package_version": "",
       "version": "1.8",
       "description": "Key-value store data type",
@@ -75,9 +75,9 @@
     },
     {
       "name": "ltree",
-      "package": "postgresql-contrib-17",
+      "package": "postgresql-contrib-14",
       "package_version": "",
-      "version": "1.3",
+      "version": "1.2",
       "description": "Tree-like structures data type",
       "docs_url": "https://www.postgresql.org/docs/current/ltree.html",
       "preload_required": false,
@@ -90,9 +90,9 @@
     },
     {
       "name": "pg_buffercache",
-      "package": "postgresql-contrib-17",
+      "package": "postgresql-contrib-14",
       "package_version": "",
-      "version": "1.5",
+      "version": "1.3",
       "description": "Buffer cache inspection",
       "docs_url": "https://www.postgresql.org/docs/current/pgbuffercache.html",
       "preload_required": false,
@@ -104,7 +104,7 @@
     },
     {
       "name": "pg_freespacemap",
-      "package": "postgresql-contrib-17",
+      "package": "postgresql-contrib-14",
       "package_version":"",
       "version": "1.2",
       "description": "Free space map examination",
@@ -118,7 +118,7 @@
     },
     {
       "name": "pg_visibility",
-      "package": "postgresql-contrib-17",
+      "package": "postgresql-contrib-14",
       "package_version": "",
       "version": "1.2",
       "description": "Visibility map examination",
@@ -132,7 +132,7 @@
     },
     {
       "name": "pgrowlocks",
-      "package": "postgresql-contrib-17",
+      "package": "postgresql-contrib-14",
       "package_version": "",
       "version": "1.2",
       "description": "Row locking information",
@@ -147,7 +147,7 @@
     },
     {
       "name": "moddatetime",
-      "package": "postgresql-contrib-17",
+      "package": "postgresql-contrib-14",
       "package_version": "",
       "version": "1.0",
       "description": "Automatic timestamp updates",
@@ -162,7 +162,7 @@
     },
     {
       "name": "insert_username",
-      "package": "postgresql-contrib-17",
+      "package": "postgresql-contrib-14",
       "package_version": "",
       "version": "1.0",
       "description": "Automatic username insertion",
@@ -177,7 +177,7 @@
     },
     {
       "name": "dblink",
-      "package": "postgresql-contrib-17",
+      "package": "postgresql-contrib-14",
       "package_version": "",
       "version": "1.2",
       "description": "Cross-database queries",
@@ -191,7 +191,7 @@
     },
     {
       "name": "wal2json",
-      "package": "postgresql-17-wal2json",
+      "package": "postgresql-14-wal2json",
       "package_version": "2.6-3.pgdg12+1",
       "version": "2.6",
       "description": "Logical replication output plugin for JSON",
@@ -205,11 +205,11 @@
         "SELECT data FROM pg_logical_slot_get_changes('test_slot', NULL, NULL, 'pretty-print', '1');",
         "SELECT pg_drop_replication_slot('test_slot');"
       ],
-      "file_check": "/usr/lib/postgresql/17/lib/wal2json.so"
+      "file_check": "/usr/lib/postgresql/14/lib/wal2json.so"
     },
     {
       "name": "pg_cron",
-      "package": "postgresql-17-cron",
+      "package": "postgresql-14-cron",
       "package_version": "1.6.7-2.pgdg12+1",
       "version": "1.6",
       "description": "Job scheduler for PostgreSQL",
@@ -227,7 +227,7 @@
     },
     {
       "name": "hypopg",
-      "package": "postgresql-17-hypopg",
+      "package": "postgresql-14-hypopg",
       "package_version": "1.4.2-2.pgdg12+1",
       "version": "1.4.2",
       "description": "Hypothetical indexes for query planning",
@@ -242,9 +242,9 @@
     },
     {
       "name": "pg_stat_statements",
-      "package": "postgresql-contrib-17",
+      "package": "postgresql-contrib-14",
       "package_version": "",
-      "version": "1.11",
+      "version": "1.9",
       "description": "Query execution statistics",
       "docs_url": "https://www.postgresql.org/docs/current/pgstatstatements.html",
       "preload_required": true,
@@ -256,7 +256,7 @@
     },
     {
       "name": "auto_explain",
-      "package": "postgresql-contrib-17",
+      "package": "postgresql-contrib-14",
       "package_version": "",
       "version": "1.0",
       "description": "Automatic query plan logging",
@@ -269,7 +269,7 @@
     },
     {
       "name": "pg_prewarm",
-      "package": "postgresql-contrib-17",
+      "package": "postgresql-contrib-14",
       "package_version": "",
       "version": "1.2",
       "description": "Database prewarming",
@@ -283,7 +283,7 @@
     },
     {
       "name": "postgis",
-      "package": "postgresql-17-postgis-3",
+      "package": "postgresql-14-postgis-3",
       "package_version": "3.6.1+dfsg-1.pgdg12+1",
       "version": "3.6.1",
       "description": "PostGIS geometry and geography spatial types and functions",
@@ -299,7 +299,7 @@
     },
     {
       "name": "postgis_topology",
-      "package": "postgresql-17-postgis-3",
+      "package": "postgresql-14-postgis-3",
       "package_version": "3.6.1+dfsg-1.pgdg12+1",
       "version": "3.6.1",
       "description": "PostGIS topology spatial types and functions",
@@ -313,7 +313,7 @@
     },
     {
       "name": "postgis_tiger_geocoder",
-      "package": "postgresql-17-postgis-3-scripts",
+      "package": "postgresql-14-postgis-3-scripts",
       "package_version": "3.6.1+dfsg-1.pgdg12+1",
       "version": "3.6.1",
       "description": "PostGIS tiger geocoder and reverse geocoder",
@@ -326,9 +326,9 @@
     },
     {
       "name": "fuzzystrmatch",
-      "package": "postgresql-contrib-17",
+      "package": "postgresql-contrib-14",
       "package_version": "",
-      "version": "1.2",
+      "version": "1.1",
       "description": "Determine similarities and distance between strings",
       "docs_url": "https://www.postgresql.org/docs/current/fuzzystrmatch.html",
       "preload_required": false,
@@ -340,7 +340,7 @@
     },
     {
       "name": "hll",
-      "package": "postgresql-17-hll",
+      "package": "postgresql-14-hll",
       "package_version": "2.19-1.pgdg12+1",
       "version": "2.19",
       "description": "HyperLogLog data type for cardinality estimation",
@@ -355,7 +355,7 @@
     },
     {
       "name": "ip4r",
-      "package": "postgresql-17-ip4r",
+      "package": "postgresql-14-ip4r",
       "package_version": "2.4.2-4.pgdg12+1",
       "version": "2.4",
       "description": "IPv4 and IPv6 types and functions",
@@ -369,22 +369,8 @@
       ]
     },
     {
-      "name": "pg_hint_plan",
-      "package": "postgresql-17-pg-hint-plan",
-      "package_version": "1.7.1-1.pgdg12+1",
-      "version": "1.7.1",
-      "description": "Query execution plan hinting",
-      "docs_url": "https://github.com/ossc-db/pg_hint_plan",
-      "preload_required": true,
-      "test_enabled": true,
-      "test_commands": [
-        "CREATE EXTENSION IF NOT EXISTS \"pg_hint_plan\";",
-        "/*+ SeqScan(pg_class) */ SELECT relname FROM pg_class WHERE relname = 'pg_class';"
-      ]
-    },
-    {
       "name": "pg_repack",
-      "package": "postgresql-17-repack",
+      "package": "postgresql-14-repack",
       "package_version": "1.5.3-1.pgdg12+1",
       "version": "1.5.3",
       "description": "Remove bloat from tables and indexes without exclusive lock",
@@ -399,7 +385,7 @@
     },
     {
       "name": "pgrouting",
-      "package": "postgresql-17-pgrouting",
+      "package": "postgresql-14-pgrouting",
       "package_version": "4.0.0-1.pgdg12+1",
       "version": "4.0.0",
       "description": "Routing functionality for PostGIS/PostgreSQL",
@@ -414,7 +400,7 @@
     },
     {
       "name": "pgtap",
-      "package": "postgresql-17-pgtap",
+      "package": "postgresql-14-pgtap",
       "package_version": "1.3.4-1.pgdg12+1",
       "version": "1.3.4",
       "description": "Unit testing framework for PostgreSQL",
@@ -430,7 +416,7 @@
     },
     {
       "name": "vector",
-      "package": "postgresql-17-pgvector",
+      "package": "postgresql-14-pgvector",
       "package_version": "0.8.1-2.pgdg12+1",
       "version": "0.8.1",
       "description": "Vector similarity search for PostgreSQL",
@@ -445,7 +431,7 @@
     },
     {
       "name": "prefix",
-      "package": "postgresql-17-prefix",
+      "package": "postgresql-14-prefix",
       "package_version": "1.2.10-4.pgdg12+1",
       "version": "1.2.0",
       "description": "Prefix matching operator",
@@ -459,22 +445,8 @@
       ]
     },
     {
-      "name": "pgaudit",
-      "package": "postgresql-17-pgaudit",
-      "package_version": "17.1-1.pgdg120+1",
-      "version": "17.1",
-      "description": "Audit logging extension for PostgreSQL",
-      "docs_url": "https://github.com/pgaudit/pgaudit",
-      "preload_required": true,
-      "test_enabled": true,
-      "test_commands": [
-        "CREATE EXTENSION IF NOT EXISTS \"pgaudit\";",
-        "SHOW pgaudit.log;"
-      ]
-    },
-    {
       "name": "pglogical",
-      "package": "postgresql-17-pglogical",
+      "package": "postgresql-14-pglogical",
       "package_version": "2.4.6-1.pgdg12+1",
       "version": "2.4.6",
       "description": "Logical replication extension for PostgreSQL",
@@ -488,7 +460,7 @@
     },
     {
       "name": "pgstattuple",
-      "package": "postgresql-contrib-17",
+      "package": "postgresql-contrib-14",
       "package_version": "",
       "version": "1.5",
       "description": "Functions to show tuple-level statistics",
@@ -503,7 +475,7 @@
     },
     {
       "name": "address_standardizer",
-      "package": "postgresql-contrib-17",
+      "package": "postgresql-contrib-14",
       "version": "3.6.1",
       "package_version": "",
       "description": "Standardizes address data using rules-based parsing",
@@ -518,7 +490,7 @@
     },
     {
       "name": "address_standardizer_data_us",
-      "package": "postgresql-contrib-17",
+      "package": "postgresql-contrib-14",
       "version": "3.6.1",
       "package_version": "",
       "description": "US address data for address_standardizer",
@@ -533,8 +505,8 @@
     },
     {
       "name": "amcheck",
-      "package": "postgresql-contrib-17",
-      "version": "1.4",
+      "package": "postgresql-contrib-14",
+      "version": "1.3",
       "package_version": "",
       "description": "Functions for verifying relation integrity",
       "docs_url": "https://www.postgresql.org/docs/current/amcheck.html",
@@ -546,7 +518,7 @@
     },
     {
       "name": "autoinc",
-      "package": "postgresql-contrib-17",
+      "package": "postgresql-contrib-14",
       "version": "1.0",
       "package_version": "",
       "description": "Functions for automatic increment of fields",
@@ -559,7 +531,7 @@
     },
     {
       "name": "bloom",
-      "package": "postgresql-contrib-17",
+      "package": "postgresql-contrib-14",
       "version": "1.0",
       "package_version": "",
       "description": "Bloom index access method",
@@ -572,7 +544,7 @@
     },
     {
       "name": "btree_gin",
-      "package": "postgresql-contrib-17",
+      "package": "postgresql-contrib-14",
       "version": "1.3",
       "package_version": "",
       "description": "Support for indexing common datatypes in GIN",
@@ -585,8 +557,8 @@
     },
     {
       "name": "btree_gist",
-      "package": "postgresql-contrib-17",
-      "version": "1.7",
+      "package": "postgresql-contrib-14",
+      "version": "1.6",
       "package_version": "",
       "description": "Support for indexing common datatypes in GiST",
       "docs_url": "https://www.postgresql.org/docs/current/btree-gist.html",
@@ -598,7 +570,7 @@
     },
     {
       "name": "cube",
-      "package": "postgresql-contrib-17",
+      "package": "postgresql-contrib-14",
       "version": "1.5",
       "package_version": "",
       "description": "Multi-dimensional cube data type",
@@ -611,7 +583,7 @@
     },
     {
       "name": "dict_int",
-      "package": "postgresql-contrib-17",
+      "package": "postgresql-contrib-14",
       "version": "1.0",
       "package_version": "",
       "description": "Text search dictionary template for integers",
@@ -624,7 +596,7 @@
     },
     {
       "name": "dict_xsyn",
-      "package": "postgresql-contrib-17",
+      "package": "postgresql-contrib-14",
       "version": "1.0",
       "package_version": "",
       "description": "Text search dictionary template for synonyms",
@@ -637,8 +609,8 @@
     },
     {
       "name": "earthdistance",
-      "package": "postgresql-contrib-17",
-      "version": "1.2",
+      "package": "postgresql-contrib-14",
+      "version": "1.1",
       "package_version": "",
       "description": "Earth distance calculations",
       "docs_url": "https://www.postgresql.org/docs/current/earthdistance.html",
@@ -650,7 +622,7 @@
     },
     {
       "name": "file_fdw",
-      "package": "postgresql-contrib-17",
+      "package": "postgresql-contrib-14",
       "version": "1.0",
       "package_version": "",
       "description": "Foreign data wrapper for flat file access",
@@ -663,7 +635,7 @@
     },
     {
       "name": "intagg",
-      "package": "postgresql-contrib-17",
+      "package": "postgresql-contrib-14",
       "version": "1.1",
       "package_version": "",
       "description": "Integer aggregator (deprecated in favor of array_agg)",
@@ -676,7 +648,7 @@
     },
     {
       "name": "intarray",
-      "package": "postgresql-contrib-17",
+      "package": "postgresql-contrib-14",
       "version": "1.5",
       "package_version": "",
       "description": "Functions for 1-D arrays of integers",
@@ -689,7 +661,7 @@
     },
     {
       "name": "isn",
-      "package": "postgresql-contrib-17",
+      "package": "postgresql-contrib-14",
       "version": "1.2",
       "package_version": "",
       "description": "International Standard Number data types",
@@ -702,7 +674,7 @@
     },
     {
       "name": "lo",
-      "package": "postgresql-contrib-17",
+      "package": "postgresql-contrib-14",
       "version": "1.1",
       "package_version": "",
       "description": "Large Object maintenance functions",
@@ -715,8 +687,8 @@
     },
     {
       "name": "pageinspect",
-      "package": "postgresql-contrib-17",
-      "version": "1.12",
+      "package": "postgresql-contrib-14",
+      "version": "1.9",
       "package_version": "",
       "description": "Low-level page inspection",
       "docs_url": "https://www.postgresql.org/docs/current/pageinspect.html",
@@ -728,7 +700,7 @@
     },
     {
       "name": "pg_surgery",
-      "package": "postgresql-contrib-17",
+      "package": "postgresql-contrib-14",
       "version": "1.0",
       "package_version": "",
       "description": "Row surgery functions for modifying rows",
@@ -740,21 +712,8 @@
       ]
     },
     {
-      "name": "pg_walinspect",
-      "package": "postgresql-contrib-17",
-      "version": "1.1",
-      "package_version": "",
-      "description": "WAL inspection functions",
-      "docs_url": "https://www.postgresql.org/docs/current/pgwalinspect.html",
-      "preload_required": false,
-      "test_enabled": true,
-      "test_commands": [
-        "CREATE EXTENSION IF NOT EXISTS pg_walinspect;"
-      ]
-    },
-    {
       "name": "plpgsql",
-      "package": "postgresql-contrib-17",
+      "package": "postgresql-contrib-14",
       "version": "1.0",
       "package_version": "",
       "description": "PL/pgSQL procedural language",
@@ -767,7 +726,7 @@
     },
     {
       "name": "postgres_fdw",
-      "package": "postgresql-contrib-17",
+      "package": "postgresql-contrib-14",
       "version": "1.1",
       "package_version": "",
       "description": "Foreign data wrapper for PostgreSQL",
@@ -780,7 +739,7 @@
     },
     {
       "name": "refint",
-      "package": "postgresql-contrib-17",
+      "package": "postgresql-contrib-14",
       "version": "1.0",
       "package_version": "",
       "description": "Referential integrity triggers (example)",
@@ -793,7 +752,7 @@
     },
     {
       "name": "seg",
-      "package": "postgresql-contrib-17",
+      "package": "postgresql-contrib-14",
       "version": "1.4",
       "package_version": "",
       "description": "Floating-point intervals",
@@ -806,7 +765,7 @@
     },
     {
       "name": "sslinfo",
-      "package": "postgresql-contrib-17",
+      "package": "postgresql-contrib-14",
       "version": "1.2",
       "package_version": "",
       "description": "Information about SSL connections",
@@ -819,7 +778,7 @@
     },
     {
       "name": "tablefunc",
-      "package": "postgresql-contrib-17",
+      "package": "postgresql-contrib-14",
       "version": "1.0",
       "package_version": "",
       "description": "Functions that manipulate whole tables, including crosstab",
@@ -832,7 +791,7 @@
     },
     {
       "name": "tcn",
-      "package": "postgresql-contrib-17",
+      "package": "postgresql-contrib-14",
       "version": "1.0",
       "package_version": "",
       "description": "Triggered change notifications",
@@ -845,7 +804,7 @@
     },
     {
       "name": "tsm_system_rows",
-      "package": "postgresql-contrib-17",
+      "package": "postgresql-contrib-14",
       "version": "1.0",
       "package_version": "",
       "description": "TABLESAMPLE method which accepts number of rows",
@@ -858,7 +817,7 @@
     },
     {
       "name": "tsm_system_time",
-      "package": "postgresql-contrib-17",
+      "package": "postgresql-contrib-14",
       "version": "1.0",
       "package_version": "",
       "description": "TABLESAMPLE method which accepts time in milliseconds",
@@ -871,7 +830,7 @@
     },
     {
       "name": "unaccent",
-      "package": "postgresql-contrib-17",
+      "package": "postgresql-contrib-14",
       "version": "1.1",
       "package_version": "",
       "description": "Text search dictionary that removes accents",
@@ -884,7 +843,7 @@
     },
     {
       "name": "uuid-ossp",
-      "package": "postgresql-contrib-17",
+      "package": "postgresql-contrib-14",
       "version": "1.1",
       "package_version": "",
       "description": "UUID generation functions",
@@ -897,7 +856,7 @@
     },
     {
       "name": "xml2",
-      "package": "postgresql-contrib-17",
+      "package": "postgresql-contrib-14",
       "version": "1.1",
       "package_version": "",
       "description": "XPath querying and XSLT support",
@@ -910,7 +869,7 @@
     },
     {
       "name": "postgis_raster",
-      "package": "postgresql-17-postgis-3",
+      "package": "postgresql-14-postgis-3",
       "version": "3.6.1",
       "package_version": "3.6.1+dfsg-1.pgdg12+1",
       "description": "PostGIS raster extension",
@@ -924,7 +883,7 @@
     },
     {
       "name": "postgis_sfcgal",
-      "package": "postgresql-17-postgis-3",
+      "package": "postgresql-14-postgis-3",
       "version": "3.6.1",
       "package_version": "3.6.1+dfsg-1.pgdg12+1",
       "description": "PostGIS SFCGAL support",
@@ -935,37 +894,12 @@
         "CREATE EXTENSION IF NOT EXISTS postgis_sfcgal;",
         "SELECT postgis_sfcgal_version();"
       ]
-    },
-    {
-      "name": "xatautils",
-      "version": "0.3.0",
-      "description": "Xata utilities (built from source)",
-      "docs_url": "https://github.com/xataio/xata-utils",
-      "preload_required": true,
-      "test_enabled": false,
-      "file_check": "/usr/lib/postgresql/17/lib/xatautils.so"
-    },
-    {
-      "name": "pg_stat_monitor",
-      "package": "percona-pg-stat-monitor17",
-      "package_version": "",
-      "version": "2.2",
-      "description": "Percona's advanced query performance monitoring extension for PostgreSQL",
-      "docs_url": "https://docs.percona.com/pg-stat-monitor/",
-      "preload_required": true,
-      "test_enabled": true,
-      "test_commands": [
-        "CREATE EXTENSION IF NOT EXISTS pg_stat_monitor;",
-        "SELECT count(*) FROM pg_stat_monitor;"
-      ]
     }
   ],
   "postgres_config": [
     { "setting": "wal_level", "value": "logical" },
     { "setting": "max_replication_slots", "value": "10" },
     { "setting": "max_worker_processes", "value": "10" },
-    { "setting": "max_wal_senders", "value": "10" },
-    { "setting": "pgaudit.log", "value": "all" },
-    { "setting": "pgaudit.log_catalog", "value": "off" }
+    { "setting": "max_wal_senders", "value": "10" }
   ]
 }
