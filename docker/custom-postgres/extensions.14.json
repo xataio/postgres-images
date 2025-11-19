@@ -476,7 +476,7 @@
     {
       "name": "address_standardizer",
       "package": "postgresql-contrib-14",
-      "version": "3.6.0",
+      "version": "3.6.1",
       "package_version": "",
       "description": "Standardizes address data using rules-based parsing",
       "docs_url": "https://postgis.net/docs/Extras.html#Address_Standardizer",
@@ -491,7 +491,7 @@
     {
       "name": "address_standardizer_data_us",
       "package": "postgresql-contrib-14",
-      "version": "3.6.0",
+      "version": "3.6.1",
       "package_version": "",
       "description": "US address data for address_standardizer",
       "docs_url": "https://postgis.net/docs/Extras.html#Address_Standardizer_Tables",
