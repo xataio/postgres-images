@@ -243,6 +243,12 @@ jobs:
             default_base="$base_minimal"
             sha_suffix="-pg15-${{ env.ARCH }}"
             ;;
+          16)
+            base_minimal="ghcr.io/cloudnative-pg/postgresql:16-minimal-bookworm"
+            base_standard="ghcr.io/cloudnative-pg/postgresql:16-standard-bookworm"
+            default_base="$base_minimal"
+            sha_suffix="-pg16-${{ env.ARCH }}"
+            ;;
           17)
             base_minimal="ghcr.io/cloudnative-pg/postgresql:17-minimal-bookworm"
             base_standard="ghcr.io/cloudnative-pg/postgresql:17-standard-bookworm"
@@ -461,6 +467,12 @@ jobs:
               base_standard="ghcr.io/cloudnative-pg/postgresql:15-standard-bookworm"
               default_base="$base_minimal"
               sha_suffix="-pg15-${{ env.ARCH }}"
+              ;;
+            16)
+              base_minimal="ghcr.io/cloudnative-pg/postgresql:16-minimal-bookworm"
+              base_standard="ghcr.io/cloudnative-pg/postgresql:16-standard-bookworm"
+              default_base="$base_minimal"
+              sha_suffix="-pg16-${{ env.ARCH }}"
               ;;
             17)
               base_minimal="ghcr.io/cloudnative-pg/postgresql:17-minimal-bookworm"
