@@ -640,8 +640,8 @@ jobs:
                 FINAL_SHA_TAG="${SHA}-pg15"
                 ;;
               16)
-                AMD_TAG="${SHA}-pg15-amd64"
-                ARM_TAG="${SHA}-pg15-arm64"
+                AMD_TAG="${SHA}-pg16-amd64"
+                ARM_TAG="${SHA}-pg16-arm64"
                 FINAL_SHA_TAG="${SHA}-pg16"
                 ;;
               17)
