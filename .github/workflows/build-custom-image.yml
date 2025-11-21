@@ -639,6 +639,11 @@ jobs:
                 ARM_TAG="${SHA}-pg15-arm64"
                 FINAL_SHA_TAG="${SHA}-pg15"
                 ;;
+              16)
+                AMD_TAG="${SHA}-pg15-amd64"
+                ARM_TAG="${SHA}-pg15-arm64"
+                FINAL_SHA_TAG="${SHA}-pg16"
+                ;;
               17)
                 AMD_TAG="${SHA}-pg17-amd64"
                 ARM_TAG="${SHA}-pg17-arm64"
