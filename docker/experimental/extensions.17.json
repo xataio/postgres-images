@@ -949,7 +949,7 @@
       "name": "pg_stat_monitor",
       "package": "percona-pg-stat-monitor17",
       "package_version": "",
-      "version": "2.2",
+      "version": "2.3",
       "description": "Percona's advanced query performance monitoring extension for PostgreSQL",
       "docs_url": "https://docs.percona.com/pg-stat-monitor/",
       "preload_required": true,
