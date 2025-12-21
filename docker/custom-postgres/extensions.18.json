@@ -324,7 +324,7 @@
     {
       "name": "pg_hint_plan",
       "package": "postgresql-18-pg-hint-plan",
-      "package_version": "1.8.0-2.pgdg12+1",
+      "package_version": "1.8.0-3.pgdg12+1",
       "version": "1.8.0",
       "description": "Query execution plan hinting",
       "docs_url": "https://github.com/ossc-db/pg_hint_plan",
