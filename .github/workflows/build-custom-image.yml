@@ -616,17 +616,21 @@ jobs:
           echo "IMAGE_NAME=${image_name}" >> $GITHUB_ENV
 
       - name: Create multiarch manifests
+        id: manifests
         run: |
           set -euo pipefail
           pg_versions='${{ toJSON(matrix.config.pg_versions) }}'
-          
+
           IMAGE="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}"
           SHA="${{ github.sha }}"
           DATE="$(date +%Y%m%d)"
-          
+
+          # Collect versions for output
+          CREATED_VERSIONS=""
+
           for pg_major in $(echo "$pg_versions" | jq -r '.[]'); do
             echo "=== Creating multiarch manifest for PG ${pg_major} ==="
-          
+
             # Pick the per-arch image tags produced by the build jobs
             case "$pg_major" in
               14)
@@ -659,11 +663,11 @@ jobs:
                 echo "Unsupported PG version: $pg_major"; exit 1
                 ;;
             esac
-  
+
             # Resolve the actual Postgres version from the built image (e.g., 17.6)
             PG_VERSION="$(docker run --rm "${IMAGE}:${AMD_TAG}" postgres -V | awk '{print $3}')"
             echo "Resolved PG_VERSION=${PG_VERSION}; DATE=${DATE}"
-          
+
             # Create ONE multi-arch manifest and attach all desired tags
             docker buildx imagetools create \
               -t "${IMAGE}:${FINAL_SHA_TAG}" \
@@ -671,7 +675,7 @@ jobs:
               -t "${IMAGE}:${PG_VERSION}-${DATE}" \
               "${IMAGE}:${AMD_TAG}" \
               "${IMAGE}:${ARM_TAG}"
-          
+
             # Optional: also tag 'latest' on main for PG17
             if [[ "${{ github.ref }}" == "refs/heads/main" && "$pg_major" == "17" ]]; then
               docker buildx imagetools create \
@@ -679,16 +683,88 @@ jobs:
                 "${IMAGE}:${AMD_TAG}" \
                 "${IMAGE}:${ARM_TAG}"
             fi
-          
+
             echo "Created: ${IMAGE}:${FINAL_SHA_TAG}, ${IMAGE}:${PG_VERSION}, ${IMAGE}:${PG_VERSION}-${DATE}"
             docker buildx imagetools inspect "${IMAGE}:${PG_VERSION}" >/dev/null
+
+            # Collect version
+            if [[ -n "$CREATED_VERSIONS" ]]; then
+              CREATED_VERSIONS="${CREATED_VERSIONS},${PG_VERSION}"
+            else
+              CREATED_VERSIONS="${PG_VERSION}"
+            fi
           done
+
+          echo "created_versions=${CREATED_VERSIONS}" >> $GITHUB_OUTPUT
+
+      - name: Save version info
+        run: |
+          mkdir -p version-info
+          # Extract short image key from full name (e.g., xataio/postgres-images/cnpg-postgres-plus -> cnpg-postgres-plus)
+          IMAGE_KEY=$(echo "${{ env.IMAGE_NAME }}" | rev | cut -d'/' -f1 | rev)
+          echo "${IMAGE_KEY}:${{ steps.manifests.outputs.created_versions }}" > version-info/versions.txt
+          cat version-info/versions.txt
+
+      - name: Upload version info
+        uses: actions/upload-artifact@v4
+        with:
+          name: version-info-${{ strategy.job-index }}
+          path: version-info/
+
+  # Trigger sync workflow to update maki repo
+  trigger-sync:
+    runs-on: ubuntu-latest
+    needs: [create-manifest]
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Download all version artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: version-info-*
+          path: all-versions/
+
+      - name: Combine version data and trigger sync
+        env:
+          GH_TOKEN: ${{ secrets.GIT_TOKEN }}
+        run: |
+          set -euo pipefail
+
+          # Combine all version files into single format
+          VERSION_DATA=""
+          for file in all-versions/*/versions.txt; do
+            if [[ -f "$file" ]]; then
+              content=$(cat "$file")
+              echo "Found: $content"
+              if [[ -n "$VERSION_DATA" ]]; then
+                VERSION_DATA="${VERSION_DATA}|${content}"
+              else
+                VERSION_DATA="${content}"
+              fi
+            fi
+          done
+
+          echo "Combined version data: $VERSION_DATA"
+
+          if [[ -z "$VERSION_DATA" ]]; then
+            echo "No version data found, skipping sync trigger"
+            exit 0
+          fi
+
+          # Trigger sync-versions workflow
+          gh workflow run sync-versions.yml \
+            --field version_data="$VERSION_DATA"
+
+          echo "Triggered sync-versions workflow with: $VERSION_DATA"
 
   # Summary job
   build-test-publish:
     name: build-test-publish
     runs-on: ubuntu-latest
-    needs: [build-test-publish-amd64, build-test-publish-arm64, create-manifest]
+    needs: [build-test-publish-amd64, build-test-publish-arm64, create-manifest, trigger-sync]
     if: always()
     steps:
       - name: Check job results
@@ -696,19 +772,21 @@ jobs:
           amd64_result="${{ needs.build-test-publish-amd64.result }}"
           arm64_result="${{ needs.build-test-publish-arm64.result }}"
           manifest_result="${{ needs.create-manifest.result }}"
-          
+          trigger_sync_result="${{ needs.trigger-sync.result }}"
+
           echo "AMD64 build result: $amd64_result"
           echo "ARM64 build result: $arm64_result"
           echo "Manifest creation result: $manifest_result"
-          
+          echo "Trigger sync result: $trigger_sync_result"
+
           if [[ "$amd64_result" == "failure" || "$arm64_result" == "failure" ]]; then
             echo "One or more build jobs failed"
             exit 1
           fi
-          
+
           if [[ "${{ github.event_name }}" != "pull_request" && "$manifest_result" == "failure" ]]; then
             echo "Manifest creation failed"
             exit 1
           fi
-          
+
           echo "All jobs completed successfully"

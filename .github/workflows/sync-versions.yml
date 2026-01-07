@@ -1,0 +1,218 @@
+name: Sync versions.yaml to maki
+
+on:
+  workflow_dispatch:
+    inputs:
+      version_data:
+        description: 'Version data in format: image-key:version1,version2|image-key:version1,version2 (e.g., cnpg-postgres-plus:17.7,18.1|experimental:17.7|xata-analytics:17.7,18.1)'
+        required: false
+        type: string
+
+jobs:
+  sync-versions:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout postgres-images
+        uses: actions/checkout@v4
+
+      - name: Checkout maki repo
+        uses: actions/checkout@v4
+        with:
+          repository: xataio/maki
+          token: ${{ secrets.GIT_TOKEN }}
+          path: maki-repo
+
+      - name: Install tools
+        run: |
+          # Install yq
+          sudo wget -qO /usr/local/bin/yq https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64
+          sudo chmod +x /usr/local/bin/yq
+
+          # Install gh if not present
+          if ! command -v gh &> /dev/null; then
+            echo "Installing GitHub CLI..."
+            curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | sudo dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg
+            echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | sudo tee /etc/apt/sources.list.d/github-cli.list > /dev/null
+            sudo apt-get update
+            sudo apt-get install -y gh
+          fi
+
+      - name: Update versions.yaml in maki
+        run: |
+          set -euo pipefail
+
+          VERSION_DATA="${{ inputs.version_data }}"
+          VERSIONS_FILE="maki-repo/internal/postgresversions/versions.yaml"
+
+          if [[ -z "$VERSION_DATA" ]]; then
+            echo "No version_data provided. Nothing to update."
+            exit 0
+          fi
+
+          echo "Processing version data: $VERSION_DATA"
+
+          # Image configuration
+          declare -A IMAGE_SOURCE=(
+            ["cnpg-postgres-plus"]="ghcr.io/xataio/postgres-images/cnpg-postgres-plus"
+            ["experimental"]="ghcr.io/xataio/postgres-images/experimental"
+            ["xata-analytics"]="ghcr.io/xataio/postgres-images/xata-analytics"
+          )
+          declare -A IMAGE_URL=(
+            ["cnpg-postgres-plus"]="https://github.com/xataio/postgres-images/pkgs/container/postgres-images%2Fcnpg-postgres-plus"
+            ["experimental"]="https://github.com/xataio/postgres-images/pkgs/container/postgres-images%2Fexperimental"
+            ["xata-analytics"]="https://github.com/xataio/postgres-images/pkgs/container/postgres-images%2Fxata-analytics"
+          )
+          declare -A SOURCE_INDEX=(
+            ["cnpg-postgres-plus"]=0
+            ["experimental"]=1
+            ["xata-analytics"]=2
+          )
+
+          # Check if file already has sources array format, if not initialize it
+          has_sources=$(yq '.sources' "$VERSIONS_FILE")
+          if [[ "$has_sources" == "null" ]]; then
+            echo "Initializing new sources array format..."
+
+            # Extract existing major_versions from old format (cnpg-postgres-plus)
+            existing_major_versions=$(yq '.major_versions' "$VERSIONS_FILE")
+
+            # Create the new format using yq
+            yq -n '
+              .last_updated = "" |
+              .updated_by = "workflow" |
+              .sources[0].source = "ghcr.io/xataio/postgres-images/cnpg-postgres-plus" |
+              .sources[0].package_url = "https://github.com/xataio/postgres-images/pkgs/container/postgres-images%2Fcnpg-postgres-plus" |
+              .sources[0].major_versions = {} |
+              .sources[1].source = "ghcr.io/xataio/postgres-images/experimental" |
+              .sources[1].package_url = "https://github.com/xataio/postgres-images/pkgs/container/postgres-images%2Fexperimental" |
+              .sources[1].major_versions = {} |
+              .sources[2].source = "ghcr.io/xataio/postgres-images/xata-analytics" |
+              .sources[2].package_url = "https://github.com/xataio/postgres-images/pkgs/container/postgres-images%2Fxata-analytics" |
+              .sources[2].major_versions = {}
+            ' | (echo "# PostgreSQL versions available in container registry"; echo "# This file is automatically updated by the postgres-images build workflow"; echo ""; cat) > "$VERSIONS_FILE"
+
+            # Migrate existing major_versions to cnpg-postgres-plus (index 0)
+            if [[ "$existing_major_versions" != "null" && "$existing_major_versions" != "{}" ]]; then
+              echo "Migrating existing versions from old format..."
+              echo "$existing_major_versions" | yq -P '.' > /tmp/existing_versions.yaml
+              yq -i ".sources[0].major_versions = load(\"/tmp/existing_versions.yaml\")" "$VERSIONS_FILE"
+            fi
+          fi
+
+          # Parse the version data: image-key:v1,v2|image-key:v1,v2
+          IFS='|' read -ra IMAGE_ENTRIES <<< "$VERSION_DATA"
+
+          for entry in "${IMAGE_ENTRIES[@]}"; do
+            # Split by : to get image key and versions
+            IFS=':' read -r image_key versions <<< "$entry"
+
+            if [[ -z "$image_key" || -z "$versions" ]]; then
+              echo "Skipping invalid entry: $entry"
+              continue
+            fi
+
+            source_idx="${SOURCE_INDEX[$image_key]:-}"
+            if [[ -z "$source_idx" ]]; then
+              echo "Unknown image key: $image_key, skipping..."
+              continue
+            fi
+
+            echo "Processing $image_key (index $source_idx): versions=$versions"
+
+            # Split versions by comma
+            IFS=',' read -ra VERSION_LIST <<< "$versions"
+
+            for version in "${VERSION_LIST[@]}"; do
+              # Extract major version (e.g., 17 from 17.7)
+              major="${version%%.*}"
+
+              echo "  Checking version $version (major: $major)"
+
+              # Check if major version exists
+              major_exists=$(yq ".sources[${source_idx}].major_versions.\"${major}\"" "$VERSIONS_FILE")
+
+              if [[ "$major_exists" == "null" || "$major_exists" == "{}" ]]; then
+                echo "  Creating new major version entry for $major"
+                yq -i ".sources[${source_idx}].major_versions.\"${major}\" = {\"versions\": [], \"latest\": \"\", \"supported\": true}" "$VERSIONS_FILE"
+              fi
+
+              # Check if version already exists
+              existing=$(yq ".sources[${source_idx}].major_versions.\"${major}\".versions[] | select(. == \"${version}\")" "$VERSIONS_FILE")
+
+              if [[ -n "$existing" ]]; then
+                echo "  Version $version already exists, skipping..."
+              else
+                echo "  Adding version $version"
+                yq -i ".sources[${source_idx}].major_versions.\"${major}\".versions += [\"${version}\"]" "$VERSIONS_FILE"
+              fi
+
+              # Update latest to this version (assuming newer versions are passed)
+              yq -i ".sources[${source_idx}].major_versions.\"${major}\".latest = \"${version}\"" "$VERSIONS_FILE"
+            done
+          done
+
+          # Update last_updated timestamp
+          yq -i ".last_updated = \"$(date -u +%Y-%m-%dT%H:%M:%SZ)\"" "$VERSIONS_FILE"
+          yq -i ".updated_by = \"workflow\"" "$VERSIONS_FILE"
+
+          # Convert versions arrays to flow style (inline format)
+          yq -i '(.sources[].major_versions.[].versions) style="flow"' "$VERSIONS_FILE"
+
+          echo "=== Updated versions.yaml ==="
+          cat "$VERSIONS_FILE"
+
+      - name: Create PR if changes exist
+        working-directory: maki-repo
+        env:
+          GH_TOKEN: ${{ secrets.GIT_TOKEN }}
+        run: |
+          if git diff --quiet internal/postgresversions/versions.yaml; then
+            echo "No changes to sync"
+            exit 0
+          fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          # Create a branch name with timestamp
+          BRANCH_NAME="sync-postgres-versions-$(date +%Y%m%d-%H%M%S)"
+
+          # Check if there's already an open PR for syncing versions
+          EXISTING_PR=$(gh pr list --search "Sync PostgreSQL image versions" --state open --json number --jq '.[0].number' || echo "")
+
+          if [[ -n "$EXISTING_PR" ]]; then
+            echo "Existing PR #${EXISTING_PR} found, updating it..."
+            BRANCH_NAME=$(gh pr view "$EXISTING_PR" --json headRefName --jq '.headRefName')
+            git fetch origin "$BRANCH_NAME" || true
+            git checkout -B "$BRANCH_NAME" origin/main
+          else
+            git checkout -b "$BRANCH_NAME"
+          fi
+
+          git add internal/postgresversions/versions.yaml
+          git commit -m "Sync PostgreSQL image versions
+
+          Updated versions from postgres-images build workflow.
+          Source: https://github.com/xataio/postgres-images"
+
+          git push -u origin "$BRANCH_NAME" --force
+
+          if [[ -n "$EXISTING_PR" ]]; then
+            echo "Updated existing PR #${EXISTING_PR}"
+            echo "PR URL: https://github.com/xataio/maki/pull/${EXISTING_PR}"
+          else
+            PR_URL=$(gh pr create \
+              --title "Sync PostgreSQL image versions" \
+              --body "## Summary
+          - Automated sync of PostgreSQL image versions from postgres-images repo
+
+          ### Version data
+          \`\`\`
+          ${{ inputs.version_data }}
+          \`\`\`
+
+          ---
+          🤖 Generated automatically by [postgres-images sync workflow](https://github.com/xataio/postgres-images/actions/workflows/sync-versions.yml)")
+            echo "Created PR: $PR_URL"
+          fi
