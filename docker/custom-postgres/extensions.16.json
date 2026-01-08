@@ -950,7 +950,9 @@
     { "setting": "wal_level", "value": "logical" },
     { "setting": "max_replication_slots", "value": "10" },
     { "setting": "max_worker_processes", "value": "10" },
-    { "setting": "max_wal_senders", "value": "10" },
+    { "setting": "max_wal_senders", "value": "10" }
+  ],
+  "postgres_config_post_restart": [
     { "setting": "pgaudit.log", "value": "all" },
     { "setting": "pgaudit.log_catalog", "value": "off" }
   ]
