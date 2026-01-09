@@ -140,6 +140,18 @@ test: ## Run tests on the built image
 		echo "No extensions require preloading, skipping shared_preload_libraries configuration"; \
 	fi
 
+	@echo "Applying postgres_config_post_restart settings (if any)…"
+	@jq -r '.postgres_config_post_restart[]? | "\(.setting) \(.value|@sh)"' $(CONFIG_FILE) \
+	  | while IFS=' ' read -r setting val; do \
+	      sql="ALTER SYSTEM SET $$setting = $$val;"; \
+	      echo " → $$sql"; \
+	      docker exec pg-test psql -U postgres -c "$$sql"; \
+	    done
+	@if jq -e '.postgres_config_post_restart | length > 0' $(CONFIG_FILE) >/dev/null 2>&1; then \
+		echo "Reloading configuration..."; \
+		docker exec pg-test psql -U postgres -c "SELECT pg_reload_conf();"; \
+	fi
+
 	@echo "Verifying declared shared objects exist (file_check)…"
 	@jq -r '.extensions[] | select(.file_check and .file_check != "") | .file_check' $(CONFIG_FILE) \
 	  | while read -r path; do \

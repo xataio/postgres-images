@@ -1,0 +1,959 @@
+{
+  "extensions": [
+    {
+      "name": "pg_partman",
+      "package": "postgresql-16-partman",
+      "package_version": "5.3.1-2.pgdg12+1",
+      "version": "5.3.1",
+      "description": "Partition management extension for PostgreSQL",
+      "docs_url": "https://github.com/pgpartman/pg_partman",
+      "preload_required": false,
+      "test_enabled": true,
+      "test_commands": [
+        "CREATE EXTENSION IF NOT EXISTS \"pg_partman\";",
+        "SELECT count(*) FROM public.part_config;"
+      ]
+    },
+    {
+      "name": "pg_trgm",
+      "package": "postgresql-contrib-16",
+      "package_version": "",
+      "version": "1.6",
+      "description": "Trigram matching for similarity searches",
+      "docs_url": "https://www.postgresql.org/docs/current/pgtrgm.html",
+      "preload_required": false,
+      "test_enabled": true,
+      "test_commands": [
+        "CREATE EXTENSION IF NOT EXISTS \"pg_trgm\";",
+        "CREATE TABLE test_search (text_col text); INSERT INTO test_search VALUES ('hello world');",
+        "SELECT similarity('hello', text_col) FROM test_search;"
+      ]
+    },
+    {
+      "name": "pgcrypto",
+      "package": "postgresql-contrib-16",
+      "package_version": "",
+      "version": "1.3",
+      "description": "Cryptographic functions",
+      "docs_url": "https://www.postgresql.org/docs/current/pgcrypto.html",
+      "preload_required": false,
+      "test_enabled": true,
+      "test_commands": [
+        "CREATE EXTENSION IF NOT EXISTS \"pgcrypto\";",
+        "SELECT digest('test', 'sha256');"
+      ]
+    },
+    {
+      "name": "citext",
+      "package": "postgresql-contrib-16",
+      "package_version": "",
+      "version": "1.6",
+      "description": "Case-insensitive text data type",
+      "docs_url": "https://www.postgresql.org/docs/current/citext.html",
+      "preload_required": false,
+      "test_enabled": true,
+      "test_commands": [
+        "CREATE EXTENSION IF NOT EXISTS \"citext\";",
+        "CREATE TABLE test_citext (text_col citext); INSERT INTO test_citext VALUES ('Hello');",
+        "SELECT * FROM test_citext WHERE text_col = 'hello';"
+      ]
+    },
+    {
+      "name": "hstore",
+      "package": "postgresql-contrib-16",
+      "package_version": "",
+      "version": "1.8",
+      "description": "Key-value store data type",
+      "docs_url": "https://www.postgresql.org/docs/current/hstore.html",
+      "preload_required": false,
+      "test_enabled": true,
+      "test_commands": [
+        "CREATE EXTENSION IF NOT EXISTS \"hstore\";",
+        "CREATE TABLE test_hstore (data hstore); INSERT INTO test_hstore VALUES ('key=>value');",
+        "SELECT data->'key' FROM test_hstore;"
+      ]
+    },
+    {
+      "name": "ltree",
+      "package": "postgresql-contrib-16",
+      "package_version": "",
+      "version": "1.2",
+      "description": "Tree-like structures data type",
+      "docs_url": "https://www.postgresql.org/docs/current/ltree.html",
+      "preload_required": false,
+      "test_enabled": true,
+      "test_commands": [
+        "CREATE EXTENSION IF NOT EXISTS \"ltree\";",
+        "CREATE TABLE test_ltree (path ltree); INSERT INTO test_ltree VALUES ('top.science.astronomy');",
+        "SELECT * FROM test_ltree WHERE path ~ '*.science.*';"
+      ]
+    },
+    {
+      "name": "pg_buffercache",
+      "package": "postgresql-contrib-16",
+      "package_version": "",
+      "version": "1.4",
+      "description": "Buffer cache inspection",
+      "docs_url": "https://www.postgresql.org/docs/current/pgbuffercache.html",
+      "preload_required": false,
+      "test_enabled": true,
+      "test_commands": [
+        "CREATE EXTENSION IF NOT EXISTS \"pg_buffercache\";",
+        "SELECT count(*) FROM pg_buffercache;"
+      ]
+    },
+    {
+      "name": "pg_freespacemap",
+      "package": "postgresql-contrib-16",
+      "package_version":"",
+      "version": "1.2",
+      "description": "Free space map examination",
+      "docs_url": "https://www.postgresql.org/docs/current/pgfreespacemap.html",
+      "preload_required": false,
+      "test_enabled": true,
+      "test_commands": [
+        "CREATE EXTENSION IF NOT EXISTS \"pg_freespacemap\";",
+        "SELECT pg_freespace('pg_class', 0) IS NOT NULL;"
+      ]
+    },
+    {
+      "name": "pg_visibility",
+      "package": "postgresql-contrib-16",
+      "package_version": "",
+      "version": "1.2",
+      "description": "Visibility map examination",
+      "docs_url": "https://www.postgresql.org/docs/current/pgvisibility.html",
+      "preload_required": false,
+      "test_enabled": true,
+      "test_commands": [
+        "CREATE EXTENSION IF NOT EXISTS \"pg_visibility\";",
+        "SELECT pg_visibility_map_summary('pg_class') IS NOT NULL;"
+      ]
+    },
+    {
+      "name": "pgrowlocks",
+      "package": "postgresql-contrib-16",
+      "package_version": "",
+      "version": "1.2",
+      "description": "Row locking information",
+      "docs_url": "https://www.postgresql.org/docs/current/pgrowlocks.html",
+      "preload_required": false,
+      "test_enabled": true,
+      "test_commands": [
+        "CREATE EXTENSION IF NOT EXISTS \"pgrowlocks\";",
+        "CREATE TABLE test_locks (id int); INSERT INTO test_locks VALUES (1);",
+        "SELECT count(*) FROM pgrowlocks('test_locks');"
+      ]
+    },
+    {
+      "name": "moddatetime",
+      "package": "postgresql-contrib-16",
+      "package_version": "",
+      "version": "1.0",
+      "description": "Automatic timestamp updates",
+      "docs_url": "https://www.postgresql.org/docs/current/contrib-spi.html#id-1.11.7.47.10",
+      "preload_required": false,
+      "test_enabled": true,
+      "test_commands": [
+        "CREATE EXTENSION IF NOT EXISTS \"moddatetime\";",
+        "CREATE TABLE test_moddate (id int, modified timestamp DEFAULT now());",
+        "CREATE TRIGGER test_trigger BEFORE UPDATE ON test_moddate FOR EACH ROW EXECUTE FUNCTION moddatetime(modified);"
+      ]
+    },
+    {
+      "name": "insert_username",
+      "package": "postgresql-contrib-16",
+      "package_version": "",
+      "version": "1.0",
+      "description": "Automatic username insertion",
+      "docs_url": "https://www.postgresql.org/docs/current/contrib-spi.html#id-1.11.7.47.9",
+      "preload_required": false,
+      "test_enabled": true,
+      "test_commands": [
+        "CREATE EXTENSION IF NOT EXISTS \"insert_username\";",
+        "CREATE TABLE test_username (id int, username text);",
+        "CREATE TRIGGER test_user_trigger BEFORE INSERT ON test_username FOR EACH ROW EXECUTE FUNCTION insert_username(username);"
+      ]
+    },
+    {
+      "name": "dblink",
+      "package": "postgresql-contrib-16",
+      "package_version": "",
+      "version": "1.2",
+      "description": "Cross-database queries",
+      "docs_url": "https://www.postgresql.org/docs/current/dblink.html",
+      "preload_required": false,
+      "test_enabled": true,
+      "test_commands": [
+        "CREATE EXTENSION IF NOT EXISTS \"dblink\";",
+        "SELECT dblink_connect('testconn', 'host=localhost user=postgres dbname=postgres') IS NOT NULL;"
+      ]
+    },
+    {
+      "name": "wal2json",
+      "package": "postgresql-16-wal2json",
+      "package_version": "2.6-3.pgdg12+1",
+      "version": "2.6",
+      "description": "Logical replication output plugin for JSON",
+      "docs_url": "https://github.com/eulerto/wal2json",
+      "preload_required": false,
+      "test_enabled": true,
+      "test_commands": [
+        "SELECT pg_create_logical_replication_slot('test_slot', 'wal2json');",
+        "CREATE TABLE test_wal2json (id SERIAL PRIMARY KEY, data TEXT);",
+        "INSERT INTO test_wal2json (data) VALUES ('test data');",
+        "SELECT data FROM pg_logical_slot_get_changes('test_slot', NULL, NULL, 'pretty-print', '1');",
+        "SELECT pg_drop_replication_slot('test_slot');"
+      ],
+      "file_check": "/usr/lib/postgresql/16/lib/wal2json.so"
+    },
+    {
+      "name": "pg_cron",
+      "package": "postgresql-16-cron",
+      "package_version": "1.6.7-2.pgdg12+1",
+      "version": "1.6",
+      "description": "Job scheduler for PostgreSQL",
+      "docs_url": "https://github.com/citusdata/pg_cron",
+      "preload_required": true,
+      "test_enabled": true,
+      "test_commands": [
+        "CREATE EXTENSION IF NOT EXISTS \"pg_cron\";",
+        "SELECT cron.schedule('test-job', '* * * * *', 'SELECT 1;');",
+        "SELECT cron.unschedule('test-job');"
+      ],
+      "postgres_config": {
+        "cron.database_name": "postgres"
+      }
+    },
+    {
+      "name": "hypopg",
+      "package": "postgresql-16-hypopg",
+      "package_version": "1.4.2-2.pgdg12+1",
+      "version": "1.4.2",
+      "description": "Hypothetical indexes for query planning",
+      "docs_url": "https://hypopg.readthedocs.io/",
+      "preload_required": false,
+      "test_enabled": true,
+      "test_commands": [
+        "CREATE EXTENSION IF NOT EXISTS \"hypopg\";",
+        "SELECT hypopg_create_index('CREATE INDEX ON test_search (text_col)');",
+        "SELECT hypopg_reset();"
+      ]
+    },
+    {
+      "name": "pg_stat_statements",
+      "package": "postgresql-contrib-16",
+      "package_version": "",
+      "version": "1.10",
+      "description": "Query execution statistics",
+      "docs_url": "https://www.postgresql.org/docs/current/pgstatstatements.html",
+      "preload_required": true,
+      "test_enabled": true,
+      "test_commands": [
+        "CREATE EXTENSION IF NOT EXISTS \"pg_stat_statements\";",
+        "SELECT count(*) FROM pg_stat_statements;"
+      ]
+    },
+    {
+      "name": "auto_explain",
+      "package": "postgresql-contrib-16",
+      "package_version": "",
+      "version": "1.0",
+      "description": "Automatic query plan logging",
+      "docs_url": "https://www.postgresql.org/docs/current/auto-explain.html",
+      "preload_required": true,
+      "test_enabled": true,
+      "test_commands": [
+        "SHOW shared_preload_libraries;"
+      ]
+    },
+    {
+      "name": "pg_prewarm",
+      "package": "postgresql-contrib-16",
+      "package_version": "",
+      "version": "1.2",
+      "description": "Database prewarming",
+      "docs_url": "https://www.postgresql.org/docs/current/pgprewarm.html",
+      "preload_required": true,
+      "test_enabled": true,
+      "test_commands": [
+        "CREATE EXTENSION IF NOT EXISTS \"pg_prewarm\";",
+        "SELECT pg_prewarm('pg_class') > 0;"
+      ]
+    },
+    {
+      "name": "postgis",
+      "package": "postgresql-16-postgis-3",
+      "package_version": "3.6.1+dfsg-1.pgdg12+1",
+      "version": "3.6.1",
+      "description": "PostGIS geometry and geography spatial types and functions",
+      "docs_url": "https://postgis.net/",
+      "preload_required": false,
+      "test_enabled": true,
+      "test_commands": [
+        "CREATE EXTENSION IF NOT EXISTS \"postgis\";",
+        "CREATE TABLE test_geometry (id INT, geom GEOMETRY(POINT, 4326));",
+        "INSERT INTO test_geometry VALUES (1, ST_GeomFromText('POINT(0 0)', 4326));",
+        "SELECT ST_AsText(geom) FROM test_geometry;"
+      ]
+    },
+    {
+      "name": "postgis_topology",
+      "package": "postgresql-16-postgis-3",
+      "package_version": "3.6.1+dfsg-1.pgdg12+1",
+      "version": "3.6.1",
+      "description": "PostGIS topology spatial types and functions",
+      "docs_url": "https://postgis.net/docs/Topology.html",
+      "preload_required": false,
+      "test_enabled": true,
+      "test_commands": [
+        "CREATE EXTENSION IF NOT EXISTS \"postgis_topology\";",
+        "SELECT topology.CreateTopology('test_topo', 4326);"
+      ]
+    },
+    {
+      "name": "postgis_tiger_geocoder",
+      "package": "postgresql-16-postgis-3-scripts",
+      "package_version": "3.6.1+dfsg-1.pgdg12+1",
+      "version": "3.6.1",
+      "description": "PostGIS tiger geocoder and reverse geocoder",
+      "docs_url": "https://postgis.net/docs/Extras.html#Tiger_Geocoder",
+      "preload_required": false,
+      "test_enabled": true,
+      "test_commands": [
+        "CREATE EXTENSION IF NOT EXISTS \"postgis_tiger_geocoder\";"
+      ]
+    },
+    {
+      "name": "fuzzystrmatch",
+      "package": "postgresql-contrib-16",
+      "package_version": "",
+      "version": "1.2",
+      "description": "Determine similarities and distance between strings",
+      "docs_url": "https://www.postgresql.org/docs/current/fuzzystrmatch.html",
+      "preload_required": false,
+      "test_enabled": true,
+      "test_commands": [
+        "CREATE EXTENSION IF NOT EXISTS \"fuzzystrmatch\";",
+        "SELECT soundex('hello');"
+      ]
+    },
+    {
+      "name": "hll",
+      "package": "postgresql-16-hll",
+      "package_version": "2.19-1.pgdg12+1",
+      "version": "2.19",
+      "description": "HyperLogLog data type for cardinality estimation",
+      "docs_url": "https://github.com/citusdata/postgresql-hll",
+      "preload_required": false,
+      "test_enabled": true,
+      "test_commands": [
+        "CREATE EXTENSION IF NOT EXISTS \"hll\";",
+        "CREATE TABLE test_hll (id INT, users hll); INSERT INTO test_hll VALUES (1, hll_empty());",
+        "SELECT hll_cardinality(users) FROM test_hll;"
+      ]
+    },
+    {
+      "name": "ip4r",
+      "package": "postgresql-16-ip4r",
+      "package_version": "2.4.2-4.pgdg12+1",
+      "version": "2.4",
+      "description": "IPv4 and IPv6 types and functions",
+      "docs_url": "https://github.com/RhodiumToad/ip4r",
+      "preload_required": false,
+      "test_enabled": true,
+      "test_commands": [
+        "CREATE EXTENSION IF NOT EXISTS \"ip4r\";",
+        "CREATE TABLE test_ip4r (id INT, ip_range ip4r); INSERT INTO test_ip4r VALUES (1, '192.168.1.0/24');",
+        "SELECT * FROM test_ip4r WHERE '192.168.1.100'::ip4 <<= ip_range;"
+      ]
+    },
+    {
+      "name": "pg_hint_plan",
+      "package": "postgresql-16-pg-hint-plan",
+      "package_version": "1.6.2-1.pgdg12+1",
+      "version": "1.6.2",
+      "description": "Query execution plan hinting",
+      "docs_url": "https://github.com/ossc-db/pg_hint_plan",
+      "preload_required": true,
+      "test_enabled": true,
+      "test_commands": [
+        "CREATE EXTENSION IF NOT EXISTS \"pg_hint_plan\";",
+        "/*+ SeqScan(pg_class) */ SELECT relname FROM pg_class WHERE relname = 'pg_class';"
+      ]
+    },
+    {
+      "name": "pg_repack",
+      "package": "postgresql-16-repack",
+      "package_version": "1.5.3-1.pgdg12+1",
+      "version": "1.5.3",
+      "description": "Remove bloat from tables and indexes without exclusive lock",
+      "docs_url": "https://github.com/reorg/pg_repack",
+      "preload_required": false,
+      "test_enabled": true,
+      "test_commands": [
+        "CREATE EXTENSION IF NOT EXISTS \"pg_repack\";",
+        "CREATE TABLE test_repack (id SERIAL PRIMARY KEY, data TEXT); INSERT INTO test_repack (data) VALUES ('test');",
+        "SELECT repack.version();"
+      ]
+    },
+    {
+      "name": "pgrouting",
+      "package": "postgresql-16-pgrouting",
+      "package_version": "4.0.0-1.pgdg12+1",
+      "version": "4.0.0",
+      "description": "Routing functionality for PostGIS/PostgreSQL",
+      "docs_url": "https://docs.pgrouting.org/",
+      "preload_required": false,
+      "test_enabled": true,
+      "test_commands": [
+        "CREATE EXTENSION IF NOT EXISTS \"pgrouting\";",
+        "CREATE TABLE test_routing (id INT, source INT, target INT, cost FLOAT); INSERT INTO test_routing VALUES (1, 1, 2, 1.0);",
+        "SELECT pgr_version();"
+      ]
+    },
+    {
+      "name": "pgtap",
+      "package": "postgresql-16-pgtap",
+      "package_version": "1.3.4-1.pgdg12+1",
+      "version": "1.3.4",
+      "description": "Unit testing framework for PostgreSQL",
+      "docs_url": "https://pgtap.org/",
+      "preload_required": false,
+      "test_enabled": true,
+      "test_commands": [
+        "CREATE EXTENSION IF NOT EXISTS \"pgtap\";",
+        "SELECT plan(1);",
+        "SELECT ok(1=1, 'Simple test');",
+        "SELECT * FROM finish();"
+      ]
+    },
+    {
+      "name": "vector",
+      "package": "postgresql-16-pgvector",
+      "package_version": "0.8.1-2.pgdg12+1",
+      "version": "0.8.1",
+      "description": "Vector similarity search for PostgreSQL",
+      "docs_url": "https://github.com/pgvector/pgvector",
+      "preload_required": false,
+      "test_enabled": true,
+      "test_commands": [
+        "CREATE EXTENSION IF NOT EXISTS \"vector\";",
+        "CREATE TABLE test_embeddings (id SERIAL PRIMARY KEY, embedding vector(3)); INSERT INTO test_embeddings (embedding) VALUES ('[1,2,3]');",
+        "SELECT embedding <-> '[3,1,2]' AS distance FROM test_embeddings;"
+      ]
+    },
+    {
+      "name": "prefix",
+      "package": "postgresql-16-prefix",
+      "package_version": "1.2.10-4.pgdg12+1",
+      "version": "1.2.0",
+      "description": "Prefix matching operator",
+      "docs_url": "https://github.com/dimitri/prefix",
+      "preload_required": false,
+      "test_enabled": true,
+      "test_commands": [
+        "CREATE EXTENSION IF NOT EXISTS \"prefix\";",
+        "CREATE TABLE test_prefix (id INT, phone prefix_range); INSERT INTO test_prefix VALUES (1, '1');",
+        "SELECT * FROM test_prefix WHERE phone @> '1234567890';"
+      ]
+    },
+    {
+      "name": "pgaudit",
+      "package": "postgresql-16-pgaudit",
+      "package_version": "16.1-1.pgdg120+1",
+      "version": "16.1",
+      "description": "Audit logging extension for PostgreSQL",
+      "docs_url": "https://github.com/pgaudit/pgaudit",
+      "preload_required": true,
+      "test_enabled": true,
+      "test_commands": [
+        "CREATE EXTENSION IF NOT EXISTS \"pgaudit\";",
+        "SHOW pgaudit.log;"
+      ]
+    },
+    {
+      "name": "pglogical",
+      "package": "postgresql-16-pglogical",
+      "package_version": "2.4.6-1.pgdg12+1",
+      "version": "2.4.6",
+      "description": "Logical replication extension for PostgreSQL",
+      "docs_url": "https://github.com/2ndQuadrant/pglogical",
+      "preload_required": true,
+      "test_enabled": true,
+      "test_commands": [
+        "CREATE EXTENSION IF NOT EXISTS \"pglogical\";",
+        "SELECT pglogical.create_node(node_name := 'test_node', dsn := 'host=localhost port=5432 dbname=postgres');"
+      ]
+    },
+    {
+      "name": "pgstattuple",
+      "package": "postgresql-contrib-16",
+      "package_version": "",
+      "version": "1.5",
+      "description": "Functions to show tuple-level statistics",
+      "docs_url": "https://www.postgresql.org/docs/current/pgstattuple.html",
+      "preload_required": false,
+      "test_enabled": true,
+      "test_commands": [
+        "CREATE EXTENSION IF NOT EXISTS \"pgstattuple\";",
+        "CREATE TABLE test_stattuple (id SERIAL PRIMARY KEY, data TEXT); INSERT INTO test_stattuple (data) VALUES ('test data');",
+        "SELECT tuple_count, tuple_len FROM pgstattuple('test_stattuple');"
+      ]
+    },
+    {
+      "name": "address_standardizer",
+      "package": "postgresql-contrib-16",
+      "version": "3.6.1",
+      "package_version": "",
+      "description": "Standardizes address data using rules-based parsing",
+      "docs_url": "https://postgis.net/docs/Extras.html#Address_Standardizer",
+      "preload_required": false,
+      "test_enabled": true,
+      "test_commands": [
+        "CREATE EXTENSION IF NOT EXISTS address_standardizer;",
+        "CREATE EXTENSION IF NOT EXISTS address_standardizer_data_us;",
+        "SELECT * FROM parse_address('1 Devonshire Place, Boston, MA 02109');"
+      ]
+    },
+    {
+      "name": "address_standardizer_data_us",
+      "package": "postgresql-contrib-16",
+      "version": "3.6.1",
+      "package_version": "",
+      "description": "US address data for address_standardizer",
+      "docs_url": "https://postgis.net/docs/Extras.html#Address_Standardizer_Tables",
+      "preload_required": false,
+      "test_enabled": true,
+      "test_commands": [
+        "CREATE EXTENSION IF NOT EXISTS address_standardizer;",
+        "CREATE EXTENSION IF NOT EXISTS address_standardizer_data_us;",
+        "SELECT * FROM parse_address('1 Devonshire Place, Boston, MA 02109');"
+      ]
+    },
+    {
+      "name": "amcheck",
+      "package": "postgresql-contrib-16",
+      "version": "1.3",
+      "package_version": "",
+      "description": "Functions for verifying relation integrity",
+      "docs_url": "https://www.postgresql.org/docs/current/amcheck.html",
+      "preload_required": false,
+      "test_enabled": true,
+      "test_commands": [
+        "CREATE EXTENSION IF NOT EXISTS amcheck;"
+      ]
+    },
+    {
+      "name": "autoinc",
+      "package": "postgresql-contrib-16",
+      "version": "1.0",
+      "package_version": "",
+      "description": "Functions for automatic increment of fields",
+      "docs_url": "https://www.postgresql.org/docs/current/contrib-spi.html#id-1.11.7.47.8",
+      "preload_required": false,
+      "test_enabled": true,
+      "test_commands": [
+        "CREATE EXTENSION IF NOT EXISTS autoinc;"
+      ]
+    },
+    {
+      "name": "bloom",
+      "package": "postgresql-contrib-16",
+      "version": "1.0",
+      "package_version": "",
+      "description": "Bloom index access method",
+      "docs_url": "https://www.postgresql.org/docs/current/bloom.html",
+      "preload_required": false,
+      "test_enabled": true,
+      "test_commands": [
+        "CREATE EXTENSION IF NOT EXISTS bloom;"
+      ]
+    },
+    {
+      "name": "btree_gin",
+      "package": "postgresql-contrib-16",
+      "version": "1.3",
+      "package_version": "",
+      "description": "Support for indexing common datatypes in GIN",
+      "docs_url": "https://www.postgresql.org/docs/current/btree-gin.html",
+      "preload_required": false,
+      "test_enabled": true,
+      "test_commands": [
+        "CREATE EXTENSION IF NOT EXISTS btree_gin;"
+      ]
+    },
+    {
+      "name": "btree_gist",
+      "package": "postgresql-contrib-16",
+      "version": "1.7",
+      "package_version": "",
+      "description": "Support for indexing common datatypes in GiST",
+      "docs_url": "https://www.postgresql.org/docs/current/btree-gist.html",
+      "preload_required": false,
+      "test_enabled": true,
+      "test_commands": [
+        "CREATE EXTENSION IF NOT EXISTS btree_gist;"
+      ]
+    },
+    {
+      "name": "cube",
+      "package": "postgresql-contrib-16",
+      "version": "1.5",
+      "package_version": "",
+      "description": "Multi-dimensional cube data type",
+      "docs_url": "https://www.postgresql.org/docs/current/cube.html",
+      "preload_required": false,
+      "test_enabled": true,
+      "test_commands": [
+        "CREATE EXTENSION IF NOT EXISTS cube;"
+      ]
+    },
+    {
+      "name": "dict_int",
+      "package": "postgresql-contrib-16",
+      "version": "1.0",
+      "package_version": "",
+      "description": "Text search dictionary template for integers",
+      "docs_url": "https://www.postgresql.org/docs/current/dict-int.html",
+      "preload_required": false,
+      "test_enabled": true,
+      "test_commands": [
+        "CREATE EXTENSION IF NOT EXISTS dict_int;"
+      ]
+    },
+    {
+      "name": "dict_xsyn",
+      "package": "postgresql-contrib-16",
+      "version": "1.0",
+      "package_version": "",
+      "description": "Text search dictionary template for synonyms",
+      "docs_url": "https://www.postgresql.org/docs/current/dict-xsyn.html",
+      "preload_required": false,
+      "test_enabled": true,
+      "test_commands": [
+        "CREATE EXTENSION IF NOT EXISTS dict_xsyn;"
+      ]
+    },
+    {
+      "name": "earthdistance",
+      "package": "postgresql-contrib-16",
+      "version": "1.2",
+      "package_version": "",
+      "description": "Earth distance calculations",
+      "docs_url": "https://www.postgresql.org/docs/current/earthdistance.html",
+      "preload_required": false,
+      "test_enabled": true,
+      "test_commands": [
+        "CREATE EXTENSION IF NOT EXISTS earthdistance;"
+      ]
+    },
+    {
+      "name": "file_fdw",
+      "package": "postgresql-contrib-16",
+      "version": "1.0",
+      "package_version": "",
+      "description": "Foreign data wrapper for flat file access",
+      "docs_url": "https://www.postgresql.org/docs/current/file-fdw.html",
+      "preload_required": false,
+      "test_enabled": true,
+      "test_commands": [
+        "CREATE EXTENSION IF NOT EXISTS file_fdw;"
+      ]
+    },
+    {
+      "name": "intagg",
+      "package": "postgresql-contrib-16",
+      "version": "1.1",
+      "package_version": "",
+      "description": "Integer aggregator (deprecated in favor of array_agg)",
+      "docs_url": "https://www.postgresql.org/docs/current/intagg.html",
+      "preload_required": false,
+      "test_enabled": true,
+      "test_commands": [
+        "CREATE EXTENSION IF NOT EXISTS intagg;"
+      ]
+    },
+    {
+      "name": "intarray",
+      "package": "postgresql-contrib-16",
+      "version": "1.5",
+      "package_version": "",
+      "description": "Functions for 1-D arrays of integers",
+      "docs_url": "https://www.postgresql.org/docs/current/intarray.html",
+      "preload_required": false,
+      "test_enabled": true,
+      "test_commands": [
+        "CREATE EXTENSION IF NOT EXISTS intarray;"
+      ]
+    },
+    {
+      "name": "isn",
+      "package": "postgresql-contrib-16",
+      "version": "1.2",
+      "package_version": "",
+      "description": "International Standard Number data types",
+      "docs_url": "https://www.postgresql.org/docs/current/isn.html",
+      "preload_required": false,
+      "test_enabled": true,
+      "test_commands": [
+        "CREATE EXTENSION IF NOT EXISTS isn;"
+      ]
+    },
+    {
+      "name": "lo",
+      "package": "postgresql-contrib-16",
+      "version": "1.1",
+      "package_version": "",
+      "description": "Large Object maintenance functions",
+      "docs_url": "https://www.postgresql.org/docs/current/lo.html",
+      "preload_required": false,
+      "test_enabled": true,
+      "test_commands": [
+        "CREATE EXTENSION IF NOT EXISTS lo;"
+      ]
+    },
+    {
+      "name": "pageinspect",
+      "package": "postgresql-contrib-16",
+      "version": "1.12",
+      "package_version": "",
+      "description": "Low-level page inspection",
+      "docs_url": "https://www.postgresql.org/docs/current/pageinspect.html",
+      "preload_required": false,
+      "test_enabled": true,
+      "test_commands": [
+        "CREATE EXTENSION IF NOT EXISTS pageinspect;"
+      ]
+    },
+    {
+      "name": "pg_surgery",
+      "package": "postgresql-contrib-16",
+      "version": "1.0",
+      "package_version": "",
+      "description": "Row surgery functions for modifying rows",
+      "docs_url": "https://www.postgresql.org/docs/current/pgsurgery.html",
+      "preload_required": false,
+      "test_enabled": true,
+      "test_commands": [
+        "CREATE EXTENSION IF NOT EXISTS pg_surgery;"
+      ]
+    },
+    {
+      "name": "pg_walinspect",
+      "package": "postgresql-contrib-16",
+      "version": "1.1",
+      "package_version": "",
+      "description": "WAL inspection functions",
+      "docs_url": "https://www.postgresql.org/docs/current/pgwalinspect.html",
+      "preload_required": false,
+      "test_enabled": true,
+      "test_commands": [
+        "CREATE EXTENSION IF NOT EXISTS pg_walinspect;"
+      ]
+    },
+    {
+      "name": "plpgsql",
+      "package": "postgresql-contrib-16",
+      "version": "1.0",
+      "package_version": "",
+      "description": "PL/pgSQL procedural language",
+      "docs_url": "https://www.postgresql.org/docs/current/plpgsql.html",
+      "preload_required": false,
+      "test_enabled": true,
+      "test_commands": [
+        "CREATE EXTENSION IF NOT EXISTS plpgsql;"
+      ]
+    },
+    {
+      "name": "postgres_fdw",
+      "package": "postgresql-contrib-16",
+      "version": "1.1",
+      "package_version": "",
+      "description": "Foreign data wrapper for PostgreSQL",
+      "docs_url": "https://www.postgresql.org/docs/current/postgres-fdw.html",
+      "preload_required": false,
+      "test_enabled": true,
+      "test_commands": [
+        "CREATE EXTENSION IF NOT EXISTS postgres_fdw;"
+      ]
+    },
+    {
+      "name": "refint",
+      "package": "postgresql-contrib-16",
+      "version": "1.0",
+      "package_version": "",
+      "description": "Referential integrity triggers (example)",
+      "docs_url": "https://www.postgresql.org/docs/current/contrib-spi.html#id-1.11.7.47.11",
+      "preload_required": false,
+      "test_enabled": true,
+      "test_commands": [
+        "CREATE EXTENSION IF NOT EXISTS refint;"
+      ]
+    },
+    {
+      "name": "seg",
+      "package": "postgresql-contrib-16",
+      "version": "1.4",
+      "package_version": "",
+      "description": "Floating-point intervals",
+      "docs_url": "https://www.postgresql.org/docs/current/seg.html",
+      "preload_required": false,
+      "test_enabled": true,
+      "test_commands": [
+        "CREATE EXTENSION IF NOT EXISTS seg;"
+      ]
+    },
+    {
+      "name": "sslinfo",
+      "package": "postgresql-contrib-16",
+      "version": "1.2",
+      "package_version": "",
+      "description": "Information about SSL connections",
+      "docs_url": "https://www.postgresql.org/docs/current/sslinfo.html",
+      "preload_required": false,
+      "test_enabled": true,
+      "test_commands": [
+        "CREATE EXTENSION IF NOT EXISTS sslinfo;"
+      ]
+    },
+    {
+      "name": "tablefunc",
+      "package": "postgresql-contrib-16",
+      "version": "1.0",
+      "package_version": "",
+      "description": "Functions that manipulate whole tables, including crosstab",
+      "docs_url": "https://www.postgresql.org/docs/current/tablefunc.html",
+      "preload_required": false,
+      "test_enabled": true,
+      "test_commands": [
+        "CREATE EXTENSION IF NOT EXISTS tablefunc;"
+      ]
+    },
+    {
+      "name": "tcn",
+      "package": "postgresql-contrib-16",
+      "version": "1.0",
+      "package_version": "",
+      "description": "Triggered change notifications",
+      "docs_url": "https://www.postgresql.org/docs/current/tcn.html",
+      "preload_required": false,
+      "test_enabled": true,
+      "test_commands": [
+        "CREATE EXTENSION IF NOT EXISTS tcn;"
+      ]
+    },
+    {
+      "name": "tsm_system_rows",
+      "package": "postgresql-contrib-16",
+      "version": "1.0",
+      "package_version": "",
+      "description": "TABLESAMPLE method which accepts number of rows",
+      "docs_url": "https://www.postgresql.org/docs/current/tsm-system-rows.html",
+      "preload_required": false,
+      "test_enabled": true,
+      "test_commands": [
+        "CREATE EXTENSION IF NOT EXISTS tsm_system_rows;"
+      ]
+    },
+    {
+      "name": "tsm_system_time",
+      "package": "postgresql-contrib-16",
+      "version": "1.0",
+      "package_version": "",
+      "description": "TABLESAMPLE method which accepts time in milliseconds",
+      "docs_url": "https://www.postgresql.org/docs/current/tsm-system-time.html",
+      "preload_required": false,
+      "test_enabled": true,
+      "test_commands": [
+        "CREATE EXTENSION IF NOT EXISTS tsm_system_time;"
+      ]
+    },
+    {
+      "name": "unaccent",
+      "package": "postgresql-contrib-16",
+      "version": "1.1",
+      "package_version": "",
+      "description": "Text search dictionary that removes accents",
+      "docs_url": "https://www.postgresql.org/docs/current/unaccent.html",
+      "preload_required": false,
+      "test_enabled": true,
+      "test_commands": [
+        "CREATE EXTENSION IF NOT EXISTS unaccent;"
+      ]
+    },
+    {
+      "name": "uuid-ossp",
+      "package": "postgresql-contrib-16",
+      "version": "1.1",
+      "package_version": "",
+      "description": "UUID generation functions",
+      "docs_url": "https://www.postgresql.org/docs/current/uuid-ossp.html",
+      "preload_required": false,
+      "test_enabled": true,
+      "test_commands": [
+        "CREATE EXTENSION IF NOT EXISTS \"uuid-ossp\";"
+      ]
+    },
+    {
+      "name": "xml2",
+      "package": "postgresql-contrib-16",
+      "version": "1.1",
+      "package_version": "",
+      "description": "XPath querying and XSLT support",
+      "docs_url": "https://www.postgresql.org/docs/current/xml2.html",
+      "preload_required": false,
+      "test_enabled": true,
+      "test_commands": [
+        "CREATE EXTENSION IF NOT EXISTS xml2;"
+      ]
+    },
+    {
+      "name": "postgis_raster",
+      "package": "postgresql-16-postgis-3",
+      "version": "3.6.1",
+      "package_version": "3.6.1+dfsg-1.pgdg12+1",
+      "description": "PostGIS raster extension",
+      "docs_url": "https://postgis.net/docs/RT_reference.html",
+      "preload_required": false,
+      "test_enabled": true,
+      "test_commands": [
+        "CREATE EXTENSION IF NOT EXISTS postgis_raster;",
+        "SELECT PostGIS_Raster_Lib_Version();"
+      ]
+    },
+    {
+      "name": "postgis_sfcgal",
+      "package": "postgresql-16-postgis-3",
+      "version": "3.6.1",
+      "package_version": "3.6.1+dfsg-1.pgdg12+1",
+      "description": "PostGIS SFCGAL support",
+      "docs_url": "https://postgis.net/docs/SFCGAL_User_Manual.html",
+      "preload_required": false,
+      "test_enabled": true,
+      "test_commands": [
+        "CREATE EXTENSION IF NOT EXISTS postgis_sfcgal;",
+        "SELECT postgis_sfcgal_version();"
+      ]
+    },
+    {
+      "name": "xatautils",
+      "version": "0.3.1",
+      "description": "Xata utilities (built from source)",
+      "docs_url": "https://github.com/xataio/xata-utils",
+      "preload_required": true,
+      "test_enabled": false,
+      "file_check": "/usr/lib/postgresql/16/lib/xatautils.so"
+    }
+  ],
+  "postgres_config": [
+    { "setting": "wal_level", "value": "logical" },
+    { "setting": "max_replication_slots", "value": "10" },
+    { "setting": "max_worker_processes", "value": "10" },
+    { "setting": "max_wal_senders", "value": "10" }
+  ],
+  "postgres_config_post_restart": [
+    { "setting": "pgaudit.log", "value": "all" },
+    { "setting": "pgaudit.log_catalog", "value": "off" }
+  ]
+}
