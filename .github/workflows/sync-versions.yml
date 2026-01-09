@@ -52,53 +52,15 @@ jobs:
 
           echo "Processing version data: $VERSION_DATA"
 
-          # Image configuration
-          declare -A IMAGE_SOURCE=(
-            ["cnpg-postgres-plus"]="ghcr.io/xataio/postgres-images/cnpg-postgres-plus"
-            ["experimental"]="ghcr.io/xataio/postgres-images/experimental"
-            ["xata-analytics"]="ghcr.io/xataio/postgres-images/xata-analytics"
-          )
-          declare -A IMAGE_URL=(
-            ["cnpg-postgres-plus"]="https://github.com/xataio/postgres-images/pkgs/container/postgres-images%2Fcnpg-postgres-plus"
-            ["experimental"]="https://github.com/xataio/postgres-images/pkgs/container/postgres-images%2Fexperimental"
-            ["xata-analytics"]="https://github.com/xataio/postgres-images/pkgs/container/postgres-images%2Fxata-analytics"
-          )
+          # Map image keys to their source index in versions.yaml
           declare -A SOURCE_INDEX=(
             ["cnpg-postgres-plus"]=0
             ["experimental"]=1
             ["xata-analytics"]=2
           )
 
-          # Check if file already has sources array format, if not initialize it
-          has_sources=$(yq '.sources' "$VERSIONS_FILE")
-          if [[ "$has_sources" == "null" ]]; then
-            echo "Initializing new sources array format..."
-
-            # Extract existing major_versions from old format (cnpg-postgres-plus)
-            existing_major_versions=$(yq '.major_versions' "$VERSIONS_FILE")
-
-            # Create the new format using yq
-            yq -n '
-              .last_updated = "" |
-              .updated_by = "workflow" |
-              .sources[0].source = "ghcr.io/xataio/postgres-images/cnpg-postgres-plus" |
-              .sources[0].package_url = "https://github.com/xataio/postgres-images/pkgs/container/postgres-images%2Fcnpg-postgres-plus" |
-              .sources[0].major_versions = {} |
-              .sources[1].source = "ghcr.io/xataio/postgres-images/experimental" |
-              .sources[1].package_url = "https://github.com/xataio/postgres-images/pkgs/container/postgres-images%2Fexperimental" |
-              .sources[1].major_versions = {} |
-              .sources[2].source = "ghcr.io/xataio/postgres-images/xata-analytics" |
-              .sources[2].package_url = "https://github.com/xataio/postgres-images/pkgs/container/postgres-images%2Fxata-analytics" |
-              .sources[2].major_versions = {}
-            ' | (echo "# PostgreSQL versions available in container registry"; echo "# This file is automatically updated by the postgres-images build workflow"; echo ""; cat) > "$VERSIONS_FILE"
-
-            # Migrate existing major_versions to cnpg-postgres-plus (index 0)
-            if [[ "$existing_major_versions" != "null" && "$existing_major_versions" != "{}" ]]; then
-              echo "Migrating existing versions from old format..."
-              echo "$existing_major_versions" | yq -P '.' > /tmp/existing_versions.yaml
-              yq -i ".sources[0].major_versions = load(\"/tmp/existing_versions.yaml\")" "$VERSIONS_FILE"
-            fi
-          fi
+          # Track if any changes were made
+          CHANGES_MADE=false
 
           # Parse the version data: image-key:v1,v2|image-key:v1,v2
           IFS='|' read -ra IMAGE_ENTRIES <<< "$VERSION_DATA"
@@ -135,6 +97,7 @@ jobs:
               if [[ "$major_exists" == "null" || "$major_exists" == "{}" ]]; then
                 echo "  Creating new major version entry for $major"
                 yq -i ".sources[${source_idx}].major_versions.\"${major}\" = {\"versions\": [], \"latest\": \"\", \"supported\": true}" "$VERSIONS_FILE"
+                CHANGES_MADE=true
               fi
 
               # Check if version already exists
@@ -145,22 +108,26 @@ jobs:
               else
                 echo "  Adding version $version"
                 yq -i ".sources[${source_idx}].major_versions.\"${major}\".versions += [\"${version}\"]" "$VERSIONS_FILE"
+                # Update latest to this version (assuming newer versions are passed)
+                yq -i ".sources[${source_idx}].major_versions.\"${major}\".latest = \"${version}\"" "$VERSIONS_FILE"
+                CHANGES_MADE=true
               fi
-
-              # Update latest to this version (assuming newer versions are passed)
-              yq -i ".sources[${source_idx}].major_versions.\"${major}\".latest = \"${version}\"" "$VERSIONS_FILE"
             done
           done
 
-          # Update last_updated timestamp
-          yq -i ".last_updated = \"$(date -u +%Y-%m-%dT%H:%M:%SZ)\"" "$VERSIONS_FILE"
-          yq -i ".updated_by = \"workflow\"" "$VERSIONS_FILE"
+          if [[ "$CHANGES_MADE" == "true" ]]; then
+            # Update last_updated timestamp only if changes were made
+            yq -i ".last_updated = \"$(date -u +%Y-%m-%dT%H:%M:%SZ)\"" "$VERSIONS_FILE"
+            yq -i ".updated_by = \"workflow\"" "$VERSIONS_FILE"
 
-          # Convert versions arrays to flow style (inline format)
-          yq -i '(.sources[].major_versions.[].versions) style="flow"' "$VERSIONS_FILE"
+            # Convert versions arrays to flow style (inline format)
+            yq -i '(.sources[].major_versions.[].versions) style="flow"' "$VERSIONS_FILE"
 
-          echo "=== Updated versions.yaml ==="
-          cat "$VERSIONS_FILE"
+            echo "=== Updated versions.yaml ==="
+            cat "$VERSIONS_FILE"
+          else
+            echo "No new versions to add, skipping update"
+          fi
 
       - name: Create PR if changes exist
         working-directory: maki-repo
