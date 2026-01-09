@@ -34,6 +34,9 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
       - name: Log in to GitHub Container Registry
         uses: docker/login-action@v3
         with:
@@ -41,104 +44,27 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Install build dependencies
-        run: |
-          # Add PostgreSQL APT repository
-          sudo apt-get update
-          sudo apt-get install -y wget gnupg
-          echo "deb http://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" | sudo tee /etc/apt/sources.list.d/pgdg.list
-          wget --quiet -O - https://www.postgresql.org/media/keys/ACCC4CF8.asc | sudo gpg --dearmor -o /etc/apt/trusted.gpg.d/postgresql.gpg
-          sudo apt-get update
-
-          # Install build dependencies
-          sudo apt-get install -y --no-install-recommends \
-            build-essential \
-            zlib1g-dev \
-            cmake \
-            ninja-build \
-            git \
-            pkg-config \
-            ccache \
-            libssl-dev \
-            liblz4-dev \
-            postgresql-server-dev-${{ env.PG_MAJOR }}
-
-      - name: Build pg_duckdb
-        run: |
-          cd /tmp
-          git clone https://github.com/duckdb/pg_duckdb.git
-          cd pg_duckdb
-          git checkout ${{ env.PG_DUCKDB_VERSION }}
-
-          # Build with security-hardened settings (no remote extensions, no httpfs)
-          export DUCKDB_EXTENSION_REMOTE_URLS=""
-          make GEN=ninja \
-            BUILD_SHELL=0 BUILD_PYTHON=0 BUILD_UNITTESTS=0 BUILD_HTTPFS=0 \
-            EXTENSION_CONFIGS="" \
-            CMAKE_VARS="\
-              -DENABLE_SANITIZER=FALSE \
-              -DENABLE_UBSAN=0 \
-              -DENABLE_EXTENSION_AUTOLOADING=0 \
-              -DENABLE_EXTENSION_AUTOINSTALL=0 \
-              -DOVERRIDE_GIT_DESCRIBE=${{ env.DUCKDB_VERSION }} \
-              -DCMAKE_BUILD_TYPE=Release"
-
-          # Install to a staging directory
-          sudo make install DESTDIR=/tmp/pg_duckdb_install
-
-      - name: Create .deb package
-        run: |
-          PKG_NAME="pg-duckdb"
-          PKG_VERSION="${{ env.PG_DUCKDB_VERSION }}"
-          # Remove 'v' prefix for package version if present
-          PKG_VERSION="${PKG_VERSION#v}"
-
-          DEB_NAME="${PKG_NAME}-${{ env.PG_DUCKDB_VERSION }}-pg${{ env.PG_MAJOR }}-${{ env.ARCH }}-linux-gnu"
-          DEB_DIR="/tmp/${DEB_NAME}"
-
-          # Create package directory structure
-          mkdir -p "${DEB_DIR}/DEBIAN"
-
-          # Copy installed files
-          cp -r /tmp/pg_duckdb_install/usr "${DEB_DIR}/"
-
-          # Create control file
-          cat > "${DEB_DIR}/DEBIAN/control" << EOF
-          Package: ${PKG_NAME}
-          Version: ${PKG_VERSION}
-          Architecture: ${{ env.ARCH }}
-          Maintainer: Xata <support@xata.io>
-          Description: DuckDB integration for PostgreSQL ${{ env.PG_MAJOR }}
-           pg_duckdb is a PostgreSQL extension that integrates DuckDB's analytical
-           query engine directly into PostgreSQL. Built with DuckDB ${{ env.DUCKDB_VERSION }}.
-          Depends: postgresql-${{ env.PG_MAJOR }}
-          Homepage: https://github.com/duckdb/pg_duckdb
-          EOF
-
-          # Build the .deb package
-          dpkg-deb --build "${DEB_DIR}"
-
-          # Move to workspace
-          mkdir -p "${{ github.workspace }}/pkgout"
-          mv "/tmp/${DEB_NAME}.deb" "${{ github.workspace }}/pkgout/pg-duckdb.deb"
-
-          echo "Created: ${DEB_NAME}.deb"
-          ls -la "${{ github.workspace }}/pkgout/"
-
       - name: Build and push package image
         run: |
-          cd ${{ github.workspace }}/pkgout
+          # Set CNPG base image based on PG version
+          CNPG_BASE="ghcr.io/cloudnative-pg/postgresql:${{ env.PG_MAJOR }}-minimal-bookworm"
 
-          # Create minimal Dockerfile
-          cat > Dockerfile << EOF
-          FROM scratch
-          COPY pg-duckdb.deb /pg-duckdb.deb
-          EOF
-
-          # Build and push
           IMAGE_TAG="${{ env.REGISTRY }}/${{ env.PACKAGE_NAME }}:${{ env.PG_DUCKDB_VERSION }}-duckdb${{ env.DUCKDB_VERSION }}-pg${{ env.PG_MAJOR }}-${{ env.ARCH }}"
-          docker build -t "${IMAGE_TAG}" .
-          docker push "${IMAGE_TAG}"
+
+          echo "Building pg_duckdb package using base: ${CNPG_BASE}"
+          echo "Image tag: ${IMAGE_TAG}"
+
+          docker buildx build \
+            --platform linux/amd64 \
+            --build-arg CNPG_BASE="${CNPG_BASE}" \
+            --build-arg PG_MAJOR="${{ env.PG_MAJOR }}" \
+            --build-arg PG_DUCKDB_VERSION="${{ env.PG_DUCKDB_VERSION }}" \
+            --build-arg DUCKDB_VERSION="${{ env.DUCKDB_VERSION }}" \
+            --build-arg ARCH="${{ env.ARCH }}" \
+            -t "${IMAGE_TAG}" \
+            --push \
+            -f docker/pg-duckdb-pkg/Dockerfile \
+            .
 
           echo "Pushed: ${IMAGE_TAG}"
 
@@ -158,6 +84,9 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
       - name: Log in to GitHub Container Registry
         uses: docker/login-action@v3
         with:
@@ -165,103 +94,26 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Install build dependencies
-        run: |
-          # Add PostgreSQL APT repository
-          sudo apt-get update
-          sudo apt-get install -y wget gnupg lsb-release
-          echo "deb http://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" | sudo tee /etc/apt/sources.list.d/pgdg.list
-          wget --quiet -O - https://www.postgresql.org/media/keys/ACCC4CF8.asc | sudo gpg --dearmor -o /etc/apt/trusted.gpg.d/postgresql.gpg
-          sudo apt-get update
-
-          # Install build dependencies
-          sudo apt-get install -y --no-install-recommends \
-            build-essential \
-            zlib1g-dev \
-            cmake \
-            ninja-build \
-            git \
-            pkg-config \
-            ccache \
-            libssl-dev \
-            liblz4-dev \
-            postgresql-server-dev-${{ env.PG_MAJOR }}
-
-      - name: Build pg_duckdb
-        run: |
-          cd /tmp
-          git clone https://github.com/duckdb/pg_duckdb.git
-          cd pg_duckdb
-          git checkout ${{ env.PG_DUCKDB_VERSION }}
-
-          # Build with security-hardened settings (no remote extensions, no httpfs)
-          export DUCKDB_EXTENSION_REMOTE_URLS=""
-          make GEN=ninja \
-            BUILD_SHELL=0 BUILD_PYTHON=0 BUILD_UNITTESTS=0 BUILD_HTTPFS=0 \
-            EXTENSION_CONFIGS="" \
-            CMAKE_VARS="\
-              -DENABLE_SANITIZER=FALSE \
-              -DENABLE_UBSAN=0 \
-              -DENABLE_EXTENSION_AUTOLOADING=0 \
-              -DENABLE_EXTENSION_AUTOINSTALL=0 \
-              -DOVERRIDE_GIT_DESCRIBE=${{ env.DUCKDB_VERSION }} \
-              -DCMAKE_BUILD_TYPE=Release"
-
-          # Install to a staging directory
-          sudo make install DESTDIR=/tmp/pg_duckdb_install
-
-      - name: Create .deb package
-        run: |
-          PKG_NAME="pg-duckdb"
-          PKG_VERSION="${{ env.PG_DUCKDB_VERSION }}"
-          # Remove 'v' prefix for package version if present
-          PKG_VERSION="${PKG_VERSION#v}"
-
-          DEB_NAME="${PKG_NAME}-${{ env.PG_DUCKDB_VERSION }}-pg${{ env.PG_MAJOR }}-${{ env.ARCH }}-linux-gnu"
-          DEB_DIR="/tmp/${DEB_NAME}"
-
-          # Create package directory structure
-          mkdir -p "${DEB_DIR}/DEBIAN"
-
-          # Copy installed files
-          cp -r /tmp/pg_duckdb_install/usr "${DEB_DIR}/"
-
-          # Create control file
-          cat > "${DEB_DIR}/DEBIAN/control" << EOF
-          Package: ${PKG_NAME}
-          Version: ${PKG_VERSION}
-          Architecture: ${{ env.ARCH }}
-          Maintainer: Xata <support@xata.io>
-          Description: DuckDB integration for PostgreSQL ${{ env.PG_MAJOR }}
-           pg_duckdb is a PostgreSQL extension that integrates DuckDB's analytical
-           query engine directly into PostgreSQL. Built with DuckDB ${{ env.DUCKDB_VERSION }}.
-          Depends: postgresql-${{ env.PG_MAJOR }}
-          Homepage: https://github.com/duckdb/pg_duckdb
-          EOF
-
-          # Build the .deb package
-          dpkg-deb --build "${DEB_DIR}"
-
-          # Move to workspace
-          mkdir -p "${{ github.workspace }}/pkgout"
-          mv "/tmp/${DEB_NAME}.deb" "${{ github.workspace }}/pkgout/pg-duckdb.deb"
-
-          echo "Created: ${DEB_NAME}.deb"
-          ls -la "${{ github.workspace }}/pkgout/"
-
       - name: Build and push package image
         run: |
-          cd ${{ github.workspace }}/pkgout
+          # Set CNPG base image based on PG version
+          CNPG_BASE="ghcr.io/cloudnative-pg/postgresql:${{ env.PG_MAJOR }}-minimal-bookworm"
 
-          # Create minimal Dockerfile
-          cat > Dockerfile << EOF
-          FROM scratch
-          COPY pg-duckdb.deb /pg-duckdb.deb
-          EOF
-
-          # Build and push
           IMAGE_TAG="${{ env.REGISTRY }}/${{ env.PACKAGE_NAME }}:${{ env.PG_DUCKDB_VERSION }}-duckdb${{ env.DUCKDB_VERSION }}-pg${{ env.PG_MAJOR }}-${{ env.ARCH }}"
-          docker build -t "${IMAGE_TAG}" .
-          docker push "${IMAGE_TAG}"
+
+          echo "Building pg_duckdb package using base: ${CNPG_BASE}"
+          echo "Image tag: ${IMAGE_TAG}"
+
+          docker buildx build \
+            --platform linux/arm64 \
+            --build-arg CNPG_BASE="${CNPG_BASE}" \
+            --build-arg PG_MAJOR="${{ env.PG_MAJOR }}" \
+            --build-arg PG_DUCKDB_VERSION="${{ env.PG_DUCKDB_VERSION }}" \
+            --build-arg DUCKDB_VERSION="${{ env.DUCKDB_VERSION }}" \
+            --build-arg ARCH="${{ env.ARCH }}" \
+            -t "${IMAGE_TAG}" \
+            --push \
+            -f docker/pg-duckdb-pkg/Dockerfile \
+            .
 
           echo "Pushed: ${IMAGE_TAG}"
