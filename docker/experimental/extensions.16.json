@@ -341,7 +341,7 @@
     {
       "name": "hll",
       "package": "postgresql-16-hll",
-      "package_version": "2.19-1.pgdg12+1",
+      "package_version": "2.19-2.pgdg12+2",
       "version": "2.19",
       "description": "HyperLogLog data type for cardinality estimation",
       "docs_url": "https://github.com/citusdata/postgresql-hll",

@@ -1,0 +1,119 @@
+name: Build pg_duckdb .deb packages
+
+on:
+  workflow_dispatch:
+    inputs:
+      pg_duckdb_version:
+        description: 'pg_duckdb version tag (e.g., v1.0.0)'
+        required: true
+        default: 'v1.0.0'
+        type: string
+      duckdb_version:
+        description: 'DuckDB version to embed (e.g., v1.3.2)'
+        required: true
+        default: 'v1.3.2'
+        type: string
+
+env:
+  REGISTRY: ghcr.io
+  PACKAGE_NAME: xataio/postgres-images/pg-duckdb-pkg
+
+jobs:
+  build-amd64:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        postgres: [17, 18]
+    env:
+      ARCH: amd64
+      PG_MAJOR: ${{ matrix.postgres }}
+      PG_DUCKDB_VERSION: ${{ inputs.pg_duckdb_version }}
+      DUCKDB_VERSION: ${{ inputs.duckdb_version }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push package image
+        run: |
+          # Set CNPG base image based on PG version
+          CNPG_BASE="ghcr.io/cloudnative-pg/postgresql:${{ env.PG_MAJOR }}-minimal-bookworm"
+
+          IMAGE_TAG="${{ env.REGISTRY }}/${{ env.PACKAGE_NAME }}:${{ env.PG_DUCKDB_VERSION }}-duckdb${{ env.DUCKDB_VERSION }}-pg${{ env.PG_MAJOR }}-${{ env.ARCH }}"
+
+          echo "Building pg_duckdb package using base: ${CNPG_BASE}"
+          echo "Image tag: ${IMAGE_TAG}"
+
+          docker buildx build \
+            --platform linux/amd64 \
+            --build-arg CNPG_BASE="${CNPG_BASE}" \
+            --build-arg PG_MAJOR="${{ env.PG_MAJOR }}" \
+            --build-arg PG_DUCKDB_VERSION="${{ env.PG_DUCKDB_VERSION }}" \
+            --build-arg DUCKDB_VERSION="${{ env.DUCKDB_VERSION }}" \
+            --build-arg ARCH="${{ env.ARCH }}" \
+            -t "${IMAGE_TAG}" \
+            --push \
+            -f docker/pg-duckdb-pkg/Dockerfile \
+            .
+
+          echo "Pushed: ${IMAGE_TAG}"
+
+  build-arm64:
+    runs-on:
+      group: arm-runners
+    strategy:
+      matrix:
+        postgres: [17, 18]
+    env:
+      ARCH: arm64
+      PG_MAJOR: ${{ matrix.postgres }}
+      PG_DUCKDB_VERSION: ${{ inputs.pg_duckdb_version }}
+      DUCKDB_VERSION: ${{ inputs.duckdb_version }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push package image
+        run: |
+          # Set CNPG base image based on PG version
+          CNPG_BASE="ghcr.io/cloudnative-pg/postgresql:${{ env.PG_MAJOR }}-minimal-bookworm"
+
+          IMAGE_TAG="${{ env.REGISTRY }}/${{ env.PACKAGE_NAME }}:${{ env.PG_DUCKDB_VERSION }}-duckdb${{ env.DUCKDB_VERSION }}-pg${{ env.PG_MAJOR }}-${{ env.ARCH }}"
+
+          echo "Building pg_duckdb package using base: ${CNPG_BASE}"
+          echo "Image tag: ${IMAGE_TAG}"
+
+          docker buildx build \
+            --platform linux/arm64 \
+            --build-arg CNPG_BASE="${CNPG_BASE}" \
+            --build-arg PG_MAJOR="${{ env.PG_MAJOR }}" \
+            --build-arg PG_DUCKDB_VERSION="${{ env.PG_DUCKDB_VERSION }}" \
+            --build-arg DUCKDB_VERSION="${{ env.DUCKDB_VERSION }}" \
+            --build-arg ARCH="${{ env.ARCH }}" \
+            -t "${IMAGE_TAG}" \
+            --push \
+            -f docker/pg-duckdb-pkg/Dockerfile \
+            .
+
+          echo "Pushed: ${IMAGE_TAG}"
