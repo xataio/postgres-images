@@ -911,8 +911,8 @@
     {
       "name": "pg_partman",
       "package": "postgresql-18-partman",
-      "package_version": "5.3.1-2.pgdg12+1",
-      "version": "5.3.1",
+      "package_version": "5.4.0-1.pgdg12+1",
+      "version": "5.4.0",
       "description": "Partition management extension for PostgreSQL",
       "docs_url": "https://github.com/pgpartman/pg_partman",
       "preload_required": false,
