@@ -175,6 +175,6 @@ jobs:
           - Updates extension versions, descriptions, and metadata for all offerings
 
           ---
-          🤖 Generated automatically by [postgres-images sync workflow](https://github.com/xataio/postgres-images/actions/workflows/sync-extensions.yml)")
+          🤖 Generated automatically by [postgres-images sync extensions workflow](https://github.com/xataio/postgres-images/actions/workflows/sync-extensions.yml)")
             echo "Created PR: $PR_URL"
           fi
