@@ -938,6 +938,7 @@
       "version": "1.0.0",
       "description": "DuckDB-powered Postgres for high performance analytics",
       "preload_required": true,
+      "docs_url": "https://github.com/duckdb/pg_duckdb",
       "test_enabled": true,
       "test_commands": [
         "CREATE EXTENSION IF NOT EXISTS \"pg_duckdb\";",

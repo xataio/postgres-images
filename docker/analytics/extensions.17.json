@@ -951,6 +951,7 @@
       "package_version": "",
       "version": "1.0.0",
       "description": "DuckDB-powered Postgres for high performance analytics",
+      "docs_url": "https://github.com/duckdb/pg_duckdb",
       "preload_required": true,
       "test_enabled": true,
       "test_commands": [
