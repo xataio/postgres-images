@@ -3,8 +3,8 @@
     {
       "name": "pg_partman",
       "package": "postgresql-17-partman",
-      "package_version": "5.3.1-2.pgdg12+1",
-      "version": "5.3.1",
+      "package_version": "5.4.0-1.pgdg12+1",
+      "version": "5.4.0",
       "description": "Partition management extension for PostgreSQL",
       "docs_url": "https://github.com/pgpartman/pg_partman",
       "preload_required": false,
@@ -951,6 +951,7 @@
       "package_version": "",
       "version": "1.0.0",
       "description": "DuckDB-powered Postgres for high performance analytics",
+      "docs_url": "https://github.com/duckdb/pg_duckdb",
       "preload_required": true,
       "test_enabled": true,
       "test_commands": [
