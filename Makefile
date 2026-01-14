@@ -1,11 +1,18 @@
 # PostgreSQL CNPG Custom Image Makefile
 PG_MAJOR ?= 17
-PG_TAG   ?= $(PG_MAJOR) #17->17, 18->18
+PG_TAG   ?= $(PG_MAJOR)
 
 # Configuration
 REGISTRY ?= ghcr.io
 IMAGE_NAME ?= xataio/postgres-images/cnpg-postgres-plus
 CNPG_BASE ?= ghcr.io/cloudnative-pg/postgresql:$(PG_TAG)-minimal-bookworm
+
+# pg_duckdb package - use CNPG_BASE for PG16 (no pg_duckdb support)
+ifeq ($(PG_MAJOR),16)
+PG_DUCKDB_PKG ?= $(CNPG_BASE)
+else
+PG_DUCKDB_PKG ?= ghcr.io/xataio/postgres-images/pg-duckdb-pkg:v1.0.0-duckdbv1.3.2-pg$(PG_MAJOR)
+endif
 DOCKERFILE_DIR ?= docker/custom-postgres
 DOCKERFILE ?= $(DOCKERFILE_DIR)/Dockerfile
 PLATFORMS ?= linux/amd64,linux/arm64
@@ -95,6 +102,7 @@ build-local: get-pg-version get-base-digest check-github-token ## Build image lo
 		--build-arg PG_MAJOR=$(PG_MAJOR) \
 		--build-arg CONFIG_FILE=$(CONFIG_FILE) \
 		--build-arg POSTGIS_CLI_VERSION_17=$(POSTGIS_CLI_VERSION_17) \
+		--build-arg PG_DUCKDB_PKG=$(PG_DUCKDB_PKG) \
 		--secret id=github_token,src=/dev/stdin \
 		.
 
@@ -210,6 +218,7 @@ build-multiarch: get-pg-version get-base-digest check-github-token setup-buildx 
 		--build-arg PG_MAJOR=$(PG_MAJOR) \
 		--build-arg CONFIG_FILE=$(CONFIG_FILE) \
 		--build-arg POSTGIS_CLI_VERSION_17=$(POSTGIS_CLI_VERSION_17) \
+		--build-arg PG_DUCKDB_PKG=$(PG_DUCKDB_PKG) \
 		--secret id=github_token,src=/dev/stdin \
 		.
 
@@ -228,6 +237,7 @@ push-arch: get-pg-version get-base-digest check-github-token setup-buildx ## Bui
 		--build-arg PG_MAJOR=$(PG_MAJOR) \
 		--build-arg CONFIG_FILE=$(CONFIG_FILE) \
 		--build-arg POSTGIS_CLI_VERSION_17=$(POSTGIS_CLI_VERSION_17) \
+		--build-arg PG_DUCKDB_PKG=$(PG_DUCKDB_PKG) \
 		--secret id=github_token,src=/dev/stdin \
 		--output type=image,push=true \
 		.

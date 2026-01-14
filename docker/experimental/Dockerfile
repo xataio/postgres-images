@@ -1,4 +1,10 @@
 ARG CNPG_BASE=ghcr.io/cloudnative-pg/postgresql:17-minimal-bookworm
+ARG PG_DUCKDB_PKG=ghcr.io/xataio/postgres-images/pg-duckdb-pkg:v1.0.0-duckdbv1.3.2-pg17
+
+# Stage: Get pg_duckdb package (PG17+ only)
+FROM ${PG_DUCKDB_PKG} AS pg_duckdb_pkg
+
+# Main build stage
 FROM ${CNPG_BASE}
 
 # Build-time knobs (overridden by Makefile)
@@ -174,6 +180,16 @@ RUN --mount=type=secret,id=github_token \
           "$DOWNLOAD_URL" && \
     dpkg -i /tmp/xatautils.deb && \
     rm /tmp/xatautils.deb;
+
+# Install pg_duckdb from pre-built package (PG17+ only)
+# For PG16, PG_DUCKDB_PKG points to CNPG_BASE so no extra image is pulled
+RUN --mount=from=pg_duckdb_pkg,source=/,target=/pg-duckdb-pkg \
+    if [ "${PG_MAJOR}" -ge 17 ]; then \
+        echo "Installing pg_duckdb for PG${PG_MAJOR}..." && \
+        dpkg -i /pg-duckdb-pkg/pg-duckdb.deb; \
+    else \
+        echo "Skipping pg_duckdb for PG${PG_MAJOR} (requires PG17+)"; \
+    fi
 
 # Remove tools
 RUN set -eux; \
