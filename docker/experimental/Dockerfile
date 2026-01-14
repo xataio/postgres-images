@@ -182,10 +182,11 @@ RUN --mount=type=secret,id=github_token \
     rm /tmp/xatautils.deb;
 
 # Install pg_duckdb from pre-built package (PG17+ only)
-RUN --mount=from=pg_duckdb_pkg,source=/pg-duckdb.deb,target=/tmp/pg-duckdb.deb \
+# For PG16, PG_DUCKDB_PKG points to CNPG_BASE so no extra image is pulled
+RUN --mount=from=pg_duckdb_pkg,source=/,target=/pg-duckdb-pkg \
     if [ "${PG_MAJOR}" -ge 17 ]; then \
         echo "Installing pg_duckdb for PG${PG_MAJOR}..." && \
-        dpkg -i /tmp/pg-duckdb.deb; \
+        dpkg -i /pg-duckdb-pkg/pg-duckdb.deb; \
     else \
         echo "Skipping pg_duckdb for PG${PG_MAJOR} (requires PG17+)"; \
     fi

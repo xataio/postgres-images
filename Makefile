@@ -1,12 +1,18 @@
 # PostgreSQL CNPG Custom Image Makefile
 PG_MAJOR ?= 17
 PG_TAG   ?= $(PG_MAJOR)
-PG_DUCKDB_PKG ?= ghcr.io/xataio/postgres-images/pg-duckdb-pkg:v1.0.0-duckdbv1.3.2-pg$(PG_MAJOR)
 
 # Configuration
 REGISTRY ?= ghcr.io
 IMAGE_NAME ?= xataio/postgres-images/cnpg-postgres-plus
 CNPG_BASE ?= ghcr.io/cloudnative-pg/postgresql:$(PG_TAG)-minimal-bookworm
+
+# pg_duckdb package - use CNPG_BASE for PG16 (no pg_duckdb support)
+ifeq ($(PG_MAJOR),16)
+PG_DUCKDB_PKG ?= $(CNPG_BASE)
+else
+PG_DUCKDB_PKG ?= ghcr.io/xataio/postgres-images/pg-duckdb-pkg:v1.0.0-duckdbv1.3.2-pg$(PG_MAJOR)
+endif
 DOCKERFILE_DIR ?= docker/custom-postgres
 DOCKERFILE ?= $(DOCKERFILE_DIR)/Dockerfile
 PLATFORMS ?= linux/amd64,linux/arm64
