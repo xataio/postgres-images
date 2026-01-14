@@ -1,0 +1,180 @@
+name: Sync extensions.yaml to maki
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'docker/*/extensions.*.json'
+  workflow_dispatch:
+
+jobs:
+  sync-extensions:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout postgres-images
+        uses: actions/checkout@v4
+
+      - name: Checkout maki repo
+        uses: actions/checkout@v4
+        with:
+          repository: xataio/maki
+          token: ${{ secrets.GIT_TOKEN }}
+          path: maki-repo
+
+      - name: Install tools
+        run: |
+          # Install yq
+          sudo wget -qO /usr/local/bin/yq https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64
+          sudo chmod +x /usr/local/bin/yq
+
+          # Install gh if not present
+          if ! command -v gh &> /dev/null; then
+            echo "Installing GitHub CLI..."
+            curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | sudo dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg
+            echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | sudo tee /etc/apt/sources.list.d/github-cli.list > /dev/null
+            sudo apt-get update
+            sudo apt-get install -y gh
+          fi
+
+      - name: Generate extensions.yaml from JSON files
+        run: |
+          set -euo pipefail
+
+          EXTENSIONS_FILE="maki-repo/internal/extensions/extensions.yaml"
+          TEMP_FILE=$(mktemp)
+
+          # Map directory names to offering names in maki
+          declare -A OFFERING_MAP=(
+            ["analytics"]="analytics"
+            ["custom-postgres"]="postgres"
+            ["experimental"]="experimental"
+          )
+
+          # Build the YAML content to a temp file (without timestamp for comparison)
+          cat > "$TEMP_FILE" << 'EOF'
+          # PostgreSQL extensions available in each image offering
+          # This file is automatically updated by a sync workflow from the postgres-images repo
+
+          EOF
+
+          # Add placeholder for metadata (will be updated later)
+          echo "last_updated: \"__TIMESTAMP__\"" >> "$TEMP_FILE"
+          echo "updated_by: workflow" >> "$TEMP_FILE"
+          echo "offerings:" >> "$TEMP_FILE"
+
+          # Process each offering directory
+          for offering_dir in analytics custom-postgres experimental; do
+            offering_name="${OFFERING_MAP[$offering_dir]}"
+            dir_path="docker/${offering_dir}"
+
+            if [[ ! -d "$dir_path" ]]; then
+              echo "Directory $dir_path not found, skipping..."
+              continue
+            fi
+
+            # Check if any extension files exist for this offering
+            shopt -s nullglob
+            ext_files=("$dir_path"/extensions.*.json)
+            shopt -u nullglob
+
+            if [[ ${#ext_files[@]} -eq 0 ]]; then
+              echo "No extension files found in $dir_path, skipping..."
+              continue
+            fi
+
+            echo "  ${offering_name}:" >> "$TEMP_FILE"
+
+            # Process each PG version's extensions file
+            for ext_file in "${ext_files[@]}"; do
+              # Extract PG version from filename (e.g., extensions.17.json -> 17)
+              pg_version=$(basename "$ext_file" | sed 's/extensions\.\([0-9]*\)\.json/\1/')
+
+              echo "    Processing $offering_dir PG $pg_version..."
+
+              echo "    \"${pg_version}\":" >> "$TEMP_FILE"
+              echo "      extensions:" >> "$TEMP_FILE"
+
+              # Extract extensions from JSON and convert to YAML format
+              jq -r '.extensions[] |
+                "        - name: \(.name)\n" +
+                "          version: \"\(.version)\"\n" +
+                "          description: \"\(.description // "")\"\n" +
+                "          docs_url: \"\(.docs_url // "")\"\n" +
+                "          preload_required: \(.preload_required // false)" +
+                (if .name == "wal2json" then "\n          type: plugin"
+                 elif .name == "auto_explain" then "\n          type: module"
+                 else "" end)
+              ' "$ext_file" >> "$TEMP_FILE"
+            done
+          done
+
+          # Compare content (ignoring timestamp) to check if there are real changes
+          EXISTING_CONTENT=$(sed 's/last_updated: "[^"]*"/last_updated: "__TIMESTAMP__"/' "$EXTENSIONS_FILE" 2>/dev/null || echo "")
+          NEW_CONTENT=$(cat "$TEMP_FILE")
+
+          if [[ "$EXISTING_CONTENT" == "$NEW_CONTENT" ]]; then
+            echo "No changes detected in extensions, skipping update"
+            rm "$TEMP_FILE"
+            exit 0
+          fi
+
+          # Real changes detected, update timestamp and write file
+          sed -i "s/__TIMESTAMP__/$(date -u +%Y-%m-%dT%H:%M:%SZ)/" "$TEMP_FILE"
+          mv "$TEMP_FILE" "$EXTENSIONS_FILE"
+
+          echo "=== Generated extensions.yaml ==="
+          head -100 "$EXTENSIONS_FILE"
+          echo "..."
+
+      - name: Create PR if changes exist
+        working-directory: maki-repo
+        env:
+          GH_TOKEN: ${{ secrets.GIT_TOKEN }}
+        run: |
+          if git diff --quiet internal/extensions/extensions.yaml; then
+            echo "No changes to sync"
+            exit 0
+          fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          # Create a branch name with timestamp
+          BRANCH_NAME="sync-postgres-extensions-$(date +%Y%m%d-%H%M%S)"
+
+          # Check if there's already an open PR for syncing extensions
+          EXISTING_PR=$(gh pr list --search "Sync PostgreSQL extensions" --state open --json number --jq '.[0].number' || echo "")
+
+          if [[ -n "$EXISTING_PR" ]]; then
+            echo "Existing PR #${EXISTING_PR} found, updating it..."
+            BRANCH_NAME=$(gh pr view "$EXISTING_PR" --json headRefName --jq '.headRefName')
+            git fetch origin "$BRANCH_NAME" || true
+            git checkout -B "$BRANCH_NAME" origin/main
+          else
+            git checkout -b "$BRANCH_NAME"
+          fi
+
+          git add internal/extensions/extensions.yaml
+          git commit -m "Sync PostgreSQL extensions
+
+          Updated extensions from postgres-images build workflow.
+          Source: https://github.com/xataio/postgres-images"
+
+          git push -u origin "$BRANCH_NAME" --force
+
+          if [[ -n "$EXISTING_PR" ]]; then
+            echo "Updated existing PR #${EXISTING_PR}"
+            echo "PR URL: https://github.com/xataio/maki/pull/${EXISTING_PR}"
+          else
+            PR_URL=$(gh pr create \
+              --title "Sync PostgreSQL extensions" \
+              --body "## Summary
+          - Automated sync of PostgreSQL extensions from postgres-images repo
+          - Updates extension versions, descriptions, and metadata for all offerings
+
+          ---
+          🤖 Generated automatically by [postgres-images sync extensions workflow](https://github.com/xataio/postgres-images/actions/workflows/sync-extensions.yml)")
+            echo "Created PR: $PR_URL"
+          fi

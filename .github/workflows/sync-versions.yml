@@ -180,6 +180,6 @@ jobs:
           \`\`\`
 
           ---
-          🤖 Generated automatically by [postgres-images sync workflow](https://github.com/xataio/postgres-images/actions/workflows/sync-versions.yml)")
+          🤖 Generated automatically by [postgres-images sync versions workflow](https://github.com/xataio/postgres-images/actions/workflows/sync-versions.yml)")
             echo "Created PR: $PR_URL"
           fi
