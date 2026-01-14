@@ -117,3 +117,38 @@ jobs:
             .
 
           echo "Pushed: ${IMAGE_TAG}"
+  create-manifest:
+    needs: [build-amd64, build-arm64]
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        postgres: [17, 18]
+    env:
+      PG_MAJOR: ${{ matrix.postgres }}
+      PG_DUCKDB_VERSION: ${{ inputs.pg_duckdb_version }}
+      DUCKDB_VERSION: ${{ inputs.duckdb_version }}
+
+    steps:
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Create and push multi-arch manifest
+        run: |
+          BASE_TAG="${{ env.REGISTRY }}/${{ env.PACKAGE_NAME }}:${{ env.PG_DUCKDB_VERSION }}-duckdb${{ env.DUCKDB_VERSION }}-pg${{ env.PG_MAJOR }}"
+          AMD64_TAG="${BASE_TAG}-amd64"
+          ARM64_TAG="${BASE_TAG}-arm64"
+
+          echo "Creating multi-arch manifest: ${BASE_TAG}"
+          echo "  - ${AMD64_TAG}"
+          echo "  - ${ARM64_TAG}"
+
+          docker buildx imagetools create \
+            -t "${BASE_TAG}" \
+            "${AMD64_TAG}" \
+            "${ARM64_TAG}"
+
+          echo "Pushed multi-arch manifest: ${BASE_TAG}"
