@@ -158,8 +158,8 @@ RUN --mount=type=secret,id=github_token \
     rm /tmp/xatautils.deb
 
 # Install pg_duckdb from pre-built package
-COPY --from=pg_duckdb_pkg /pg-duckdb.deb /tmp/pg-duckdb.deb
-RUN dpkg -i /tmp/pg-duckdb.deb && rm /tmp/pg-duckdb.deb
+RUN --mount=from=pg_duckdb_pkg,source=/,target=/pg-duckdb-pkg \
+    dpkg -i /pg-duckdb-pkg/pg-duckdb.deb
 
 
 # Remove tools
