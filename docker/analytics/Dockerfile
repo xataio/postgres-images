@@ -1,4 +1,10 @@
 ARG CNPG_BASE=ghcr.io/cloudnative-pg/postgresql:17-minimal-bookworm
+ARG PG_DUCKDB_PKG=ghcr.io/xataio/postgres-images/pg-duckdb-pkg:v1.0.0-duckdbv1.3.2-pg17
+
+# Stage: Get pg_duckdb package
+FROM ${PG_DUCKDB_PKG} AS pg_duckdb_pkg
+
+# Main build stage
 FROM ${CNPG_BASE}
 
 # Build-time knobs (overridden by Makefile)
@@ -151,53 +157,9 @@ RUN --mount=type=secret,id=github_token \
     dpkg -i /tmp/xatautils.deb && \
     rm /tmp/xatautils.deb
 
-# Build pg_duckdb from source (DuckDB v1.3.2, no httpfs)
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    build-essential \
-    zlib1g-dev \
-    cmake \
-    ninja-build \
-    git \
-    pkg-config \
-    ccache \
-    libssl-dev \
-    liblz4-dev \
-    postgresql-server-dev-${PG_MAJOR} \
-  && rm -rf /var/lib/apt/lists/* \
-  && cd /tmp \
-  && git clone https://github.com/duckdb/pg_duckdb.git \
-  && cd pg_duckdb \
-  && git checkout v1.0.0  \
-  # Don't fetch remote extensions like httpfs, and turn httpfs off entirely \
-  # disable the following: sanitizers, shell, python, unit test,  \
-  # does not automagically load extensions at runtime \
-  # does not automagically try to install extensions from the internet \
-  && export DUCKDB_EXTENSION_REMOTE_URLS="" \
-  && make GEN=ninja \
-    BUILD_SHELL=0 BUILD_PYTHON=0 BUILD_UNITTESTS=0 BUILD_HTTPFS=0 \
-    EXTENSION_CONFIGS="" \
-    CMAKE_VARS="\
-      -DENABLE_SANITIZER=FALSE  \
-      -DENABLE_UBSAN=0 \
-      -DENABLE_EXTENSION_AUTOLOADING=0  \
-      -DENABLE_EXTENSION_AUTOINSTALL=0 \
-      -DOVERRIDE_GIT_DESCRIBE=v1.3.2 \
-      -DCMAKE_BUILD_TYPE=Release" \
-  && make install \
-  && cd /tmp && rm -rf pg_duckdb \
-  # Strip build toolchain to keep image small
-  && apt-get purge -y --auto-remove \
-       build-essential \
-       zlib1g-dev \
-       ccache \
-       libssl-dev \
-       pkg-config \
-       cmake \
-       liblz4-dev \
-       ninja-build \
-       git \
-       ${PG_DEV_PKG} \
-  && rm -rf /var/lib/apt/lists/*
+# Install pg_duckdb from pre-built package
+RUN --mount=from=pg_duckdb_pkg,source=/,target=/pg-duckdb-pkg \
+    dpkg -i /pg-duckdb-pkg/pg-duckdb.deb
 
 
 # Remove tools
