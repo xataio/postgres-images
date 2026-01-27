@@ -28,6 +28,7 @@ on:
           - 'docker/custom-postgres'
           - 'docker/experimental'
           - 'docker/analytics'
+          - 'docker/minimal'
       only_version:
         description: 'Limit build to a single PG version (optional)'
         required: false
@@ -55,6 +56,7 @@ jobs:
             ["docker/custom-postgres"]='{"pg_versions":[17,18,14,15,16],"image_name":"xataio/postgres-images/cnpg-postgres-plus","description":"CNPG PostgreSQL with additional extensions"}'
             ["docker/experimental"]='{"pg_versions":[17,18,16],"image_name":"xataio/postgres-images/experimental","description":"My custom PostgreSQL experimental"}'
             ["docker/analytics"]='{"pg_versions":[17,18],"image_name":"xataio/postgres-images/xata-analytics","description":"CNPG PostgreSQL plus with added pg_duckdb"}'
+            ["docker/minimal"]='{"pg_versions":[17],"image_name":"xataio/postgres-images/minimal","description":"Minimal PostgreSQL 17 with xatautils and pgbackrest"}'
           )
           
           if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
