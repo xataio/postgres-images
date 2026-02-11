@@ -935,7 +935,7 @@
       "name": "pg_duckdb",
       "package": "source",
       "package_version": "",
-      "version": "1.0.0",
+      "version": "1.1.1",
       "description": "DuckDB-powered Postgres for high performance analytics",
       "preload_required": true,
       "docs_url": "https://github.com/duckdb/pg_duckdb",
