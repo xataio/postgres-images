@@ -1,5 +1,5 @@
 ARG CNPG_BASE=ghcr.io/cloudnative-pg/postgresql:17-minimal-bookworm
-ARG PG_DUCKDB_PKG=ghcr.io/xataio/postgres-images/pg-duckdb-pkg:v1.0.0-duckdbv1.3.2-pg17
+ARG PG_DUCKDB_PKG=ghcr.io/xataio/postgres-images/pg-duckdb-pkg:v1.1.1-duckdbv1.4.3-pg17
 
 # Stage: Get pg_duckdb package
 FROM ${PG_DUCKDB_PKG} AS pg_duckdb_pkg

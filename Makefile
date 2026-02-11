@@ -11,7 +11,7 @@ CNPG_BASE ?= ghcr.io/cloudnative-pg/postgresql:$(PG_TAG)-minimal-bookworm
 ifeq ($(PG_MAJOR),16)
 PG_DUCKDB_PKG ?= $(CNPG_BASE)
 else
-PG_DUCKDB_PKG ?= ghcr.io/xataio/postgres-images/pg-duckdb-pkg:v1.0.0-duckdbv1.3.2-pg$(PG_MAJOR)
+PG_DUCKDB_PKG ?= ghcr.io/xataio/postgres-images/pg-duckdb-pkg:v1.1.1-duckdbv1.4.3-pg$(PG_MAJOR)
 endif
 DOCKERFILE_DIR ?= docker/custom-postgres
 DOCKERFILE ?= $(DOCKERFILE_DIR)/Dockerfile
