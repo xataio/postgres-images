@@ -936,20 +936,6 @@
       ]
     },
     {
-      "name": "pgaudit",
-      "package": "postgresql-18-pgaudit",
-      "package_version": "18.0-2.pgdg12+1",
-      "version": "18.0",
-      "description": "Audit logging extension for PostgreSQL",
-      "docs_url": "https://github.com/pgaudit/pgaudit",
-      "preload_required": true,
-      "test_enabled": true,
-      "test_commands": [
-        "CREATE EXTENSION IF NOT EXISTS \"pgaudit\";",
-        "SHOW pgaudit.log;"
-      ]
-    },
-    {
       "name": "xatautils",
       "version": "0.3.3",
       "description": "Xata utilities (built from source)",
