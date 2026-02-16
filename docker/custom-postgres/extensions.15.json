@@ -3,8 +3,8 @@
     {
       "name": "pg_partman",
       "package": "postgresql-15-partman",
-      "package_version": "5.4.0-1.pgdg12+1",
-      "version": "5.4.0",
+      "package_version": "5.4.1-1.pgdg12+1",
+      "version": "5.4.1",
       "description": "Partition management extension for PostgreSQL",
       "docs_url": "https://github.com/pgpartman/pg_partman",
       "preload_required": false,
@@ -268,6 +268,19 @@
       ]
     },
     {
+      "name": "auth_delay",
+      "package": "postgresql-contrib-15",
+      "package_version": "",
+      "version": "1.0",
+      "description": "Pause briefly before reporting authentication failure",
+      "docs_url": "https://www.postgresql.org/docs/current/auth-delay.html",
+      "preload_required": true,
+      "test_enabled": true,
+      "test_commands": [
+        "SHOW shared_preload_libraries;"
+      ]
+    },
+    {
       "name": "pg_prewarm",
       "package": "postgresql-contrib-15",
       "package_version": "",
@@ -284,8 +297,8 @@
     {
       "name": "postgis",
       "package": "postgresql-15-postgis-3",
-      "package_version": "3.6.1+dfsg-1.pgdg12+1",
-      "version": "3.6.1",
+      "package_version": "3.6.2+dfsg-1.pgdg12+1",
+      "version": "3.6.2",
       "description": "PostGIS geometry and geography spatial types and functions",
       "docs_url": "https://postgis.net/",
       "preload_required": false,
@@ -300,8 +313,8 @@
     {
       "name": "postgis_topology",
       "package": "postgresql-15-postgis-3",
-      "package_version": "3.6.1+dfsg-1.pgdg12+1",
-      "version": "3.6.1",
+      "package_version": "3.6.2+dfsg-1.pgdg12+1",
+      "version": "3.6.2",
       "description": "PostGIS topology spatial types and functions",
       "docs_url": "https://postgis.net/docs/Topology.html",
       "preload_required": false,
@@ -314,8 +327,8 @@
     {
       "name": "postgis_tiger_geocoder",
       "package": "postgresql-15-postgis-3-scripts",
-      "package_version": "3.6.1+dfsg-1.pgdg12+1",
-      "version": "3.6.1",
+      "package_version": "3.6.2+dfsg-1.pgdg12+1",
+      "version": "3.6.2",
       "description": "PostGIS tiger geocoder and reverse geocoder",
       "docs_url": "https://postgis.net/docs/Extras.html#Tiger_Geocoder",
       "preload_required": false,
@@ -386,8 +399,8 @@
     {
       "name": "pgrouting",
       "package": "postgresql-15-pgrouting",
-      "package_version": "4.0.0-1.pgdg12+1",
-      "version": "4.0.0",
+      "package_version": "4.0.1-1.pgdg12+1",
+      "version": "4.0.1",
       "description": "Routing functionality for PostGIS/PostgreSQL",
       "docs_url": "https://docs.pgrouting.org/",
       "preload_required": false,
@@ -476,7 +489,7 @@
     {
       "name": "address_standardizer",
       "package": "postgresql-contrib-15",
-      "version": "3.6.1",
+      "version": "3.6.2",
       "package_version": "",
       "description": "Standardizes address data using rules-based parsing",
       "docs_url": "https://postgis.net/docs/Extras.html#Address_Standardizer",
@@ -491,7 +504,7 @@
     {
       "name": "address_standardizer_data_us",
       "package": "postgresql-contrib-15",
-      "version": "3.6.1",
+      "version": "3.6.2",
       "package_version": "",
       "description": "US address data for address_standardizer",
       "docs_url": "https://postgis.net/docs/Extras.html#Address_Standardizer_Tables",
@@ -870,8 +883,8 @@
     {
       "name": "postgis_raster",
       "package": "postgresql-15-postgis-3",
-      "version": "3.6.1",
-      "package_version": "3.6.1+dfsg-1.pgdg12+1",
+      "version": "3.6.2",
+      "package_version": "3.6.2+dfsg-1.pgdg12+1",
       "description": "PostGIS raster extension",
       "docs_url": "https://postgis.net/docs/RT_reference.html",
       "preload_required": false,
@@ -884,8 +897,8 @@
     {
       "name": "postgis_sfcgal",
       "package": "postgresql-15-postgis-3",
-      "version": "3.6.1",
-      "package_version": "3.6.1+dfsg-1.pgdg12+1",
+      "version": "3.6.2",
+      "package_version": "3.6.2+dfsg-1.pgdg12+1",
       "description": "PostGIS SFCGAL support",
       "docs_url": "https://postgis.net/docs/SFCGAL_User_Manual.html",
       "preload_required": false,
@@ -894,6 +907,29 @@
         "CREATE EXTENSION IF NOT EXISTS postgis_sfcgal;",
         "SELECT postgis_sfcgal_version();"
       ]
+    },
+    {
+      "name": "pgaudit",
+      "package": "postgresql-15-pgaudit",
+      "package_version": "1.7.1-2.pgdg12+1",
+      "version": "1.7.1",
+      "description": "Audit logging extension for PostgreSQL",
+      "docs_url": "https://github.com/pgaudit/pgaudit",
+      "preload_required": true,
+      "test_enabled": true,
+      "test_commands": [
+        "CREATE EXTENSION IF NOT EXISTS \"pgaudit\";",
+        "SHOW pgaudit.log;"
+      ]
+    },
+    {
+      "name": "xatautils",
+      "version": "0.3.0",
+      "description": "Xata utilities (built from source)",
+      "docs_url": "https://github.com/xataio/xata-utils",
+      "preload_required": true,
+      "test_enabled": false,
+      "file_check": "/usr/lib/postgresql/15/lib/xatautils.so"
     }
   ],
   "postgres_config": [
@@ -901,5 +937,9 @@
     { "setting": "max_replication_slots", "value": "10" },
     { "setting": "max_worker_processes", "value": "10" },
     { "setting": "max_wal_senders", "value": "10" }
+  ],
+  "postgres_config_post_restart": [
+      { "setting": "pgaudit.log", "value": "all" },
+      { "setting": "pgaudit.log_catalog", "value": "off" }
   ]
 }
