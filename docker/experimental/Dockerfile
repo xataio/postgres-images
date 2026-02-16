@@ -209,7 +209,7 @@ mismatches=()
 
 while read -r name expected_version; do
     # Skip preload-only modules or non-creatable ones
-    if [[ "$name" == "auto_explain" || "$name" == "wal2json" ]]; then
+    if [[ "$name" == "auto_explain" || "$name" == "auth_delay" || "$name" == "wal2json" ]]; then
         so_path=$(find /usr/lib/postgresql -name "${name}.so" 2>/dev/null)
         if [[ -z "$so_path" ]]; then
             mismatches+=("Module '${name}' not found (.so missing)")
