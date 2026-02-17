@@ -105,6 +105,7 @@ jobs:
                 "          preload_required: \(.preload_required // false)" +
                 (if .name == "wal2json" then "\n          type: plugin"
                  elif .name == "auto_explain" then "\n          type: module"
+                 elif .name == "auth_delay" then "\n          type: module"
                  else "" end)
               ' "$ext_file" >> "$TEMP_FILE"
             done
