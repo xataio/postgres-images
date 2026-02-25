@@ -924,7 +924,7 @@
     {
       "name": "pg_partman",
       "package": "postgresql-18-partman",
-      "package_version": "5.4.1-1.pgdg12+1",
+      "package_version": "5.4.2-1.pgdg12+1",
       "version": "5.4.1",
       "description": "Partition management extension for PostgreSQL",
       "docs_url": "https://github.com/pgpartman/pg_partman",
@@ -933,6 +933,20 @@
       "test_commands": [
         "CREATE EXTENSION IF NOT EXISTS \"pg_partman\";",
         "SELECT count(*) FROM public.part_config;"
+      ]
+    },
+    {
+      "name": "pglogical",
+      "package": "postgresql-18-pglogical",
+      "package_version": "2.4.6-2.pgdg12+1",
+      "version": "2.4.6",
+      "description": "Logical replication extension for PostgreSQL",
+      "docs_url": "https://github.com/2ndQuadrant/pglogical",
+      "preload_required": true,
+      "test_enabled": true,
+      "test_commands": [
+        "CREATE EXTENSION IF NOT EXISTS \"pglogical\";",
+        "SELECT pglogical.create_node(node_name := 'test_node', dsn := 'host=localhost port=5432 dbname=postgres');"
       ]
     },
     {
