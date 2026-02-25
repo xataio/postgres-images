@@ -4,7 +4,7 @@
       "name": "pg_partman",
       "package": "postgresql-17-partman",
       "package_version": "5.4.2-1.pgdg12+1",
-      "version": "5.4.2",
+      "version": "5.4.1",
       "description": "Partition management extension for PostgreSQL",
       "docs_url": "https://github.com/pgpartman/pg_partman",
       "preload_required": false,
