@@ -11,6 +11,8 @@ on:
 jobs:
   sync-versions:
     runs-on: ubuntu-latest
+    env:
+      INPUT_VERSION_DATA: ${{ inputs.version_data }}
 
     steps:
       - name: Checkout postgres-images
@@ -42,7 +44,7 @@ jobs:
         run: |
           set -euo pipefail
 
-          VERSION_DATA="${{ inputs.version_data }}"
+          VERSION_DATA="${INPUT_VERSION_DATA}"
           VERSIONS_FILE="maki-repo/internal/postgresversions/versions.yaml"
 
           if [[ -z "$VERSION_DATA" ]]; then
@@ -176,7 +178,7 @@ jobs:
 
           ### Version data
           \`\`\`
-          ${{ inputs.version_data }}
+          ${INPUT_VERSION_DATA}
           \`\`\`
 
           ---

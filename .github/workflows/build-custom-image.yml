@@ -40,6 +40,10 @@ jobs:
   # Detect which folders to build
   detect-changes:
     runs-on: ubuntu-latest
+    env:
+      INPUT_TARGET_FOLDER: ${{ github.event.inputs.target_folder }}
+      INPUT_ONLY_VERSION: ${{ github.event.inputs.only_version }}
+      INPUT_CUSTOM_CNPG_BASE: ${{ github.event.inputs.custom_cnpg_base }}
     outputs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
     steps:
@@ -60,9 +64,9 @@ jobs:
           )
           
           if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
-            if [[ -n "${{ github.event.inputs.target_folder }}" ]]; then
+            if [[ -n "${INPUT_TARGET_FOLDER}" ]]; then
               # Manual trigger with specific folder
-              folder="${{ github.event.inputs.target_folder }}"
+              folder="${INPUT_TARGET_FOLDER}"
               config="${folders[$folder]}"
               matrix="{\"include\":[{\"folder\":\"$folder\",\"config\":$config}]}"
             else
@@ -76,9 +80,9 @@ jobs:
             fi
 
             # Narrow to a single major if requested
-            if [[ -n "${{ github.event.inputs.only_version }}" ]]; then
-              input_version="${{ github.event.inputs.only_version }}"
-              
+            if [[ -n "${INPUT_ONLY_VERSION}" ]]; then
+              input_version="${INPUT_ONLY_VERSION}"
+
               # Extract major version (e.g., "17" from "17.5" or "17")
               major_version="${input_version%%.*}"
               matrix=$(jq \
@@ -92,7 +96,7 @@ jobs:
             fi
 
             # Safety guard: if a custom base is provided, require only_version
-            if [[ -n "${{ github.event.inputs.custom_cnpg_base }}" && -z "${{ github.event.inputs.only_version }}" ]]; then
+            if [[ -n "${INPUT_CUSTOM_CNPG_BASE}" && -z "${INPUT_ONLY_VERSION}" ]]; then
               echo "ERROR: custom_cnpg_base was provided but only_version was not set. Refusing to build cross-major with a single custom base."
               exit 1
             fi
@@ -146,6 +150,9 @@ jobs:
       REGISTRY: ghcr.io
       PLATFORMS: linux/amd64
       ARCH: amd64
+      INPUT_ONLY_VERSION: ${{ github.event.inputs.only_version }}
+      INPUT_CUSTOM_CNPG_BASE: ${{ github.event.inputs.custom_cnpg_base }}
+      INPUT_CNPG_BASE: ${{ github.event.inputs.cnpg_base }}
 
     steps:
       - name: Checkout repository
@@ -202,7 +209,7 @@ jobs:
       - name: Set environment variables
         run: |
           # Parse input version if provided
-          input_version="${{ github.event.inputs.only_version }}"
+          input_version="${INPUT_ONLY_VERSION}"
           if [[ -n "$input_version" && "$input_version" == *.* ]]; then
           # Contains dot, use as PG_DEV_VERSION with wildcard
             pg_dev_version="${input_version}-*"
@@ -215,7 +222,7 @@ jobs:
           pg_versions='${{ toJSON(matrix.config.pg_versions) }}'
           image_name='${{ matrix.config.image_name }}'
           description='${{ matrix.config.description }}'
-          
+
           echo "IMAGE_NAME=${image_name}" >> $GITHUB_ENV
           echo "DOCKERFILE_DIR=${{ matrix.folder }}" >> $GITHUB_ENV
           echo "DESCRIPTION=${description}" >> $GITHUB_ENV
@@ -226,54 +233,54 @@ jobs:
           # Get PG versions for this folder
           pg_versions='${{ toJSON(matrix.config.pg_versions) }}'
           echo "Building PG versions: $pg_versions for folder: ${{ matrix.folder }} (AMD64)"
-          
+
           # Process each PG version
           for pg_major in $(echo "$pg_versions" | jq -r '.[]'); do
             echo "=== Processing PG ${pg_major} (AMD64) ==="
-          
+
             # Set version-specific variables
           case "$pg_major" in
           14)
             base_minimal="ghcr.io/cloudnative-pg/postgresql:14-minimal-bookworm"
             base_standard="ghcr.io/cloudnative-pg/postgresql:14-standard-bookworm"
             default_base="$base_minimal"
-            sha_suffix="-pg14-${{ env.ARCH }}"
+            sha_suffix="-pg14-${ARCH}"
             ;;
           15)
             base_minimal="ghcr.io/cloudnative-pg/postgresql:15-minimal-bookworm"
             base_standard="ghcr.io/cloudnative-pg/postgresql:15-standard-bookworm"
             default_base="$base_minimal"
-            sha_suffix="-pg15-${{ env.ARCH }}"
+            sha_suffix="-pg15-${ARCH}"
             ;;
           16)
             base_minimal="ghcr.io/cloudnative-pg/postgresql:16-minimal-bookworm"
             base_standard="ghcr.io/cloudnative-pg/postgresql:16-standard-bookworm"
             default_base="$base_minimal"
-            sha_suffix="-pg16-${{ env.ARCH }}"
+            sha_suffix="-pg16-${ARCH}"
             ;;
           17)
             base_minimal="ghcr.io/cloudnative-pg/postgresql:17-minimal-bookworm"
             base_standard="ghcr.io/cloudnative-pg/postgresql:17-standard-bookworm"
             default_base="$base_minimal"
-            sha_suffix="-pg17-${{ env.ARCH }}"
+            sha_suffix="-pg17-${ARCH}"
             ;;
           18)
             base_minimal="ghcr.io/cloudnative-pg/postgresql:18-minimal-bookworm"
             base_standard="ghcr.io/cloudnative-pg/postgresql:18-standard-bookworm"
             default_base="$base_minimal"
-            sha_suffix="-pg18-${{ env.ARCH }}"
+            sha_suffix="-pg18-${ARCH}"
             ;;
           *)
             echo "Unsupported PG version: $pg_major"
             exit 1
             ;;
           esac
-          
+
             # Determine CNPG base image
             if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
-              if [[ -n "${{ github.event.inputs.custom_cnpg_base }}" ]]; then
-                cnpg_base="${{ github.event.inputs.custom_cnpg_base }}"
-              elif [[ "${{ github.event.inputs.cnpg_base }}" == "minimal" ]]; then
+              if [[ -n "${INPUT_CUSTOM_CNPG_BASE}" ]]; then
+                cnpg_base="${INPUT_CUSTOM_CNPG_BASE}"
+              elif [[ "${INPUT_CNPG_BASE}" == "minimal" ]]; then
                 cnpg_base="$base_minimal"
               else
                 cnpg_base="$base_standard"
@@ -281,49 +288,49 @@ jobs:
             else
               cnpg_base="$default_base"
             fi
-          
+
             # Create image tag
             image_tag="${{ github.sha }}${sha_suffix}"
-          
+
             echo "CNPG Base: $cnpg_base"
             echo "Image Tag: $image_tag"
             echo "Folder: ${{ matrix.folder }}"
-          
+
             # Show build info using make (with organization token)
             GITHUB_TOKEN="${{ secrets.GIT_TOKEN }}" make show-info \
-              DOCKERFILE_DIR="${{ env.DOCKERFILE_DIR }}" \
-              IMAGE_NAME="${{ env.IMAGE_NAME }}" \
+              DOCKERFILE_DIR="${DOCKERFILE_DIR}" \
+              IMAGE_NAME="${IMAGE_NAME}" \
               CNPG_BASE="$cnpg_base" \
               PG_MAJOR="$pg_major" \
               IMAGE_TAG="$image_tag" \
-              PG_DEV_VERSION="${{ env.PG_DEV_VERSION }}"
-          
+              PG_DEV_VERSION="${PG_DEV_VERSION}"
+
             # For scheduled builds, check if base image changed
             should_build=true
             if [[ "${{ github.event_name }}" == "schedule" ]]; then
               if ! GITHUB_TOKEN="${{ secrets.GIT_TOKEN }}" make check-base-updated \
-                DOCKERFILE_DIR="${{ env.DOCKERFILE_DIR }}" \
-                IMAGE_NAME="${{ env.IMAGE_NAME }}" \
+                DOCKERFILE_DIR="${DOCKERFILE_DIR}" \
+                IMAGE_NAME="${IMAGE_NAME}" \
                 CNPG_BASE="$cnpg_base" \
                 PG_MAJOR="$pg_major"; then
                 echo "Base image unchanged for PG${pg_major}, skipping build..."
                 should_build=false
               fi
             fi
-          
+
             if [[ "$should_build" == "true" ]]; then
               # Build and test using make with organization token
               echo "Building and testing PG${pg_major} (AMD64)..."
               GITHUB_TOKEN="${{ secrets.GIT_TOKEN }}" make build-and-test \
-                DOCKERFILE_DIR="${{ env.DOCKERFILE_DIR }}" \
-                IMAGE_NAME="${{ env.IMAGE_NAME }}" \
+                DOCKERFILE_DIR="${DOCKERFILE_DIR}" \
+                IMAGE_NAME="${IMAGE_NAME}" \
                 CNPG_BASE="$cnpg_base" \
                 PG_MAJOR="$pg_major" \
                 IMAGE_TAG="$image_tag" \
                 PLATFORM="linux/amd64" \
-                PG_DEV_VERSION="${{ env.PG_DEV_VERSION }}"
+                PG_DEV_VERSION="${PG_DEV_VERSION}"
             fi
-          
+
             # Export variables for next steps
             echo "PG${pg_major}_CNPG_BASE=$cnpg_base" >> $GITHUB_ENV
             echo "PG${pg_major}_IMAGE_TAG=$image_tag" >> $GITHUB_ENV
@@ -338,23 +345,23 @@ jobs:
             should_build_var="PG${pg_major}_SHOULD_BUILD"
             cnpg_base_var="PG${pg_major}_CNPG_BASE"
             image_tag_var="PG${pg_major}_IMAGE_TAG"
-          
+
             if [[ "${!should_build_var}" == "true" ]]; then
               echo "Pushing PG${pg_major} image (AMD64)..."
-          
+
               # Test GitHub token access before pushing
               echo "Testing GitHub token access before push..."
               GITHUB_TOKEN="${{ secrets.GIT_TOKEN }}" make test-github-access \
-                DOCKERFILE_DIR="${{ env.DOCKERFILE_DIR }}" \
-                IMAGE_NAME="${{ env.IMAGE_NAME }}"
-          
+                DOCKERFILE_DIR="${DOCKERFILE_DIR}" \
+                IMAGE_NAME="${IMAGE_NAME}"
+
               GITHUB_TOKEN="${{ secrets.GIT_TOKEN }}" make push-arch \
-              DOCKERFILE_DIR="${{ env.DOCKERFILE_DIR }}" \
-              IMAGE_NAME="${{ env.IMAGE_NAME }}" \
+              DOCKERFILE_DIR="${DOCKERFILE_DIR}" \
+              IMAGE_NAME="${IMAGE_NAME}" \
               CNPG_BASE="${!cnpg_base_var}" \
               PG_MAJOR="$pg_major" \
               IMAGE_TAG="${!image_tag_var}" \
-              PLATFORMS="${{ env.PLATFORMS }}"
+              PLATFORMS="${PLATFORMS}"
             else
               echo "Skipping push for PG${pg_major} (not built)"
             fi
@@ -371,6 +378,9 @@ jobs:
       REGISTRY: ghcr.io
       PLATFORMS: linux/arm64
       ARCH: arm64
+      INPUT_ONLY_VERSION: ${{ github.event.inputs.only_version }}
+      INPUT_CUSTOM_CNPG_BASE: ${{ github.event.inputs.custom_cnpg_base }}
+      INPUT_CNPG_BASE: ${{ github.event.inputs.cnpg_base }}
 
     steps:
       - name: Checkout repository
@@ -427,7 +437,7 @@ jobs:
       - name: Set environment variables
         run: |
           # Parse input version if provided
-          input_version="${{ github.event.inputs.only_version }}"
+          input_version="${INPUT_ONLY_VERSION}"
           if [[ -n "$input_version" && "$input_version" == *.* ]]; then
           # Contains dot, use as PG_DEV_VERSION with wildcard
           pg_dev_version="${input_version}-*"
@@ -440,7 +450,7 @@ jobs:
           pg_versions='${{ toJSON(matrix.config.pg_versions) }}'
           image_name='${{ matrix.config.image_name }}'
           description='${{ matrix.config.description }}'
-          
+
           echo "IMAGE_NAME=${image_name}" >> $GITHUB_ENV
           echo "DOCKERFILE_DIR=${{ matrix.folder }}" >> $GITHUB_ENV
           echo "DESCRIPTION=${description}" >> $GITHUB_ENV
@@ -451,54 +461,54 @@ jobs:
           # Get PG versions for this folder
           pg_versions='${{ toJSON(matrix.config.pg_versions) }}'
           echo "Building PG versions: $pg_versions for folder: ${{ matrix.folder }} (ARM64)"
-          
+
           # Process each PG version
           for pg_major in $(echo "$pg_versions" | jq -r '.[]'); do
             echo "=== Processing PG ${pg_major} (ARM64) ==="
-          
+
             # Set version-specific variables
             case "$pg_major" in
             14)
               base_minimal="ghcr.io/cloudnative-pg/postgresql:14-minimal-bookworm"
               base_standard="ghcr.io/cloudnative-pg/postgresql:14-standard-bookworm"
               default_base="$base_minimal"
-              sha_suffix="-pg14-${{ env.ARCH }}"
+              sha_suffix="-pg14-${ARCH}"
               ;;
             15)
               base_minimal="ghcr.io/cloudnative-pg/postgresql:15-minimal-bookworm"
               base_standard="ghcr.io/cloudnative-pg/postgresql:15-standard-bookworm"
               default_base="$base_minimal"
-              sha_suffix="-pg15-${{ env.ARCH }}"
+              sha_suffix="-pg15-${ARCH}"
               ;;
             16)
               base_minimal="ghcr.io/cloudnative-pg/postgresql:16-minimal-bookworm"
               base_standard="ghcr.io/cloudnative-pg/postgresql:16-standard-bookworm"
               default_base="$base_minimal"
-              sha_suffix="-pg16-${{ env.ARCH }}"
+              sha_suffix="-pg16-${ARCH}"
               ;;
             17)
               base_minimal="ghcr.io/cloudnative-pg/postgresql:17-minimal-bookworm"
               base_standard="ghcr.io/cloudnative-pg/postgresql:17-standard-bookworm"
               default_base="$base_minimal"
-              sha_suffix="-pg17-${{ env.ARCH }}"
+              sha_suffix="-pg17-${ARCH}"
               ;;
             18)
               base_minimal="ghcr.io/cloudnative-pg/postgresql:18-minimal-bookworm"
               base_standard="ghcr.io/cloudnative-pg/postgresql:18-standard-bookworm"
               default_base="$base_minimal"
-              sha_suffix="-pg18-${{ env.ARCH }}"
+              sha_suffix="-pg18-${ARCH}"
               ;;
             *)
               echo "Unsupported PG version: $pg_major"
               exit 1
               ;;
             esac
-          
+
             # Determine CNPG base image
             if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
-              if [[ -n "${{ github.event.inputs.custom_cnpg_base }}" ]]; then
-                cnpg_base="${{ github.event.inputs.custom_cnpg_base }}"
-              elif [[ "${{ github.event.inputs.cnpg_base }}" == "minimal" ]]; then
+              if [[ -n "${INPUT_CUSTOM_CNPG_BASE}" ]]; then
+                cnpg_base="${INPUT_CUSTOM_CNPG_BASE}"
+              elif [[ "${INPUT_CNPG_BASE}" == "minimal" ]]; then
                 cnpg_base="$base_minimal"
               else
                 cnpg_base="$base_standard"
@@ -506,49 +516,49 @@ jobs:
             else
               cnpg_base="$default_base"
             fi
-          
+
             # Create image tag
             image_tag="${{ github.sha }}${sha_suffix}"
-          
+
             echo "CNPG Base: $cnpg_base"
             echo "Image Tag: $image_tag"
             echo "Folder: ${{ matrix.folder }}"
-          
+
             # Show build info using make (with organization token)
             GITHUB_TOKEN="${{ secrets.GIT_TOKEN }}" make show-info \
-              DOCKERFILE_DIR="${{ env.DOCKERFILE_DIR }}" \
-              IMAGE_NAME="${{ env.IMAGE_NAME }}" \
+              DOCKERFILE_DIR="${DOCKERFILE_DIR}" \
+              IMAGE_NAME="${IMAGE_NAME}" \
               CNPG_BASE="$cnpg_base" \
               PG_MAJOR="$pg_major" \
               IMAGE_TAG="$image_tag" \
-              PG_DEV_VERSION="${{ env.PG_DEV_VERSION }}"
-          
+              PG_DEV_VERSION="${PG_DEV_VERSION}"
+
             # For scheduled builds, check if base image changed
             should_build=true
             if [[ "${{ github.event_name }}" == "schedule" ]]; then
               if ! GITHUB_TOKEN="${{ secrets.GIT_TOKEN }}" make check-base-updated \
-                DOCKERFILE_DIR="${{ env.DOCKERFILE_DIR }}" \
-                IMAGE_NAME="${{ env.IMAGE_NAME }}" \
+                DOCKERFILE_DIR="${DOCKERFILE_DIR}" \
+                IMAGE_NAME="${IMAGE_NAME}" \
                 CNPG_BASE="$cnpg_base" \
                 PG_MAJOR="$pg_major"; then
                 echo "Base image unchanged for PG${pg_major}, skipping build..."
                 should_build=false
               fi
             fi
-          
+
             if [[ "$should_build" == "true" ]]; then
               # Build and test using make with organization token
               echo "Building and testing PG${pg_major} (ARM64)..."
               GITHUB_TOKEN="${{ secrets.GIT_TOKEN }}" make build-and-test \
-                DOCKERFILE_DIR="${{ env.DOCKERFILE_DIR }}" \
-                IMAGE_NAME="${{ env.IMAGE_NAME }}" \
+                DOCKERFILE_DIR="${DOCKERFILE_DIR}" \
+                IMAGE_NAME="${IMAGE_NAME}" \
                 CNPG_BASE="$cnpg_base" \
                 PG_MAJOR="$pg_major" \
                 IMAGE_TAG="$image_tag" \
                 PLATFORM="linux/arm64" \
-                PG_DEV_VERSION="${{ env.PG_DEV_VERSION }}"
+                PG_DEV_VERSION="${PG_DEV_VERSION}"
             fi
-          
+
             # Export variables for next steps
             echo "PG${pg_major}_CNPG_BASE=$cnpg_base" >> $GITHUB_ENV
             echo "PG${pg_major}_IMAGE_TAG=$image_tag" >> $GITHUB_ENV
@@ -559,28 +569,28 @@ jobs:
       - name: Push images
         run: |
           pg_versions='${{ toJSON(matrix.config.pg_versions) }}'
-          
+
           for pg_major in $(echo "$pg_versions" | jq -r '.[]'); do
             should_build_var="PG${pg_major}_SHOULD_BUILD"
             cnpg_base_var="PG${pg_major}_CNPG_BASE"
             image_tag_var="PG${pg_major}_IMAGE_TAG"
-          
+
             if [[ "${!should_build_var}" == "true" ]]; then
               echo "Pushing PG${pg_major} image (ARM64)..."
-          
+
               # Test GitHub token access before pushing
               echo "Testing GitHub token access before push..."
               GITHUB_TOKEN="${{ secrets.GIT_TOKEN }}" make test-github-access \
-                DOCKERFILE_DIR="${{ env.DOCKERFILE_DIR }}" \
-                IMAGE_NAME="${{ env.IMAGE_NAME }}"
-          
+                DOCKERFILE_DIR="${DOCKERFILE_DIR}" \
+                IMAGE_NAME="${IMAGE_NAME}"
+
               GITHUB_TOKEN="${{ secrets.GIT_TOKEN }}" make push-arch \
-              DOCKERFILE_DIR="${{ env.DOCKERFILE_DIR }}" \
-              IMAGE_NAME="${{ env.IMAGE_NAME }}" \
+              DOCKERFILE_DIR="${DOCKERFILE_DIR}" \
+              IMAGE_NAME="${IMAGE_NAME}" \
               CNPG_BASE="${!cnpg_base_var}" \
               PG_MAJOR="$pg_major" \
               IMAGE_TAG="${!image_tag_var}" \
-              PLATFORMS="${{ env.PLATFORMS }}"
+              PLATFORMS="${PLATFORMS}"
             else
               echo "Skipping push for PG${pg_major} (not built)"
             fi
@@ -623,7 +633,7 @@ jobs:
           set -euo pipefail
           pg_versions='${{ toJSON(matrix.config.pg_versions) }}'
 
-          IMAGE="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}"
+          IMAGE="${REGISTRY}/${IMAGE_NAME}"
           SHA="${{ github.sha }}"
           DATE="$(date +%Y%m%d)"
 
@@ -703,7 +713,7 @@ jobs:
         run: |
           mkdir -p version-info
           # Extract short image key from full name (e.g., xataio/postgres-images/cnpg-postgres-plus -> cnpg-postgres-plus)
-          IMAGE_KEY=$(echo "${{ env.IMAGE_NAME }}" | rev | cut -d'/' -f1 | rev)
+          IMAGE_KEY=$(echo "${IMAGE_NAME}" | rev | cut -d'/' -f1 | rev)
           echo "${IMAGE_KEY}:${{ steps.manifests.outputs.created_versions }}" > version-info/versions.txt
           cat version-info/versions.txt
 
