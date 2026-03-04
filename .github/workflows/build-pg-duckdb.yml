@@ -47,9 +47,9 @@ jobs:
       - name: Build and push package image
         run: |
           # Set CNPG base image based on PG version
-          CNPG_BASE="ghcr.io/cloudnative-pg/postgresql:${{ env.PG_MAJOR }}-minimal-bookworm"
+          CNPG_BASE="ghcr.io/cloudnative-pg/postgresql:${PG_MAJOR}-minimal-bookworm"
 
-          IMAGE_TAG="${{ env.REGISTRY }}/${{ env.PACKAGE_NAME }}:${{ env.PG_DUCKDB_VERSION }}-duckdb${{ env.DUCKDB_VERSION }}-pg${{ env.PG_MAJOR }}-${{ env.ARCH }}"
+          IMAGE_TAG="${REGISTRY}/${PACKAGE_NAME}:${PG_DUCKDB_VERSION}-duckdb${DUCKDB_VERSION}-pg${PG_MAJOR}-${ARCH}"
 
           echo "Building pg_duckdb package using base: ${CNPG_BASE}"
           echo "Image tag: ${IMAGE_TAG}"
@@ -57,10 +57,10 @@ jobs:
           docker buildx build \
             --platform linux/amd64 \
             --build-arg CNPG_BASE="${CNPG_BASE}" \
-            --build-arg PG_MAJOR="${{ env.PG_MAJOR }}" \
-            --build-arg PG_DUCKDB_VERSION="${{ env.PG_DUCKDB_VERSION }}" \
-            --build-arg DUCKDB_VERSION="${{ env.DUCKDB_VERSION }}" \
-            --build-arg ARCH="${{ env.ARCH }}" \
+            --build-arg PG_MAJOR="${PG_MAJOR}" \
+            --build-arg PG_DUCKDB_VERSION="${PG_DUCKDB_VERSION}" \
+            --build-arg DUCKDB_VERSION="${DUCKDB_VERSION}" \
+            --build-arg ARCH="${ARCH}" \
             -t "${IMAGE_TAG}" \
             --push \
             -f docker/pg-duckdb-pkg/Dockerfile \
@@ -97,9 +97,9 @@ jobs:
       - name: Build and push package image
         run: |
           # Set CNPG base image based on PG version
-          CNPG_BASE="ghcr.io/cloudnative-pg/postgresql:${{ env.PG_MAJOR }}-minimal-bookworm"
+          CNPG_BASE="ghcr.io/cloudnative-pg/postgresql:${PG_MAJOR}-minimal-bookworm"
 
-          IMAGE_TAG="${{ env.REGISTRY }}/${{ env.PACKAGE_NAME }}:${{ env.PG_DUCKDB_VERSION }}-duckdb${{ env.DUCKDB_VERSION }}-pg${{ env.PG_MAJOR }}-${{ env.ARCH }}"
+          IMAGE_TAG="${REGISTRY}/${PACKAGE_NAME}:${PG_DUCKDB_VERSION}-duckdb${DUCKDB_VERSION}-pg${PG_MAJOR}-${ARCH}"
 
           echo "Building pg_duckdb package using base: ${CNPG_BASE}"
           echo "Image tag: ${IMAGE_TAG}"
@@ -107,10 +107,10 @@ jobs:
           docker buildx build \
             --platform linux/arm64 \
             --build-arg CNPG_BASE="${CNPG_BASE}" \
-            --build-arg PG_MAJOR="${{ env.PG_MAJOR }}" \
-            --build-arg PG_DUCKDB_VERSION="${{ env.PG_DUCKDB_VERSION }}" \
-            --build-arg DUCKDB_VERSION="${{ env.DUCKDB_VERSION }}" \
-            --build-arg ARCH="${{ env.ARCH }}" \
+            --build-arg PG_MAJOR="${PG_MAJOR}" \
+            --build-arg PG_DUCKDB_VERSION="${PG_DUCKDB_VERSION}" \
+            --build-arg DUCKDB_VERSION="${DUCKDB_VERSION}" \
+            --build-arg ARCH="${ARCH}" \
             -t "${IMAGE_TAG}" \
             --push \
             -f docker/pg-duckdb-pkg/Dockerfile \
@@ -138,7 +138,7 @@ jobs:
 
       - name: Create and push multi-arch manifest
         run: |
-          BASE_TAG="${{ env.REGISTRY }}/${{ env.PACKAGE_NAME }}:${{ env.PG_DUCKDB_VERSION }}-duckdb${{ env.DUCKDB_VERSION }}-pg${{ env.PG_MAJOR }}"
+          BASE_TAG="${REGISTRY}/${PACKAGE_NAME}:${PG_DUCKDB_VERSION}-duckdb${DUCKDB_VERSION}-pg${PG_MAJOR}"
           AMD64_TAG="${BASE_TAG}-amd64"
           ARM64_TAG="${BASE_TAG}-arm64"
 
