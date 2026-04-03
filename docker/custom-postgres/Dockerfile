@@ -109,6 +109,15 @@ RUN which shp2pgsql || echo "shp2pgsql not found" && \
     which pgsql2shp || echo "pgsql2shp not found" && \
     which raster2pgsql || echo "raster2pgsql not found"
 
+# Install pgbackrest from PostgreSQL APT repository
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    pgbackrest \
+    && rm -rf /var/lib/apt/lists/*
+
+
+# Verify pgbackrest installation
+RUN pgbackrest version
+
 # Install xatautils extension using Docker secrets for GitHub token
 RUN --mount=type=secret,id=github_token \
     ARCH=$(dpkg --print-architecture) && \

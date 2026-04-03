@@ -32,16 +32,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     pgbackrest \
     && rm -rf /var/lib/apt/lists/*
 
-# Create pgbackrest directories with appropriate permissions
-RUN mkdir -p /var/lib/pgbackrest \
-    && mkdir -p /var/log/pgbackrest \
-    && mkdir -p /var/spool/pgbackrest \
-    && chown -R postgres:postgres /var/lib/pgbackrest \
-    && chown -R postgres:postgres /var/log/pgbackrest \
-    && chown -R postgres:postgres /var/spool/pgbackrest \
-    && chmod 750 /var/lib/pgbackrest \
-    && chmod 750 /var/log/pgbackrest \
-    && chmod 750 /var/spool/pgbackrest
 
 # Verify pgbackrest installation
 RUN pgbackrest version
