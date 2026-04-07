@@ -61,6 +61,13 @@ jobs:
             ["xata-analytics"]=2
           )
 
+          # Map image keys to their display names
+          declare -A DISPLAY_NAME=(
+            ["cnpg-postgres-plus"]="postgres"
+            ["experimental"]="experimental"
+            ["xata-analytics"]="analytics"
+          )
+
           # Track if any changes were made
           CHANGES_MADE=false
 
@@ -83,6 +90,15 @@ jobs:
             fi
 
             echo "Processing $image_key (index $source_idx): versions=$versions"
+
+            # Set the display_name for this source
+            display_name="${DISPLAY_NAME[$image_key]:-$image_key}"
+            current_display_name=$(yq ".sources[${source_idx}].display_name // \"\"" "$VERSIONS_FILE")
+            if [[ "$current_display_name" != "$display_name" ]]; then
+              echo "  Setting display_name to '$display_name'"
+              yq -i ".sources[${source_idx}].display_name = \"${display_name}\"" "$VERSIONS_FILE"
+              CHANGES_MADE=true
+            fi
 
             # Split versions by comma
             IFS=',' read -ra VERSION_LIST <<< "$versions"
