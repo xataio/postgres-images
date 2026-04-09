@@ -1,6 +1,8 @@
-# PostgreSQL CNPG Custom Image - Development Guide
+# Xata PostgreSQL CNPG Custom Image
 
-Contains custom-built PostgreSQL images to start Xata clusters
+Contains custom-built PostgreSQL images for the Xata platform.
+
+The repository is open source and the images are public, but we only offer support for these images as part of the Xata platform. See https://xata.io for details.
 
 ## Prerequisites:
 
