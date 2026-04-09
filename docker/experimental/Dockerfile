@@ -144,8 +144,7 @@ RUN which shp2pgsql || echo "shp2pgsql not found" && \
 
 # Install pgbackrest from PostgreSQL APT repository
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    pgbackrest \
-    && rm -rf /var/lib/apt/lists/*
+    pgbackrest
 
 
 # Verify pgbackrest installation
