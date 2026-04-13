@@ -189,13 +189,11 @@ RUN set -eux; \
       apt-get purge -y --auto-remove \
         wget \
         gnupg \
-        ca-certificates \
         jq; \
     else \
       apt-get purge -y --auto-remove \
         wget \
         gnupg \
-        ca-certificates \
         jq \
         curl \
         lsb-release; \
