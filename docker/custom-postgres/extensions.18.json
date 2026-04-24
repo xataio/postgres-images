@@ -587,19 +587,6 @@
       ]
     },
     {
-      "name": "file_fdw",
-      "package": "postgresql-contrib-18",
-      "version": "1.0",
-      "package_version": "",
-      "description": "Foreign data wrapper for flat file access",
-      "docs_url": "https://www.postgresql.org/docs/current/file-fdw.html",
-      "preload_required": false,
-      "test_enabled": true,
-      "test_commands": [
-        "CREATE EXTENSION IF NOT EXISTS file_fdw;"
-      ]
-    },
-    {
       "name": "intagg",
       "package": "postgresql-contrib-18",
       "version": "1.1",
@@ -831,19 +818,6 @@
       "test_enabled": true,
       "test_commands": [
         "CREATE EXTENSION IF NOT EXISTS \"uuid-ossp\";"
-      ]
-    },
-    {
-      "name": "xml2",
-      "package": "postgresql-contrib-18",
-      "version": "1.2",
-      "package_version": "",
-      "description": "XPath querying and XSLT support",
-      "docs_url": "https://www.postgresql.org/docs/current/xml2.html",
-      "preload_required": false,
-      "test_enabled": true,
-      "test_commands": [
-        "CREATE EXTENSION IF NOT EXISTS xml2;"
       ]
     },
     {
