@@ -2,7 +2,7 @@
   "extensions": [
     {
       "name": "xatautils",
-      "version": "0.3.1",
+      "version": "0.3.4",
       "description": "Xata utilities (built from source)",
       "docs_url": "https://github.com/xataio/xata-utils",
       "preload_required": true,
