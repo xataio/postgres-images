@@ -9,6 +9,10 @@ ARG CONFIG_FILE=docker/experimental/extensions.${PG_MAJOR}.json
 ARG POSTGIS_CLI_VERSION_17=
 ARG PG_DEV_VERSION=""
 
+# Prepend the version-specific postgres bindir to PATH, so that we run the binaries
+# directly, rather than through the debian wrapper.
+ENV PATH="/usr/lib/postgresql/${PG_MAJOR}/bin:${PATH}"
+
 USER root
 
 # Hold PostgreSQL packages at current version if pinning is requested
