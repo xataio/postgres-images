@@ -30,6 +30,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     gnupg \
     ca-certificates \
     jq \
+    unzip \
     && rm -rf /var/lib/apt/lists/*
 
 # Install all locales
@@ -187,18 +188,49 @@ RUN --mount=type=secret,id=github_token \
     dpkg -i /tmp/xatautils.deb && \
     rm /tmp/xatautils.deb;
 
+# Install pg_deltax from the public GitHub release (deb assets exist for PG17+).
+# Driven by the per-major manifest: skipped when the extension is not listed.
+RUN set -eux; \
+    DELTAX_VERSION="$(jq -r '.extensions[] | select(.name=="pg_deltax") | .version' /tmp/extensions.json)"; \
+    if [ -n "${DELTAX_VERSION}" ]; then \
+      ARCH=$(dpkg --print-architecture); \
+      wget -O /tmp/pg-deltax.deb \
+        "https://github.com/xataio/deltax/releases/download/v${DELTAX_VERSION}/pg-deltax-pg${PG_MAJOR}_${DELTAX_VERSION}_${ARCH}.deb"; \
+      dpkg -i /tmp/pg-deltax.deb; \
+      rm -f /tmp/pg-deltax.deb; \
+    else \
+      echo "pg_deltax not in manifest for PG${PG_MAJOR}, skipping"; \
+    fi
+
+# Install pg_textsearch from the public GitHub release (zip wrapping a deb, per arch).
+# Driven by the per-major manifest: skipped when the extension is not listed.
+RUN set -eux; \
+    TEXTSEARCH_VERSION="$(jq -r '.extensions[] | select(.name=="pg_textsearch") | .version' /tmp/extensions.json)"; \
+    if [ -n "${TEXTSEARCH_VERSION}" ]; then \
+      ARCH=$(dpkg --print-architecture); \
+      wget -O /tmp/pg-textsearch.zip \
+        "https://github.com/timescale/pg_textsearch/releases/download/v${TEXTSEARCH_VERSION}/pg-textsearch-v${TEXTSEARCH_VERSION}-pg${PG_MAJOR}-${ARCH}.zip"; \
+      unzip -o /tmp/pg-textsearch.zip -d /tmp/pg-textsearch; \
+      dpkg -i /tmp/pg-textsearch/*.deb; \
+      rm -rf /tmp/pg-textsearch.zip /tmp/pg-textsearch; \
+    else \
+      echo "pg_textsearch not in manifest for PG${PG_MAJOR}, skipping"; \
+    fi
+
 # Remove tools
 RUN set -eux; \
     if [ "${PG_MAJOR}" -ge 18 ]; then \
       apt-get purge -y --auto-remove \
         wget \
         gnupg \
-        jq; \
+        jq \
+        unzip; \
     else \
       apt-get purge -y --auto-remove \
         wget \
         gnupg \
         jq \
+        unzip \
         curl \
         lsb-release; \
     fi; \

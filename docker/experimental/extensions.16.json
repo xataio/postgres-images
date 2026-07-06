@@ -191,7 +191,7 @@
     },
     {
       "name": "wal2json",
-      "package": "postgresql-17-wal2json",
+      "package": "postgresql-16-wal2json",
       "package_version": "2.6-3.pgdg12+1",
       "version": "2.6",
       "description": "Logical replication output plugin for JSON",
@@ -444,8 +444,8 @@
     {
       "name": "vector",
       "package": "postgresql-16-pgvector",
-      "package_version": "0.8.1-2.pgdg12+1",
-      "version": "0.8.1",
+      "package_version": "0.8.4-1.pgdg12+1",
+      "version": "0.8.4",
       "description": "Vector similarity search for PostgreSQL",
       "docs_url": "https://github.com/pgvector/pgvector",
       "preload_required": false,

@@ -302,6 +302,7 @@
       "preload_required": false,
       "test_enabled": true,
       "test_commands": [
+        "CREATE EXTENSION IF NOT EXISTS \"fuzzystrmatch\";",
         "CREATE EXTENSION IF NOT EXISTS \"postgis_tiger_geocoder\";"
       ]
     },
@@ -397,8 +398,8 @@
     {
       "name": "vector",
       "package": "postgresql-18-pgvector",
-      "package_version": "0.8.1-2.pgdg12+1",
-      "version": "0.8.1",
+      "package_version": "0.8.4-1.pgdg12+1",
+      "version": "0.8.4",
       "description": "Vector similarity search for PostgreSQL",
       "docs_url": "https://github.com/pgvector/pgvector",
       "preload_required": false,
@@ -908,6 +909,42 @@
         "CREATE EXTENSION IF NOT EXISTS \"pg_partman\";",
         "SELECT count(*) FROM public.part_config;"
       ]
+    },
+    {
+      "name": "pg_deltax",
+      "package": "pg-deltax-pg18",
+      "package_version": "",
+      "version": "0.2.1",
+      "description": "Time-series partitioning, columnar storage and Gorilla compression",
+      "docs_url": "https://github.com/xataio/deltax",
+      "preload_required": true,
+      "test_enabled": true,
+      "test_commands": [
+        "CREATE EXTENSION IF NOT EXISTS \"pg_deltax\";",
+        "CREATE TABLE test_deltax (ts TIMESTAMPTZ NOT NULL, device TEXT, value FLOAT8);",
+        "SELECT deltax.deltax_create_table('test_deltax', 'ts', '1 day');",
+        "INSERT INTO test_deltax SELECT now() - (i * interval '1 minute'), 'dev-' || (i % 3), i::float8 FROM generate_series(0, 1000) i;",
+        "SELECT deltax.time_bucket('1 hour', ts) AS bucket, avg(value) FROM test_deltax GROUP BY 1 ORDER BY 1 LIMIT 5;"
+      ],
+      "file_check": "/usr/lib/postgresql/18/lib/pg_deltax.so"
+    },
+    {
+      "name": "pg_textsearch",
+      "package": "pg-textsearch-postgresql-18",
+      "package_version": "",
+      "version": "1.3.1",
+      "description": "Full-text search with BM25 ranking",
+      "docs_url": "https://github.com/timescale/pg_textsearch",
+      "preload_required": true,
+      "test_enabled": true,
+      "test_commands": [
+        "CREATE EXTENSION IF NOT EXISTS \"pg_textsearch\";",
+        "CREATE TABLE test_bm25 (id bigserial PRIMARY KEY, content text);",
+        "INSERT INTO test_bm25 (content) VALUES ('PostgreSQL is a powerful database system'), ('BM25 is an effective ranking function');",
+        "CREATE INDEX test_bm25_idx ON test_bm25 USING bm25(content) WITH (text_config='english');",
+        "SELECT id FROM test_bm25 ORDER BY content <@> 'database system' LIMIT 2;"
+      ],
+      "file_check": "/usr/lib/postgresql/18/lib/pg_textsearch.so"
     },
     {
       "name": "xatautils",
