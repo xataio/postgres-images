@@ -430,8 +430,8 @@
     {
       "name": "vector",
       "package": "postgresql-14-pgvector",
-      "package_version": "0.8.1-2.pgdg12+1",
-      "version": "0.8.1",
+      "package_version": "0.8.4-1.pgdg12+1",
+      "version": "0.8.4",
       "description": "Vector similarity search for PostgreSQL",
       "docs_url": "https://github.com/pgvector/pgvector",
       "preload_required": false,
