@@ -311,20 +311,6 @@
       ]
     },
     {
-      "name": "postgis_topology",
-      "package": "postgresql-14-postgis-3",
-      "package_version": "3.6.4+dfsg-2.pgdg12+1",
-      "version": "3.6.4",
-      "description": "PostGIS topology spatial types and functions",
-      "docs_url": "https://postgis.net/docs/Topology.html",
-      "preload_required": false,
-      "test_enabled": true,
-      "test_commands": [
-        "CREATE EXTENSION IF NOT EXISTS \"postgis_topology\";",
-        "SELECT topology.CreateTopology('test_topo', 4326);"
-      ]
-    },
-    {
       "name": "postgis_tiger_geocoder",
       "package": "postgresql-14-postgis-3-scripts",
       "package_version": "3.6.4+dfsg-2.pgdg12+1",
