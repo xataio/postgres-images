@@ -85,6 +85,11 @@ RUN set -e; \
   fi; \
   rm -rf /var/lib/apt/lists/*
 
+# Pin unqualified pg_catalog builtins in ip4r's extension scripts.
+COPY docker/custom-postgres/harden-ip4r-scripts.sh /tmp/harden-ip4r-scripts.sh
+RUN bash /tmp/harden-ip4r-scripts.sh "/usr/share/postgresql/${PG_MAJOR}/extension" \
+    && rm -f /tmp/harden-ip4r-scripts.sh
+
 # Install PostGIS extensions and additional dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
     postgresql-${PG_MAJOR}-postgis-3 \
