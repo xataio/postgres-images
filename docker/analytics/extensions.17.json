@@ -105,7 +105,7 @@
     {
       "name": "pg_freespacemap",
       "package": "postgresql-contrib-17",
-      "package_version":"",
+      "package_version": "",
       "version": "1.2",
       "description": "Free space map examination",
       "docs_url": "https://www.postgresql.org/docs/current/pgfreespacemap.html",
@@ -263,9 +263,7 @@
       "docs_url": "https://www.postgresql.org/docs/current/auto-explain.html",
       "preload_required": true,
       "test_enabled": true,
-      "test_commands": [
-        "SHOW shared_preload_libraries;"
-      ]
+      "test_commands": ["SHOW shared_preload_libraries;"]
     },
     {
       "name": "auth_delay",
@@ -276,9 +274,7 @@
       "docs_url": "https://www.postgresql.org/docs/current/auth-delay.html",
       "preload_required": true,
       "test_enabled": true,
-      "test_commands": [
-        "SHOW shared_preload_libraries;"
-      ]
+      "test_commands": ["SHOW shared_preload_libraries;"]
     },
     {
       "name": "pg_prewarm",
@@ -525,9 +521,7 @@
       "docs_url": "https://www.postgresql.org/docs/current/amcheck.html",
       "preload_required": false,
       "test_enabled": true,
-      "test_commands": [
-        "CREATE EXTENSION IF NOT EXISTS amcheck;"
-      ]
+      "test_commands": ["CREATE EXTENSION IF NOT EXISTS amcheck;"]
     },
     {
       "name": "autoinc",
@@ -538,9 +532,7 @@
       "docs_url": "https://www.postgresql.org/docs/current/contrib-spi.html#id-1.11.7.47.8",
       "preload_required": false,
       "test_enabled": true,
-      "test_commands": [
-        "CREATE EXTENSION IF NOT EXISTS autoinc;"
-      ]
+      "test_commands": ["CREATE EXTENSION IF NOT EXISTS autoinc;"]
     },
     {
       "name": "bloom",
@@ -551,9 +543,7 @@
       "docs_url": "https://www.postgresql.org/docs/current/bloom.html",
       "preload_required": false,
       "test_enabled": true,
-      "test_commands": [
-        "CREATE EXTENSION IF NOT EXISTS bloom;"
-      ]
+      "test_commands": ["CREATE EXTENSION IF NOT EXISTS bloom;"]
     },
     {
       "name": "btree_gin",
@@ -564,9 +554,7 @@
       "docs_url": "https://www.postgresql.org/docs/current/btree-gin.html",
       "preload_required": false,
       "test_enabled": true,
-      "test_commands": [
-        "CREATE EXTENSION IF NOT EXISTS btree_gin;"
-      ]
+      "test_commands": ["CREATE EXTENSION IF NOT EXISTS btree_gin;"]
     },
     {
       "name": "btree_gist",
@@ -577,9 +565,7 @@
       "docs_url": "https://www.postgresql.org/docs/current/btree-gist.html",
       "preload_required": false,
       "test_enabled": true,
-      "test_commands": [
-        "CREATE EXTENSION IF NOT EXISTS btree_gist;"
-      ]
+      "test_commands": ["CREATE EXTENSION IF NOT EXISTS btree_gist;"]
     },
     {
       "name": "cube",
@@ -590,9 +576,7 @@
       "docs_url": "https://www.postgresql.org/docs/current/cube.html",
       "preload_required": false,
       "test_enabled": true,
-      "test_commands": [
-        "CREATE EXTENSION IF NOT EXISTS cube;"
-      ]
+      "test_commands": ["CREATE EXTENSION IF NOT EXISTS cube;"]
     },
     {
       "name": "dict_int",
@@ -603,9 +587,7 @@
       "docs_url": "https://www.postgresql.org/docs/current/dict-int.html",
       "preload_required": false,
       "test_enabled": true,
-      "test_commands": [
-        "CREATE EXTENSION IF NOT EXISTS dict_int;"
-      ]
+      "test_commands": ["CREATE EXTENSION IF NOT EXISTS dict_int;"]
     },
     {
       "name": "dict_xsyn",
@@ -616,9 +598,7 @@
       "docs_url": "https://www.postgresql.org/docs/current/dict-xsyn.html",
       "preload_required": false,
       "test_enabled": true,
-      "test_commands": [
-        "CREATE EXTENSION IF NOT EXISTS dict_xsyn;"
-      ]
+      "test_commands": ["CREATE EXTENSION IF NOT EXISTS dict_xsyn;"]
     },
     {
       "name": "earthdistance",
@@ -629,9 +609,7 @@
       "docs_url": "https://www.postgresql.org/docs/current/earthdistance.html",
       "preload_required": false,
       "test_enabled": true,
-      "test_commands": [
-        "CREATE EXTENSION IF NOT EXISTS earthdistance;"
-      ]
+      "test_commands": ["CREATE EXTENSION IF NOT EXISTS earthdistance;"]
     },
     {
       "name": "intagg",
@@ -642,9 +620,7 @@
       "docs_url": "https://www.postgresql.org/docs/current/intagg.html",
       "preload_required": false,
       "test_enabled": true,
-      "test_commands": [
-        "CREATE EXTENSION IF NOT EXISTS intagg;"
-      ]
+      "test_commands": ["CREATE EXTENSION IF NOT EXISTS intagg;"]
     },
     {
       "name": "intarray",
@@ -655,9 +631,7 @@
       "docs_url": "https://www.postgresql.org/docs/current/intarray.html",
       "preload_required": false,
       "test_enabled": true,
-      "test_commands": [
-        "CREATE EXTENSION IF NOT EXISTS intarray;"
-      ]
+      "test_commands": ["CREATE EXTENSION IF NOT EXISTS intarray;"]
     },
     {
       "name": "isn",
@@ -668,9 +642,7 @@
       "docs_url": "https://www.postgresql.org/docs/current/isn.html",
       "preload_required": false,
       "test_enabled": true,
-      "test_commands": [
-        "CREATE EXTENSION IF NOT EXISTS isn;"
-      ]
+      "test_commands": ["CREATE EXTENSION IF NOT EXISTS isn;"]
     },
     {
       "name": "lo",
@@ -681,9 +653,7 @@
       "docs_url": "https://www.postgresql.org/docs/current/lo.html",
       "preload_required": false,
       "test_enabled": true,
-      "test_commands": [
-        "CREATE EXTENSION IF NOT EXISTS lo;"
-      ]
+      "test_commands": ["CREATE EXTENSION IF NOT EXISTS lo;"]
     },
     {
       "name": "pageinspect",
@@ -694,9 +664,7 @@
       "docs_url": "https://www.postgresql.org/docs/current/pageinspect.html",
       "preload_required": false,
       "test_enabled": true,
-      "test_commands": [
-        "CREATE EXTENSION IF NOT EXISTS pageinspect;"
-      ]
+      "test_commands": ["CREATE EXTENSION IF NOT EXISTS pageinspect;"]
     },
     {
       "name": "pg_surgery",
@@ -707,9 +675,7 @@
       "docs_url": "https://www.postgresql.org/docs/current/pgsurgery.html",
       "preload_required": false,
       "test_enabled": true,
-      "test_commands": [
-        "CREATE EXTENSION IF NOT EXISTS pg_surgery;"
-      ]
+      "test_commands": ["CREATE EXTENSION IF NOT EXISTS pg_surgery;"]
     },
     {
       "name": "pg_walinspect",
@@ -720,9 +686,7 @@
       "docs_url": "https://www.postgresql.org/docs/current/pgwalinspect.html",
       "preload_required": false,
       "test_enabled": true,
-      "test_commands": [
-        "CREATE EXTENSION IF NOT EXISTS pg_walinspect;"
-      ]
+      "test_commands": ["CREATE EXTENSION IF NOT EXISTS pg_walinspect;"]
     },
     {
       "name": "plpgsql",
@@ -733,9 +697,7 @@
       "docs_url": "https://www.postgresql.org/docs/current/plpgsql.html",
       "preload_required": false,
       "test_enabled": true,
-      "test_commands": [
-        "CREATE EXTENSION IF NOT EXISTS plpgsql;"
-      ]
+      "test_commands": ["CREATE EXTENSION IF NOT EXISTS plpgsql;"]
     },
     {
       "name": "postgres_fdw",
@@ -746,9 +708,7 @@
       "docs_url": "https://www.postgresql.org/docs/current/postgres-fdw.html",
       "preload_required": false,
       "test_enabled": true,
-      "test_commands": [
-        "CREATE EXTENSION IF NOT EXISTS postgres_fdw;"
-      ]
+      "test_commands": ["CREATE EXTENSION IF NOT EXISTS postgres_fdw;"]
     },
     {
       "name": "refint",
@@ -759,9 +719,7 @@
       "docs_url": "https://www.postgresql.org/docs/current/contrib-spi.html#id-1.11.7.47.11",
       "preload_required": false,
       "test_enabled": true,
-      "test_commands": [
-        "CREATE EXTENSION IF NOT EXISTS refint;"
-      ]
+      "test_commands": ["CREATE EXTENSION IF NOT EXISTS refint;"]
     },
     {
       "name": "seg",
@@ -772,9 +730,7 @@
       "docs_url": "https://www.postgresql.org/docs/current/seg.html",
       "preload_required": false,
       "test_enabled": true,
-      "test_commands": [
-        "CREATE EXTENSION IF NOT EXISTS seg;"
-      ]
+      "test_commands": ["CREATE EXTENSION IF NOT EXISTS seg;"]
     },
     {
       "name": "sslinfo",
@@ -785,9 +741,7 @@
       "docs_url": "https://www.postgresql.org/docs/current/sslinfo.html",
       "preload_required": false,
       "test_enabled": true,
-      "test_commands": [
-        "CREATE EXTENSION IF NOT EXISTS sslinfo;"
-      ]
+      "test_commands": ["CREATE EXTENSION IF NOT EXISTS sslinfo;"]
     },
     {
       "name": "tablefunc",
@@ -798,9 +752,7 @@
       "docs_url": "https://www.postgresql.org/docs/current/tablefunc.html",
       "preload_required": false,
       "test_enabled": true,
-      "test_commands": [
-        "CREATE EXTENSION IF NOT EXISTS tablefunc;"
-      ]
+      "test_commands": ["CREATE EXTENSION IF NOT EXISTS tablefunc;"]
     },
     {
       "name": "tcn",
@@ -811,9 +763,7 @@
       "docs_url": "https://www.postgresql.org/docs/current/tcn.html",
       "preload_required": false,
       "test_enabled": true,
-      "test_commands": [
-        "CREATE EXTENSION IF NOT EXISTS tcn;"
-      ]
+      "test_commands": ["CREATE EXTENSION IF NOT EXISTS tcn;"]
     },
     {
       "name": "tsm_system_rows",
@@ -824,9 +774,7 @@
       "docs_url": "https://www.postgresql.org/docs/current/tsm-system-rows.html",
       "preload_required": false,
       "test_enabled": true,
-      "test_commands": [
-        "CREATE EXTENSION IF NOT EXISTS tsm_system_rows;"
-      ]
+      "test_commands": ["CREATE EXTENSION IF NOT EXISTS tsm_system_rows;"]
     },
     {
       "name": "tsm_system_time",
@@ -837,9 +785,7 @@
       "docs_url": "https://www.postgresql.org/docs/current/tsm-system-time.html",
       "preload_required": false,
       "test_enabled": true,
-      "test_commands": [
-        "CREATE EXTENSION IF NOT EXISTS tsm_system_time;"
-      ]
+      "test_commands": ["CREATE EXTENSION IF NOT EXISTS tsm_system_time;"]
     },
     {
       "name": "unaccent",
@@ -850,9 +796,7 @@
       "docs_url": "https://www.postgresql.org/docs/current/unaccent.html",
       "preload_required": false,
       "test_enabled": true,
-      "test_commands": [
-        "CREATE EXTENSION IF NOT EXISTS unaccent;"
-      ]
+      "test_commands": ["CREATE EXTENSION IF NOT EXISTS unaccent;"]
     },
     {
       "name": "uuid-ossp",
@@ -863,9 +807,7 @@
       "docs_url": "https://www.postgresql.org/docs/current/uuid-ossp.html",
       "preload_required": false,
       "test_enabled": true,
-      "test_commands": [
-        "CREATE EXTENSION IF NOT EXISTS \"uuid-ossp\";"
-      ]
+      "test_commands": ["CREATE EXTENSION IF NOT EXISTS \"uuid-ossp\";"]
     },
     {
       "name": "postgis_raster",
@@ -897,7 +839,7 @@
     },
     {
       "name": "xatautils",
-      "version": "0.3.5",
+      "version": "0.3.9",
       "description": "Xata utilities (built from source)",
       "docs_url": "https://github.com/xataio/xata-utils",
       "preload_required": true,
