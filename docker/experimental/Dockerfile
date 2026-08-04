@@ -168,13 +168,18 @@ RUN --mount=type=secret,id=github_token \
         exit 1; \
     fi && \
     GITHUB_TOKEN=$(cat /run/secrets/github_token) && \
-    # First, get the release info to find the asset download URL
+    # Pin to the version in the extension manifest
+    XATA_VERSION="v$(jq -r '.extensions[] | select(.name=="xatautils") | .version' /tmp/extensions.json)" && \
+    if [ "$XATA_VERSION" = "v" ] || [ "$XATA_VERSION" = "vnull" ]; then \
+        echo "ERROR: no xatautils version pinned in the extension manifest"; \
+        exit 1; \
+    fi && \
+    echo "Pinned xatautils version: ${XATA_VERSION}" && \
+    # Get the release info to find the asset download URL
     RELEASE_INFO=$(wget --header="Authorization: token $GITHUB_TOKEN" \
                         --header="Accept: application/vnd.github.v3+json" \
                         -O- -q \
-                        "https://api.github.com/repos/xataio/xata-utils/releases/latest") && \
-    # Extract the asset download URL for the specific file we need
-    XATA_VERSION=$(printf '%s' "$RELEASE_INFO" | jq -r '.tag_name') && \
+                        "https://api.github.com/repos/xataio/xata-utils/releases/tags/${XATA_VERSION}") && \
     ASSET_NAME="xatautils-${XATA_VERSION}-pg${PG_MAJOR}-${ARCH}-linux-gnu.deb" && \
     echo "Downloading xatautils extension: ${ASSET_NAME}..." && \
     DOWNLOAD_URL=$(printf '%s' "$RELEASE_INFO" | jq -r ".assets[] | select(.name==\"$ASSET_NAME\") | .url") && \
@@ -191,6 +196,13 @@ RUN --mount=type=secret,id=github_token \
           -O /tmp/xatautils.deb \
           "$DOWNLOAD_URL" && \
     dpkg -i /tmp/xatautils.deb && \
+    # verify-extensions.sh skips xatautils, so check the installed version here
+    INSTALLED_XATA_VERSION="$(dpkg-query -W -f='${Version}' xatautils)" && \
+    if [ "$INSTALLED_XATA_VERSION" != "${XATA_VERSION#v}" ]; then \
+        echo "ERROR: installed xatautils ${INSTALLED_XATA_VERSION} != pinned ${XATA_VERSION}"; \
+        exit 1; \
+    fi && \
+    echo "Installed xatautils: ${INSTALLED_XATA_VERSION}" && \
     rm /tmp/xatautils.deb;
 
 # Install pg_deltax from the public GitHub release (deb assets exist for PG17+).
