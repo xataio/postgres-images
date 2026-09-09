@@ -1,11 +1,16 @@
 # PostgreSQL CNPG Custom Image Makefile
 PG_MAJOR ?= 17
-PG_TAG   ?= $(PG_MAJOR)
+# PG19 is still a beta; CNPG tags it 19beta3 and publishes it on trixie only.
+PG_TAG       ?= $(if $(filter $(PG_MAJOR),19),19beta3,$(PG_MAJOR))
+DEBIAN_SUITE ?= $(if $(filter $(PG_MAJOR),19),trixie,bookworm)
+# PGDG appends the Debian major to package versions: pgdg12 on bookworm,
+# pgdg13 on trixie.
+PGDG_SUFFIX  ?= $(if $(filter bookworm,$(DEBIAN_SUITE)),pgdg12+1,pgdg13+1)
 
 # Configuration
 REGISTRY ?= ghcr.io
 IMAGE_NAME ?= xataio/postgres-images/cnpg-postgres-plus
-CNPG_BASE ?= ghcr.io/cloudnative-pg/postgresql:$(PG_TAG)-minimal-bookworm
+CNPG_BASE ?= ghcr.io/cloudnative-pg/postgresql:$(PG_TAG)-minimal-$(DEBIAN_SUITE)
 
 # pg_duckdb package - use CNPG_BASE for PG16 (no pg_duckdb support)
 ifeq ($(PG_MAJOR),16)
@@ -32,10 +37,15 @@ endif
 # Derived variables
 FULL_IMAGE_NAME := $(REGISTRY)/$(IMAGE_NAME)
 
+# Version tag. Bookworm images keep the bare version, so existing tags such as
+# 17.6 do not change. Any other suite carries its name, so a trixie image is
+# never mistaken for a bookworm one.
+VERSION_TAG = $(if $(filter bookworm,$(DEBIAN_SUITE)),$(PG_VERSION),$(PG_VERSION)-$(DEBIAN_SUITE))
+
 # Common tag set used by build commands
 DOCKER_TAGS = \
-	-t $(FULL_IMAGE_NAME):$(PG_VERSION) \
-	-t $(FULL_IMAGE_NAME):$(PG_VERSION)-$(DATE_TAG) \
+	-t $(FULL_IMAGE_NAME):$(VERSION_TAG) \
+	-t $(FULL_IMAGE_NAME):$(VERSION_TAG)-$(DATE_TAG) \
 	-t $(FULL_IMAGE_NAME):$(IMAGE_TAG)
 
 # extract names where preload_required==true, wrap each in single-quotes,
@@ -90,7 +100,7 @@ check-github-token: ## Check if GitHub token is set
 
 .PHONY: build-local
 build-local: get-pg-version get-base-digest check-github-token ## Build image locally for testing
-	@echo "Building local image (tags: $(PG_VERSION), $(PG_VERSION)-$(DATE_TAG), $(IMAGE_TAG))..."
+	@echo "Building local image (tags: $(VERSION_TAG), $(VERSION_TAG)-$(DATE_TAG), $(IMAGE_TAG))..."
 	@echo "$(GITHUB_TOKEN)" | docker build \
 		-f $(DOCKERFILE) \
 		$(DOCKER_TAGS) \
@@ -102,6 +112,7 @@ build-local: get-pg-version get-base-digest check-github-token ## Build image lo
 		--build-arg PG_MAJOR=$(PG_MAJOR) \
 		--build-arg CONFIG_FILE=$(CONFIG_FILE) \
 		--build-arg POSTGIS_CLI_VERSION_17=$(POSTGIS_CLI_VERSION_17) \
+		--build-arg PGDG_SUFFIX=$(PGDG_SUFFIX) \
 		--build-arg PG_DUCKDB_PKG=$(PG_DUCKDB_PKG) \
 		--secret id=github_token,src=/dev/stdin \
 		.
@@ -205,7 +216,7 @@ setup-buildx: ## Setup Docker buildx for multi-platform builds
 
 .PHONY: build-multiarch
 build-multiarch: get-pg-version get-base-digest check-github-token setup-buildx ## Build multi-architecture image (no push)
-	@echo "Building multi-architecture image (tags: latest, $(PG_VERSION), $(PG_VERSION)-$(DATE_TAG), $(IMAGE_TAG))..."
+	@echo "Building multi-architecture image (tags: latest, $(VERSION_TAG), $(VERSION_TAG)-$(DATE_TAG), $(IMAGE_TAG))..."
 	@echo "$(GITHUB_TOKEN)" | docker buildx build \
 		-f $(DOCKERFILE) \
 		--platform $(PLATFORMS) \
@@ -218,6 +229,7 @@ build-multiarch: get-pg-version get-base-digest check-github-token setup-buildx 
 		--build-arg PG_MAJOR=$(PG_MAJOR) \
 		--build-arg CONFIG_FILE=$(CONFIG_FILE) \
 		--build-arg POSTGIS_CLI_VERSION_17=$(POSTGIS_CLI_VERSION_17) \
+		--build-arg PGDG_SUFFIX=$(PGDG_SUFFIX) \
 		--build-arg PG_DUCKDB_PKG=$(PG_DUCKDB_PKG) \
 		--secret id=github_token,src=/dev/stdin \
 		.
@@ -237,6 +249,7 @@ push-arch: get-pg-version get-base-digest check-github-token setup-buildx ## Bui
 		--build-arg PG_MAJOR=$(PG_MAJOR) \
 		--build-arg CONFIG_FILE=$(CONFIG_FILE) \
 		--build-arg POSTGIS_CLI_VERSION_17=$(POSTGIS_CLI_VERSION_17) \
+		--build-arg PGDG_SUFFIX=$(PGDG_SUFFIX) \
 		--build-arg PG_DUCKDB_PKG=$(PG_DUCKDB_PKG) \
 		--secret id=github_token,src=/dev/stdin \
 		--output type=image,push=true \
@@ -246,9 +259,9 @@ push-arch: get-pg-version get-base-digest check-github-token setup-buildx ## Bui
 
 .PHONY: check-base-updated
 check-base-updated: get-base-digest get-pg-version ## Check if base image has been updated
-	@echo "Checking if base image has been updated (reference tag: $(PG_VERSION))..."
-	@if docker pull $(FULL_IMAGE_NAME):$(PG_VERSION) 2>/dev/null; then \
-		EXISTING_DIGEST=$$(docker image inspect $(FULL_IMAGE_NAME):$(PG_VERSION) --format '{{index .Config.Labels "base.digest"}}' 2>/dev/null || echo ""); \
+	@echo "Checking if base image has been updated (reference tag: $(VERSION_TAG))..."
+	@if docker pull $(FULL_IMAGE_NAME):$(VERSION_TAG) 2>/dev/null; then \
+		EXISTING_DIGEST=$$(docker image inspect $(FULL_IMAGE_NAME):$(VERSION_TAG) --format '{{index .Config.Labels "base.digest"}}' 2>/dev/null || echo ""); \
 		if [ "$$EXISTING_DIGEST" = "$(BASE_DIGEST)" ]; then \
 			echo "Base image unchanged, no rebuild needed"; \
 			exit 1; \
@@ -256,7 +269,7 @@ check-base-updated: get-base-digest get-pg-version ## Check if base image has be
 			echo "Base image updated, rebuild needed"; \
 		fi; \
 	else \
-		echo "No existing image with tag $(PG_VERSION) found, build needed"; \
+		echo "No existing image with tag $(VERSION_TAG) found, build needed"; \
 	fi
 
 .PHONY: clean
