@@ -8,6 +8,9 @@ ARG PG_MAJOR=17
 ARG CONFIG_FILE=docker/experimental/extensions.${PG_MAJOR}.json
 ARG POSTGIS_CLI_VERSION_17=
 ARG PG_DEV_VERSION=""
+# PGDG package suffix for the base image's Debian suite: pgdg12 on bookworm,
+# pgdg13 on trixie. Set by the Makefile from DEBIAN_SUITE.
+ARG PGDG_SUFFIX=pgdg12+1
 
 # Prepend the version-specific postgres bindir to PATH, so that we run the binaries
 # directly, rather than through the debian wrapper.
@@ -110,34 +113,31 @@ RUN bash /tmp/harden-ip4r-scripts.sh "/usr/share/postgresql/${PG_MAJOR}/extensio
     && rm -f /tmp/harden-ip4r-scripts.sh
 
 # Install PostGIS extensions and additional dependencies
+# GDAL/GEOS/PROJ/json-c/protobuf-c are pulled in as dependencies of
+# postgresql-${PG_MAJOR}-postgis-3. Do not name them here: the package names
+# carry the library ABI version (libgdal32, libgeos-c1v5, ...) and those names
+# change between Debian suites, so a hardcoded list breaks on a suite bump.
 RUN apt-get update && apt-get install -y --no-install-recommends \
     postgresql-${PG_MAJOR}-postgis-3 \
     postgresql-${PG_MAJOR}-postgis-3-scripts \
-    libgdal32 \
-    libgeos-c1v5 \
-    libproj25 \
-    libjson-c5 \
-    libprotobuf-c1 \
     && rm -rf /var/lib/apt/lists/*
 
 # Download and install PostGIS tools manually for ARM64
 # Use pinned package version matching the SQL extension version (3.6.4)
 RUN ARCH=$(dpkg --print-architecture) && \
     if [ "$ARCH" = "arm64" ]; then \
-        POSTGIS_PKG_VERSION=3.6.4+dfsg-2.pgdg12+1 && \
+        POSTGIS_PKG_VERSION=3.6.4+dfsg-2.${PGDG_SUFFIX} && \
         apt-get update && \
         mkdir -p /tmp/postgis-tools && \
         cd /tmp/postgis-tools && \
-        echo "Downloading pinned postgis CLI for PG17: ${POSTGIS_PKG_VERSION}"; \
+        echo "Downloading pinned postgis CLI: ${POSTGIS_PKG_VERSION}"; \
         apt-get download postgis=${POSTGIS_PKG_VERSION} && \
         dpkg-deb -x postgis_*.deb . && cp -r usr/bin/* /usr/bin/ || true; \
+        # dpkg-deb -x skips dependency resolution, so pull the shared libraries
+        # back in via the package that declares them, not by hardcoded name.
         apt-get install -y --no-install-recommends \
-            libgdal32 \
+            postgresql-${PG_MAJOR}-postgis-3 \
             gdal-data \
-            libgeos-c1v5 \
-            libproj25 \
-            libjson-c5 \
-            libprotobuf-c1 \
             || true && \
         cd / && rm -rf /tmp/postgis-tools && \
         rm -rf /var/lib/apt/lists/*; \

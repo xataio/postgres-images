@@ -58,9 +58,9 @@ jobs:
           # Define folder configurations
           declare -A folders=(
             ["docker/custom-postgres"]='{"pg_versions":[17,18,14,15,16],"image_name":"xataio/postgres-images/cnpg-postgres-plus","description":"CNPG PostgreSQL with additional extensions"}'
-            ["docker/experimental"]='{"pg_versions":[17,18,16],"image_name":"xataio/postgres-images/experimental","description":"My custom PostgreSQL experimental"}'
+            ["docker/experimental"]='{"pg_versions":[17,18,19,16],"image_name":"xataio/postgres-images/experimental","description":"My custom PostgreSQL experimental"}'
             ["docker/analytics"]='{"pg_versions":[17,18],"image_name":"xataio/postgres-images/xata-analytics","description":"CNPG PostgreSQL plus with added pg_duckdb"}'
-            ["docker/minimal"]='{"pg_versions":[17],"image_name":"xataio/postgres-images/minimal","description":"Minimal PostgreSQL 17 with xatautils and pgbackrest"}'
+            ["docker/minimal"]='{"pg_versions":[17,19],"image_name":"xataio/postgres-images/minimal","description":"Minimal PostgreSQL 17 with xatautils and pgbackrest"}'
           )
           
           if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
@@ -269,6 +269,13 @@ jobs:
             base_standard="ghcr.io/cloudnative-pg/postgresql:18-standard-bookworm"
             default_base="$base_minimal"
             sha_suffix="-pg18-${ARCH}"
+            ;;
+          19)
+            # PG19 is still a beta. CNPG publishes it as 19beta3, on trixie only.
+            base_minimal="ghcr.io/cloudnative-pg/postgresql:19beta3-minimal-trixie"
+            base_standard="ghcr.io/cloudnative-pg/postgresql:19beta3-standard-trixie"
+            default_base="$base_minimal"
+            sha_suffix="-pg19-${ARCH}"
             ;;
           *)
             echo "Unsupported PG version: $pg_major"
@@ -498,6 +505,13 @@ jobs:
               default_base="$base_minimal"
               sha_suffix="-pg18-${ARCH}"
               ;;
+            19)
+              # PG19 is still a beta. CNPG publishes it as 19beta3, on trixie only.
+              base_minimal="ghcr.io/cloudnative-pg/postgresql:19beta3-minimal-trixie"
+              base_standard="ghcr.io/cloudnative-pg/postgresql:19beta3-standard-trixie"
+              default_base="$base_minimal"
+              sha_suffix="-pg19-${ARCH}"
+              ;;
             *)
               echo "Unsupported PG version: $pg_major"
               exit 1
@@ -643,33 +657,46 @@ jobs:
           for pg_major in $(echo "$pg_versions" | jq -r '.[]'); do
             echo "=== Creating multiarch manifest for PG ${pg_major} ==="
 
-            # Pick the per-arch image tags produced by the build jobs
+            # Pick the per-arch image tags produced by the build jobs.
+            # SUITE must be set in EVERY arm: this case runs inside a loop over
+            # pg_major, so a value left from an earlier iteration would leak.
             case "$pg_major" in
               14)
                 AMD_TAG="${SHA}-pg14-amd64"
                 ARM_TAG="${SHA}-pg14-arm64"
                 FINAL_SHA_TAG="${SHA}-pg14"
+                SUITE="bookworm"
                 ;;
               15)
                 AMD_TAG="${SHA}-pg15-amd64"
                 ARM_TAG="${SHA}-pg15-arm64"
                 FINAL_SHA_TAG="${SHA}-pg15"
+                SUITE="bookworm"
                 ;;
               16)
                 AMD_TAG="${SHA}-pg16-amd64"
                 ARM_TAG="${SHA}-pg16-arm64"
                 FINAL_SHA_TAG="${SHA}-pg16"
+                SUITE="bookworm"
                 ;;
               17)
                 AMD_TAG="${SHA}-pg17-amd64"
                 ARM_TAG="${SHA}-pg17-arm64"
                 # 17 remains the "default" SHA tag with no suffix
                 FINAL_SHA_TAG="${SHA}"
+                SUITE="bookworm"
                 ;;
               18)
                 AMD_TAG="${SHA}-pg18-amd64"
                 ARM_TAG="${SHA}-pg18-arm64"
                 FINAL_SHA_TAG="${SHA}-pg18"
+                SUITE="bookworm"
+                ;;
+              19)
+                AMD_TAG="${SHA}-pg19-amd64"
+                ARM_TAG="${SHA}-pg19-arm64"
+                FINAL_SHA_TAG="${SHA}-pg19"
+                SUITE="trixie"
                 ;;
               *)
                 echo "Unsupported PG version: $pg_major"; exit 1
@@ -678,13 +705,22 @@ jobs:
 
             # Resolve the actual Postgres version from the built image (e.g., 17.6)
             PG_VERSION="$(docker run --rm "${IMAGE}:${AMD_TAG}" postgres -V | awk '{print $3}')"
-            echo "Resolved PG_VERSION=${PG_VERSION}; DATE=${DATE}"
+
+            # Bookworm images keep the bare version, so tags such as 17.6 do not
+            # change. Any other suite carries its name, so a trixie image is
+            # never mistaken for a bookworm one.
+            if [[ "$SUITE" == "bookworm" ]]; then
+              VERSION_TAG="${PG_VERSION}"
+            else
+              VERSION_TAG="${PG_VERSION}-${SUITE}"
+            fi
+            echo "Resolved PG_VERSION=${PG_VERSION}; SUITE=${SUITE}; VERSION_TAG=${VERSION_TAG}; DATE=${DATE}"
 
             # Create ONE multi-arch manifest and attach all desired tags
             docker buildx imagetools create \
               -t "${IMAGE}:${FINAL_SHA_TAG}" \
-              -t "${IMAGE}:${PG_VERSION}" \
-              -t "${IMAGE}:${PG_VERSION}-${DATE}" \
+              -t "${IMAGE}:${VERSION_TAG}" \
+              -t "${IMAGE}:${VERSION_TAG}-${DATE}" \
               "${IMAGE}:${AMD_TAG}" \
               "${IMAGE}:${ARM_TAG}"
 
@@ -696,14 +732,15 @@ jobs:
                 "${IMAGE}:${ARM_TAG}"
             fi
 
-            echo "Created: ${IMAGE}:${FINAL_SHA_TAG}, ${IMAGE}:${PG_VERSION}, ${IMAGE}:${PG_VERSION}-${DATE}"
-            docker buildx imagetools inspect "${IMAGE}:${PG_VERSION}" >/dev/null
+            echo "Created: ${IMAGE}:${FINAL_SHA_TAG}, ${IMAGE}:${VERSION_TAG}, ${IMAGE}:${VERSION_TAG}-${DATE}"
+            docker buildx imagetools inspect "${IMAGE}:${VERSION_TAG}" >/dev/null
 
-            # Collect version
+            # Collect version. This feeds versions.txt and the maki sync, so it
+            # must be the tag that can actually be pulled.
             if [[ -n "$CREATED_VERSIONS" ]]; then
-              CREATED_VERSIONS="${CREATED_VERSIONS},${PG_VERSION}"
+              CREATED_VERSIONS="${CREATED_VERSIONS},${VERSION_TAG}"
             else
-              CREATED_VERSIONS="${PG_VERSION}"
+              CREATED_VERSIONS="${VERSION_TAG}"
             fi
           done
 
