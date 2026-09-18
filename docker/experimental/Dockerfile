@@ -152,9 +152,10 @@ RUN which shp2pgsql || echo "shp2pgsql not found" && \
     which pgsql2shp || echo "pgsql2shp not found" && \
     which raster2pgsql || echo "raster2pgsql not found"
 
-# Install pgbackrest from PostgreSQL APT repository
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    pgbackrest
+# Pin pgBackRest so image rebuilds cannot introduce incompatible backup protocol versions.
+RUN . /etc/os-release && \
+    apt-get update && apt-get install -y --no-install-recommends \
+    "pgbackrest=2.59.0-1.pgdg${VERSION_ID}+1"
 
 
 # Verify pgbackrest installation

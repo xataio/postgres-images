@@ -31,9 +31,10 @@ COPY ${CONFIG_FILE} /tmp/extensions.json
 # Generate plain version map for verification
 RUN jq -r '.extensions[] | "\(.name) \(.version)"' /tmp/extensions.json > /usr/local/share/extensions-versions.txt
 
-# Install pgbackrest from PostgreSQL APT repository
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    pgbackrest \
+# Pin pgBackRest so image rebuilds cannot introduce incompatible backup protocol versions.
+RUN . /etc/os-release && \
+    apt-get update && apt-get install -y --no-install-recommends \
+    "pgbackrest=2.59.0-1.pgdg${VERSION_ID}+1" \
     && rm -rf /var/lib/apt/lists/*
 
 
