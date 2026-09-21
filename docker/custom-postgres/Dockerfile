@@ -48,6 +48,25 @@ COPY ${CONFIG_FILE} /tmp/extensions.json
 # Generate plain version map for verification
 RUN jq -r '.extensions[] | "\(.name) \(.version)"' /tmp/extensions.json > /usr/local/share/extensions-versions.txt
 
+# Install percona-* packages from the manifest with the Percona repo enabled only for this step
+RUN set -eux; \
+  apt-get update && apt-get install -y --no-install-recommends curl lsb-release; \
+  CODENAME="$(. /etc/os-release; echo "$VERSION_CODENAME")"; \
+  wget -O /tmp/percona-release.deb "https://repo.percona.com/apt/percona-release_latest.${CODENAME}_all.deb"; \
+  dpkg -i /tmp/percona-release.deb; rm -f /tmp/percona-release.deb; \
+  percona-release setup -y "ppg-${PG_MAJOR}"; \
+  apt-get update; \
+  PERCONA_PKGS="$(jq -r '.extensions[] | select((.package? // "") | startswith("percona-")) \
+    | if (.package_version and (.package_version != "")) then "\(.package)=\(.package_version)" else .package end' \
+    /tmp/extensions.json | sort -u | tr '\n' ' ' )"; \
+  echo "Percona packages to install: ${PERCONA_PKGS:-<none>}"; \
+  if [ -n "${PERCONA_PKGS}" ]; then \
+    apt-get install -y --no-install-recommends ${PERCONA_PKGS}; \
+  fi; \
+  apt-get purge -y percona-release curl lsb-release; \
+  rm -f /etc/apt/sources.list.d/percona*; \
+  rm -rf /var/lib/apt/lists/*
+
 
 
 # Install pinned package versions (skip contrib virtual and ignore blank pins)
