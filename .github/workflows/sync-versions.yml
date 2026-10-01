@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       version_data:
-        description: 'Version data in format: image-key:version1,version2|image-key:version1,version2 (e.g., cnpg-postgres-plus:17.7,18.1|experimental:17.7|xata-analytics:17.7,18.1)'
+        description: 'Version data in format: image-key:version1=tag1,version2=tag2|image-key:version1=tag1 (e.g., cnpg-postgres-plus:17.7=17.7-20261001,18.1=18.1-20261001|experimental:17.7=17.7-20261001). Each version is paired with the immutable, date-suffixed registry tag this build pushed it under.'
         required: false
         type: string
 
@@ -84,14 +84,18 @@ jobs:
 
             echo "Processing $image_key (index $source_idx): versions=$versions"
 
-            # Split versions by comma
+            # Split version=immutable_tag pairs by comma
             IFS=',' read -ra VERSION_LIST <<< "$versions"
 
-            for version in "${VERSION_LIST[@]}"; do
+            for pair in "${VERSION_LIST[@]}"; do
+              # Each entry is "version=immutable_tag", e.g. "17.11=17.11-20261001".
+              version="${pair%%=*}"
+              immutable_tag="${pair#*=}"
+
               # Extract major version (e.g., 17 from 17.7)
               major="${version%%.*}"
 
-              echo "  Checking version $version (major: $major)"
+              echo "  Checking version $version (major: $major, immutable tag: ${immutable_tag:-<none>})"
 
               # Check if major version exists
               major_exists=$(yq ".sources[${source_idx}].major_versions.\"${major}\"" "$VERSIONS_FILE")
@@ -106,13 +110,25 @@ jobs:
               existing=$(yq ".sources[${source_idx}].major_versions.\"${major}\".versions[] | select(. == \"${version}\")" "$VERSIONS_FILE")
 
               if [[ -n "$existing" ]]; then
-                echo "  Version $version already exists, skipping..."
+                echo "  Version $version already exists"
               else
                 echo "  Adding version $version"
                 yq -i ".sources[${source_idx}].major_versions.\"${major}\".versions += [\"${version}\"]" "$VERSIONS_FILE"
                 # Update latest to this version (assuming newer versions are passed)
                 yq -i ".sources[${source_idx}].major_versions.\"${major}\".latest = \"${version}\"" "$VERSIONS_FILE"
                 CHANGES_MADE=true
+              fi
+
+              # Record/refresh the immutable tag for this version.
+              if [[ -n "$immutable_tag" ]]; then
+                current_tag=$(yq ".sources[${source_idx}].major_versions.\"${major}\".immutable_tags.\"${version}\"" "$VERSIONS_FILE")
+                if [[ "$current_tag" != "$immutable_tag" ]]; then
+                  echo "  Pinning $version -> $immutable_tag (was: ${current_tag})"
+                  yq -i ".sources[${source_idx}].major_versions.\"${major}\".immutable_tags.\"${version}\" = \"${immutable_tag}\"" "$VERSIONS_FILE"
+                  CHANGES_MADE=true
+                else
+                  echo "  $version already pinned to $immutable_tag"
+                fi
               fi
             done
           done
@@ -124,6 +140,9 @@ jobs:
 
             # Convert versions arrays to flow style (inline format)
             yq -i '(.sources[].major_versions.[].versions) style="flow"' "$VERSIONS_FILE"
+
+            # Quote immutable tag values
+            yq -i '(.sources[].major_versions.[] | select(has("immutable_tags")) | .immutable_tags.[]) style="double"' "$VERSIONS_FILE"
 
             echo "=== Updated versions.yaml ==="
             cat "$VERSIONS_FILE"
@@ -168,8 +187,9 @@ jobs:
           git push -u origin "$BRANCH_NAME" --force
 
           if [[ -n "$EXISTING_PR" ]]; then
+            PR_URL="https://github.com/xataio/maki/pull/${EXISTING_PR}"
             echo "Updated existing PR #${EXISTING_PR}"
-            echo "PR URL: https://github.com/xataio/maki/pull/${EXISTING_PR}"
+            echo "PR URL: ${PR_URL}"
           else
             PR_URL=$(gh pr create \
               --title "Sync PostgreSQL image versions" \
@@ -185,3 +205,5 @@ jobs:
           🤖 Generated automatically by [postgres-images sync versions workflow](https://github.com/xataio/postgres-images/actions/workflows/sync-versions.yml)")
             echo "Created PR: $PR_URL"
           fi
+
+          echo "🤖 Generated automatically by [postgres-images sync versions workflow](https://github.com/xataio/postgres-images/actions/workflows/sync-versions.yml): ${PR_URL}" >> "$GITHUB_STEP_SUMMARY"
