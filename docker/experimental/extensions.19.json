@@ -810,7 +810,7 @@
     {
       "name": "pgaudit",
       "package": "postgresql-19-pgaudit",
-      "package_version": "19~beta3-1.pgdg13+1",
+      "package_version": "19~beta4-1.pgdg13+1",
       "version": "19.0",
       "description": "Audit logging extension for PostgreSQL",
       "docs_url": "https://github.com/pgaudit/pgaudit",
