@@ -738,18 +738,30 @@ jobs:
               continue
             fi
 
-            PINNED_TAG="${VERSION_TAG}-${DATE}"
-            if docker buildx imagetools inspect "${IMAGE}:${PINNED_TAG}" >/dev/null 2>&1; then
-              echo "ERROR: ${IMAGE}:${PINNED_TAG} exists. Refusing to overwrite a pinned tag."
-              exit 1
+            # The version tag names its pinned tag in an annotation. Keep that
+            # tag when this build holds the same images as the version tag.
+            new_images="$(docker buildx imagetools inspect --raw "${IMAGE}:${FINAL_SHA_TAG}" | jq -c '[.manifests[].digest] | sort')"
+            current="$(docker buildx imagetools inspect --raw "${IMAGE}:${VERSION_TAG}" 2>/dev/null || true)"
+            PINNED_TAG="$(jq -r '.annotations["io.xata.pinned-tag"] // empty' <<<"$current")"
+
+            if [[ -n "$PINNED_TAG" && "$(jq -c '[.manifests[].digest] | sort' <<<"$current")" == "$new_images" ]]; then
+              echo "Unchanged: ${IMAGE}:${VERSION_TAG} keeps ${PINNED_TAG}"
+            else
+              PINNED_TAG="${VERSION_TAG}-${DATE}"
+              if docker buildx imagetools inspect "${IMAGE}:${PINNED_TAG}" >/dev/null 2>&1; then
+                echo "ERROR: ${IMAGE}:${PINNED_TAG} exists. Refusing to overwrite a pinned tag."
+                exit 1
+              fi
+
+              docker buildx imagetools create \
+                --annotation "index:io.xata.pinned-tag=${PINNED_TAG}" \
+                -t "${IMAGE}:${VERSION_TAG}" \
+                -t "${IMAGE}:${PINNED_TAG}" \
+                "${IMAGE}:${AMD_TAG}" \
+                "${IMAGE}:${ARM_TAG}"
+
+              echo "Created: ${IMAGE}:${FINAL_SHA_TAG}, ${IMAGE}:${VERSION_TAG}, ${IMAGE}:${PINNED_TAG}"
             fi
-
-            docker buildx imagetools create \
-              -t "${IMAGE}:${VERSION_TAG}" \
-              -t "${IMAGE}:${PINNED_TAG}" \
-              "${IMAGE}:${FINAL_SHA_TAG}"
-
-            echo "Created: ${IMAGE}:${FINAL_SHA_TAG}, ${IMAGE}:${VERSION_TAG}, ${IMAGE}:${PINNED_TAG}"
 
             # Collect version paired with the pinned tag this exact build
             # was pushed under.
