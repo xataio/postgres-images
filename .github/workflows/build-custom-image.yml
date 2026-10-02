@@ -145,6 +145,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: detect-changes
     strategy:
+      fail-fast: false
       matrix: ${{ fromJSON(needs.detect-changes.outputs.matrix) }}
     env:
       REGISTRY: ghcr.io
@@ -380,6 +381,7 @@ jobs:
       group: arm-runners
     needs: detect-changes
     strategy:
+      fail-fast: false
       matrix: ${{ fromJSON(needs.detect-changes.outputs.matrix) }}
     env:
       REGISTRY: ghcr.io
