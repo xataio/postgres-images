@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       version_data:
-        description: 'Version data in format: image-key:version1=tag1,version2=tag2|image-key:version1=tag1 (e.g., cnpg-postgres-plus:17.7=17.7-20261001T020304Z,18.1=18.1-20261001T020304Z|experimental:17.7=17.7-20261001T020311Z). Each version is paired with the immutable, timestamp-suffixed registry tag this build pushed it under.'
+        description: 'Version data in format: image-key:version1=tag1,version2=tag2|image-key:version1=tag1 (e.g., cnpg-postgres-plus:17.7=17.7-20261001T020304Z,18.1=18.1-20261001T020304Z|experimental:17.7=17.7-20261001T020311Z). Each version is paired with the timestamp-suffixed registry tag this build pushed it under.'
         required: false
         type: string
 
@@ -84,21 +84,21 @@ jobs:
 
             echo "Processing $image_key (index $source_idx): versions=$versions"
 
-            # Split version=immutable_tag pairs by comma
+            # Split version=pinned_tag pairs by comma
             IFS=',' read -ra VERSION_LIST <<< "$versions"
 
             for pair in "${VERSION_LIST[@]}"; do
-              # Each entry is "version=immutable_tag", e.g. "17.11=17.11-20261001T020304Z".
+              # Each entry is "version=pinned_tag", e.g. "17.11=17.11-20261001T020304Z".
               version="${pair%%=*}"
-              immutable_tag=""
+              pinned_tag=""
               if [[ "$pair" == *=* ]]; then
-                immutable_tag="${pair#*=}"
+                pinned_tag="${pair#*=}"
               fi
 
               # Extract major version (e.g., 17 from 17.7)
               major="${version%%.*}"
 
-              echo "  Checking version $version (major: $major, immutable tag: ${immutable_tag:-<none>})"
+              echo "  Checking version $version (major: $major, pinned tag: ${pinned_tag:-<none>})"
 
               # Check if major version exists
               major_exists=$(yq ".sources[${source_idx}].major_versions.\"${major}\"" "$VERSIONS_FILE")
@@ -122,15 +122,15 @@ jobs:
                 CHANGES_MADE=true
               fi
 
-              # Record/refresh the immutable tag for this version.
-              if [[ -n "$immutable_tag" ]]; then
-                current_tag=$(yq ".sources[${source_idx}].major_versions.\"${major}\".immutable_tags.\"${version}\"" "$VERSIONS_FILE")
-                if [[ "$current_tag" != "$immutable_tag" ]]; then
-                  echo "  Pinning $version -> $immutable_tag (was: ${current_tag})"
-                  yq -i ".sources[${source_idx}].major_versions.\"${major}\".immutable_tags.\"${version}\" = \"${immutable_tag}\"" "$VERSIONS_FILE"
+              # Record/refresh the pinned tag for this version.
+              if [[ -n "$pinned_tag" ]]; then
+                current_tag=$(yq ".sources[${source_idx}].major_versions.\"${major}\".pinned_tags.\"${version}\"" "$VERSIONS_FILE")
+                if [[ "$current_tag" != "$pinned_tag" ]]; then
+                  echo "  Pinning $version -> $pinned_tag (was: ${current_tag})"
+                  yq -i ".sources[${source_idx}].major_versions.\"${major}\".pinned_tags.\"${version}\" = \"${pinned_tag}\"" "$VERSIONS_FILE"
                   CHANGES_MADE=true
                 else
-                  echo "  $version already pinned to $immutable_tag"
+                  echo "  $version already pinned to $pinned_tag"
                 fi
               fi
             done
@@ -144,8 +144,8 @@ jobs:
             # Convert versions arrays to flow style (inline format)
             yq -i '(.sources[].major_versions.[].versions) style="flow"' "$VERSIONS_FILE"
 
-            # Quote immutable tag values
-            yq -i '(.sources[].major_versions.[] | select(has("immutable_tags")) | .immutable_tags.[]) style="double"' "$VERSIONS_FILE"
+            # Quote pinned tag values
+            yq -i '(.sources[].major_versions.[] | select(has("pinned_tags")) | .pinned_tags.[]) style="double"' "$VERSIONS_FILE"
 
             echo "=== Updated versions.yaml ==="
             cat "$VERSIONS_FILE"

@@ -737,13 +737,13 @@ jobs:
             echo "Created: ${IMAGE}:${FINAL_SHA_TAG}, ${IMAGE}:${VERSION_TAG}, ${IMAGE}:${VERSION_TAG}-${DATE}"
             docker buildx imagetools inspect "${IMAGE}:${VERSION_TAG}" >/dev/null
 
-            # Collect version paired with the immutable tag this exact build
-            # was pushed under (IMMUTABLE_TAG=${VERSION_TAG}-${DATE}).
-            IMMUTABLE_TAG="${VERSION_TAG}-${DATE}"
+            # Collect version paired with the pinned tag this exact build
+            # was pushed under (PINNED_TAG=${VERSION_TAG}-${DATE}).
+            PINNED_TAG="${VERSION_TAG}-${DATE}"
             if [[ -n "$CREATED_VERSIONS" ]]; then
-              CREATED_VERSIONS="${CREATED_VERSIONS},${VERSION_TAG}=${IMMUTABLE_TAG}"
+              CREATED_VERSIONS="${CREATED_VERSIONS},${VERSION_TAG}=${PINNED_TAG}"
             else
-              CREATED_VERSIONS="${VERSION_TAG}=${IMMUTABLE_TAG}"
+              CREATED_VERSIONS="${VERSION_TAG}=${PINNED_TAG}"
             fi
           done
 
