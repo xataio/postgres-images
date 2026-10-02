@@ -101,9 +101,12 @@ check-github-token: ## Check if GitHub token is set
 .PHONY: build-local
 build-local: get-pg-version get-base-digest check-github-token ## Build image locally for testing
 	@echo "Building local image (tags: $(VERSION_TAG), $(VERSION_TAG)-$(DATE_TAG), $(IMAGE_TAG))..."
+	@# --load copies the image into the Docker image store when BUILDX_BUILDER
+	@# selects a docker-container builder. The default builder ignores it.
 	@echo "$(GITHUB_TOKEN)" | docker build \
 		-f $(DOCKERFILE) \
 		$(DOCKER_TAGS) \
+		--load \
 		--label "base.digest=$(BASE_DIGEST)" \
 		--label "org.opencontainers.image.source=https://github.com/xataio/postgres-images" \
 		--label "org.opencontainers.image.description=$(DESCRIPTION)" \
