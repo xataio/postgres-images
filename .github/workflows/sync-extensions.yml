@@ -146,7 +146,7 @@ jobs:
           BRANCH_NAME="sync-postgres-extensions-$(date +%Y%m%d-%H%M%S)"
 
           # Check if there's already an open PR for syncing extensions
-          EXISTING_PR=$(gh pr list --search "Sync PostgreSQL extensions" --state open --json number --jq '.[0].number' || echo "")
+          EXISTING_PR=$(gh pr list --state open --limit 1000 --json number,headRefName --jq 'map(select(.headRefName | startswith("sync-postgres-extensions-"))) | .[0].number // empty' || echo "")
 
           if [[ -n "$EXISTING_PR" ]]; then
             echo "Existing PR #${EXISTING_PR} found, updating it..."
