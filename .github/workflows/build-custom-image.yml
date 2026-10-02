@@ -651,7 +651,7 @@ jobs:
 
           IMAGE="${REGISTRY}/${IMAGE_NAME}"
           SHA="${{ github.sha }}"
-          DATE="$(date +%Y%m%d)"
+          DATE="$(date -u +%Y%m%dT%H%M%SZ)"
 
           # Collect versions for output
           CREATED_VERSIONS=""
@@ -737,12 +737,13 @@ jobs:
             echo "Created: ${IMAGE}:${FINAL_SHA_TAG}, ${IMAGE}:${VERSION_TAG}, ${IMAGE}:${VERSION_TAG}-${DATE}"
             docker buildx imagetools inspect "${IMAGE}:${VERSION_TAG}" >/dev/null
 
-            # Collect version. This feeds versions.txt and the maki sync, so it
-            # must be the tag that can actually be pulled.
+            # Collect version paired with the pinned tag this exact build
+            # was pushed under (PINNED_TAG=${VERSION_TAG}-${DATE}).
+            PINNED_TAG="${VERSION_TAG}-${DATE}"
             if [[ -n "$CREATED_VERSIONS" ]]; then
-              CREATED_VERSIONS="${CREATED_VERSIONS},${VERSION_TAG}"
+              CREATED_VERSIONS="${CREATED_VERSIONS},${VERSION_TAG}=${PINNED_TAG}"
             else
-              CREATED_VERSIONS="${VERSION_TAG}"
+              CREATED_VERSIONS="${VERSION_TAG}=${PINNED_TAG}"
             fi
           done
 
