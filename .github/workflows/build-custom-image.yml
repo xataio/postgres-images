@@ -161,6 +161,8 @@ jobs:
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@4d04d5d9486b7bd6fa91e7baf45bbb4f8b9deedd # v4
+        with:
+          name: multiarch
 
       - name: Log in to GitHub Container Registry
         uses: docker/login-action@b45d80f862d83dbcd57f89517bcf500b2ab88fb2 # v4
@@ -230,6 +232,8 @@ jobs:
 
       # Build each PG version for this folder
       - name: Build and process PG versions
+        env:
+          BUILDX_BUILDER: multiarch
         run: |
           # Get PG versions for this folder
           pg_versions='${{ toJSON(matrix.config.pg_versions) }}'
@@ -347,6 +351,8 @@ jobs:
 
       # Push AMD64 images
       - name: Push images
+        env:
+          BUILDX_BUILDER: multiarch
         run: |
           pg_versions='${{ toJSON(matrix.config.pg_versions) }}'
           for pg_major in $(echo "$pg_versions" | jq -r '.[]'); do
@@ -397,6 +403,8 @@ jobs:
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@4d04d5d9486b7bd6fa91e7baf45bbb4f8b9deedd # v4
+        with:
+          name: multiarch
 
       - name: Log in to GitHub Container Registry
         uses: docker/login-action@b45d80f862d83dbcd57f89517bcf500b2ab88fb2 # v4
@@ -466,6 +474,8 @@ jobs:
 
       # Build each PG version for this folder
       - name: Build and process PG versions
+        env:
+          BUILDX_BUILDER: multiarch
         run: |
           # Get PG versions for this folder
           pg_versions='${{ toJSON(matrix.config.pg_versions) }}'
@@ -583,6 +593,8 @@ jobs:
 
       # Push ARM64 images
       - name: Push images
+        env:
+          BUILDX_BUILDER: multiarch
         run: |
           pg_versions='${{ toJSON(matrix.config.pg_versions) }}'
 
