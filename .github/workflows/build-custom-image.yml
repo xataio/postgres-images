@@ -158,8 +158,11 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
 
+      # The Makefile target setup-buildx uses the builder with this name.
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@4d04d5d9486b7bd6fa91e7baf45bbb4f8b9deedd # v4
+        with:
+          name: multiarch
 
       - name: Log in to GitHub Container Registry
         uses: docker/login-action@b45d80f862d83dbcd57f89517bcf500b2ab88fb2 # v4
@@ -228,7 +231,12 @@ jobs:
           echo "DESCRIPTION=${description}" >> $GITHUB_ENV
 
       # Build each PG version for this folder
+      # BUILDX_BUILDER makes "docker build" use the builder that the push step
+      # uses. Without it, "docker build" uses the default builder, and the push
+      # step builds every image a second time with an empty cache.
       - name: Build and process PG versions
+        env:
+          BUILDX_BUILDER: multiarch
         run: |
           # Get PG versions for this folder
           pg_versions='${{ toJSON(matrix.config.pg_versions) }}'
@@ -344,8 +352,11 @@ jobs:
             echo "PG${pg_major}_SHOULD_BUILD=$should_build" >> $GITHUB_ENV
           done
 
-      # Push AMD64 images
+      # Push AMD64 images. The build step filled the cache of this builder, so
+      # this build only makes the manifest and the attestation, then pushes.
       - name: Push images
+        env:
+          BUILDX_BUILDER: multiarch
         run: |
           pg_versions='${{ toJSON(matrix.config.pg_versions) }}'
           for pg_major in $(echo "$pg_versions" | jq -r '.[]'); do
@@ -393,8 +404,11 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
 
+      # The Makefile target setup-buildx uses the builder with this name.
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@4d04d5d9486b7bd6fa91e7baf45bbb4f8b9deedd # v4
+        with:
+          name: multiarch
 
       - name: Log in to GitHub Container Registry
         uses: docker/login-action@b45d80f862d83dbcd57f89517bcf500b2ab88fb2 # v4
@@ -463,7 +477,12 @@ jobs:
           echo "DESCRIPTION=${description}" >> $GITHUB_ENV
 
       # Build each PG version for this folder
+      # BUILDX_BUILDER makes "docker build" use the builder that the push step
+      # uses. Without it, "docker build" uses the default builder, and the push
+      # step builds every image a second time with an empty cache.
       - name: Build and process PG versions
+        env:
+          BUILDX_BUILDER: multiarch
         run: |
           # Get PG versions for this folder
           pg_versions='${{ toJSON(matrix.config.pg_versions) }}'
@@ -579,8 +598,11 @@ jobs:
             echo "PG${pg_major}_SHOULD_BUILD=$should_build" >> $GITHUB_ENV
           done
 
-      # Push ARM64 images
+      # Push ARM64 images. The build step filled the cache of this builder, so
+      # this build only makes the manifest and the attestation, then pushes.
       - name: Push images
+        env:
+          BUILDX_BUILDER: multiarch
         run: |
           pg_versions='${{ toJSON(matrix.config.pg_versions) }}'
 
