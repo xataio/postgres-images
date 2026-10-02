@@ -210,7 +210,7 @@
     {
       "name": "pg_cron",
       "package": "postgresql-17-cron",
-      "package_version": "1.6.7-2.pgdg12+1",
+      "package_version": "1.6.7-3.pgdg12+1",
       "version": "1.6",
       "description": "Job scheduler for PostgreSQL",
       "docs_url": "https://github.com/citusdata/pg_cron",
@@ -340,8 +340,8 @@
     {
       "name": "hll",
       "package": "postgresql-17-hll",
-      "package_version": "2.19-2.pgdg12+2",
-      "version": "2.19",
+      "package_version": "2.20-1.pgdg12+1",
+      "version": "2.20",
       "description": "HyperLogLog data type for cardinality estimation",
       "docs_url": "https://github.com/citusdata/postgresql-hll",
       "preload_required": false,
@@ -355,7 +355,7 @@
     {
       "name": "ip4r",
       "package": "postgresql-17-ip4r",
-      "package_version": "2.4.2-4.pgdg12+1",
+      "package_version": "2.4.2-5.pgdg12+1",
       "version": "2.4",
       "description": "IPv4 and IPv6 types and functions",
       "docs_url": "https://github.com/RhodiumToad/ip4r",
@@ -430,8 +430,8 @@
     {
       "name": "vector",
       "package": "postgresql-17-pgvector",
-      "package_version": "0.8.4-1.pgdg12+1",
-      "version": "0.8.4",
+      "package_version": "0.8.5-1.pgdg12+1",
+      "version": "0.8.5",
       "description": "Vector similarity search for PostgreSQL",
       "docs_url": "https://github.com/pgvector/pgvector",
       "preload_required": false,

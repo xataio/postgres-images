@@ -32,7 +32,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # The locales-all package should provide most locales, but we'll also
 # uncomment all locales in locale.gen and generate them to be thorough
 RUN sed -i 's/^# *\([a-zA-Z0-9_]\)/\1/' /etc/locale.gen && \
-    locale-gen
+    locale-gen >/dev/null
 
 # Verify locales are available
 RUN locale -a | head -20 && echo "... and more locales available"
@@ -40,7 +40,7 @@ RUN locale -a | head -20 && echo "... and more locales available"
 # Add PostgreSQL APT repository (detect codename without lsb_release)
 RUN CODENAME=$(grep VERSION_CODENAME /etc/os-release | cut -d= -f2 | tr -d '"') && \
     echo "deb http://apt.postgresql.org/pub/repos/apt $CODENAME-pgdg main" > /etc/apt/sources.list.d/pgdg.list && \
-    wget --quiet -O - https://www.postgresql.org/media/keys/ACCC4CF8.asc | gpg --dearmor -o /etc/apt/trusted.gpg.d/postgresql.gpg && \
+    wget --tries=5 --waitretry=10 --retry-connrefused --retry-on-http-error=429,500,502,503,504 --quiet -O - https://www.postgresql.org/media/keys/ACCC4CF8.asc | gpg --dearmor -o /etc/apt/trusted.gpg.d/postgresql.gpg && \
     apt-get update
 
 # Copy extensions file into image
@@ -143,7 +143,7 @@ RUN --mount=type=secret,id=github_token \
     fi && \
     echo "Pinned xatautils version: ${XATA_VERSION}" && \
     # Get the release info to find the asset download URL
-    RELEASE_INFO=$(wget --header="Authorization: token $GITHUB_TOKEN" \
+    RELEASE_INFO=$(wget --tries=5 --waitretry=10 --retry-connrefused --retry-on-http-error=429,500,502,503,504 --header="Authorization: token $GITHUB_TOKEN" \
                         --header="Accept: application/vnd.github.v3+json" \
                         -O- -q \
                         "https://api.github.com/repos/xataio/xata-utils/releases/tags/${XATA_VERSION}") && \
@@ -158,7 +158,7 @@ RUN --mount=type=secret,id=github_token \
     fi && \
     echo "Downloading from: $DOWNLOAD_URL" && \
     # Download the asset using the GitHub API
-    wget --header="Authorization: token $GITHUB_TOKEN" \
+    wget --tries=5 --waitretry=10 --retry-connrefused --retry-on-http-error=429,500,502,503,504 --header="Authorization: token $GITHUB_TOKEN" \
          --header="Accept: application/octet-stream" \
          -O /tmp/xatautils.deb \
          "$DOWNLOAD_URL" && \

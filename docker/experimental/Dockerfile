@@ -46,7 +46,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # The locales-all package should provide most locales, but we'll also
 # uncomment all locales in locale.gen and generate them to be thorough
 RUN sed -i 's/^# *\([a-zA-Z0-9_]\)/\1/' /etc/locale.gen && \
-    locale-gen
+    locale-gen >/dev/null
 
 # Verify locales are available
 RUN locale -a | head -20 && echo "... and more locales available"
@@ -54,7 +54,7 @@ RUN locale -a | head -20 && echo "... and more locales available"
 # Add PostgreSQL APT repository (detect codename without lsb_release)
 RUN CODENAME=$(grep VERSION_CODENAME /etc/os-release | cut -d= -f2 | tr -d '"') && \
     echo "deb http://apt.postgresql.org/pub/repos/apt $CODENAME-pgdg main" > /etc/apt/sources.list.d/pgdg.list && \
-    wget --quiet -O - https://www.postgresql.org/media/keys/ACCC4CF8.asc | gpg --dearmor -o /etc/apt/trusted.gpg.d/postgresql.gpg && \
+    wget --tries=5 --waitretry=10 --retry-connrefused --retry-on-http-error=429,500,502,503,504 --quiet -O - https://www.postgresql.org/media/keys/ACCC4CF8.asc | gpg --dearmor -o /etc/apt/trusted.gpg.d/postgresql.gpg && \
     apt-get update
 
 # Copy extensions file into image
@@ -68,7 +68,7 @@ RUN set -eux; \
   else \
     apt-get update && apt-get install -y --no-install-recommends curl lsb-release; \
     CODENAME="$(. /etc/os-release; echo "$VERSION_CODENAME")"; \
-    wget -O /tmp/percona-release.deb "https://repo.percona.com/apt/percona-release_latest.${CODENAME}_all.deb"; \
+    wget --tries=5 --waitretry=10 --retry-connrefused --retry-on-http-error=429,500,502,503,504 -O /tmp/percona-release.deb "https://repo.percona.com/apt/percona-release_latest.${CODENAME}_all.deb"; \
     dpkg -i /tmp/percona-release.deb; rm -f /tmp/percona-release.deb; \
     percona-release setup -y "ppg-${PG_MAJOR}"; \
     apt-get update; \
@@ -177,7 +177,7 @@ RUN --mount=type=secret,id=github_token \
     fi && \
     echo "Pinned xatautils version: ${XATA_VERSION}" && \
     # Get the release info to find the asset download URL
-    RELEASE_INFO=$(wget --header="Authorization: token $GITHUB_TOKEN" \
+    RELEASE_INFO=$(wget --tries=5 --waitretry=10 --retry-connrefused --retry-on-http-error=429,500,502,503,504 --header="Authorization: token $GITHUB_TOKEN" \
                         --header="Accept: application/vnd.github.v3+json" \
                         -O- -q \
                         "https://api.github.com/repos/xataio/xata-utils/releases/tags/${XATA_VERSION}") && \
@@ -192,7 +192,7 @@ RUN --mount=type=secret,id=github_token \
     fi && \
     echo "Downloading from: $DOWNLOAD_URL" && \
     # Download the asset using the GitHub API
-    wget --header="Authorization: token $GITHUB_TOKEN" \
+    wget --tries=5 --waitretry=10 --retry-connrefused --retry-on-http-error=429,500,502,503,504 --header="Authorization: token $GITHUB_TOKEN" \
           --header="Accept: application/octet-stream" \
           -O /tmp/xatautils.deb \
           "$DOWNLOAD_URL" && \
@@ -212,7 +212,7 @@ RUN set -eux; \
     DELTAX_VERSION="$(jq -r '.extensions[] | select(.name=="pg_deltax") | .version' /tmp/extensions.json)"; \
     if [ -n "${DELTAX_VERSION}" ]; then \
       ARCH=$(dpkg --print-architecture); \
-      wget -O /tmp/pg-deltax.deb \
+      wget --tries=5 --waitretry=10 --retry-connrefused --retry-on-http-error=429,500,502,503,504 -O /tmp/pg-deltax.deb \
         "https://github.com/xataio/deltax/releases/download/v${DELTAX_VERSION}/pg-deltax-pg${PG_MAJOR}_${DELTAX_VERSION}_${ARCH}.deb"; \
       dpkg -i /tmp/pg-deltax.deb; \
       rm -f /tmp/pg-deltax.deb; \
@@ -226,7 +226,7 @@ RUN set -eux; \
     TEXTSEARCH_VERSION="$(jq -r '.extensions[] | select(.name=="pg_textsearch") | .version' /tmp/extensions.json)"; \
     if [ -n "${TEXTSEARCH_VERSION}" ]; then \
       ARCH=$(dpkg --print-architecture); \
-      wget -O /tmp/pg-textsearch.zip \
+      wget --tries=5 --waitretry=10 --retry-connrefused --retry-on-http-error=429,500,502,503,504 -O /tmp/pg-textsearch.zip \
         "https://github.com/timescale/pg_textsearch/releases/download/v${TEXTSEARCH_VERSION}/pg-textsearch-v${TEXTSEARCH_VERSION}-pg${PG_MAJOR}-${ARCH}.zip"; \
       unzip -o /tmp/pg-textsearch.zip -d /tmp/pg-textsearch; \
       dpkg -i /tmp/pg-textsearch/*.deb; \
