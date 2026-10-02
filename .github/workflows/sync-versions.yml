@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       version_data:
-        description: 'Version data in format: image-key:version1=tag1,version2=tag2|image-key:version1=tag1 (e.g., cnpg-postgres-plus:17.7=17.7-20261001,18.1=18.1-20261001|experimental:17.7=17.7-20261001). Each version is paired with the immutable, date-suffixed registry tag this build pushed it under.'
+        description: 'Version data in format: image-key:version1=tag1,version2=tag2|image-key:version1=tag1 (e.g., cnpg-postgres-plus:17.7=17.7-20261001T020304Z,18.1=18.1-20261001T020304Z|experimental:17.7=17.7-20261001T020311Z). Each version is paired with the immutable, timestamp-suffixed registry tag this build pushed it under.'
         required: false
         type: string
 
@@ -88,7 +88,7 @@ jobs:
             IFS=',' read -ra VERSION_LIST <<< "$versions"
 
             for pair in "${VERSION_LIST[@]}"; do
-              # Each entry is "version=immutable_tag", e.g. "17.11=17.11-20261001".
+              # Each entry is "version=immutable_tag", e.g. "17.11=17.11-20261001T020304Z".
               version="${pair%%=*}"
               immutable_tag="${pair#*=}"
 

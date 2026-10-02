@@ -651,7 +651,7 @@ jobs:
 
           IMAGE="${REGISTRY}/${IMAGE_NAME}"
           SHA="${{ github.sha }}"
-          DATE="$(date +%Y%m%d)"
+          DATE="$(date -u +%Y%m%dT%H%M%SZ)"
 
           # Collect versions for output
           CREATED_VERSIONS=""
