@@ -45,6 +45,19 @@
       "extractVersionTemplate": "^(?<version>.+\\+dfsg-\\d+)\\.pgdg12\\+1$",
       "datasourceTemplate": "deb",
       "versioningTemplate": "deb"
+    },
+    {
+      "description": "GitHub-release pins in docker/*/extensions.<major>.json for extensions that are not in PGDG. The Dockerfile downloads the release asset for the manifest's `version`, so Renovate edits that field and the repository comes from docs_url. The allowlist keeps out entries that also have a GitHub docs_url but a different source, such as pg_duckdb. Their version is not a release tag. The post-upgrade script does not run for these, because the default_version check in the build already catches a mismatch.",
+      "customType": "regex",
+      "managerFilePatterns": [
+        "/^docker/[^/]+/extensions\\.\\d+\\.json$/"
+      ],
+      "matchStrings": [
+        "\"name\"\\s*:\\s*\"(?:pg_deltax|pg_textsearch)\"[^{}]*?\"version\"\\s*:\\s*\"(?<currentValue>[^\"]+)\"[^{}]*?\"docs_url\"\\s*:\\s*\"https://github\\.com/(?<depName>[^\"/]+/[^\"/]+)\""
+      ],
+      "datasourceTemplate": "github-releases",
+      "extractVersionTemplate": "^v(?<version>.+)$",
+      "versioningTemplate": "semver"
     }
   ],
   "packageRules": [
