@@ -32,7 +32,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # The locales-all package should provide most locales, but we'll also
 # uncomment all locales in locale.gen and generate them to be thorough
 RUN sed -i 's/^# *\([a-zA-Z0-9_]\)/\1/' /etc/locale.gen && \
-    locale-gen
+    locale-gen >/dev/null
 
 # Verify locales are available
 RUN locale -a | head -20 && echo "... and more locales available"
