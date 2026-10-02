@@ -257,6 +257,9 @@ Renovate manages:
 - the pgBackRest pin in the Dockerfiles. A PG beta needs a matching pgBackRest
   release, and Renovate does not check this.
 - the PostGIS CLI pin in the Dockerfiles.
+- the `version` of `pg_deltax` and `pg_textsearch`, which are GitHub releases
+  and not PGDG packages. Renovate edits only that field. The build checks it
+  against `default_version`.
 
 Run it locally to check the configuration and proposed changes.
 Local mode reads only the files that git tracks.
