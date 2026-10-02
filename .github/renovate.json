@@ -1,0 +1,107 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [],
+  "enabledManagers": [
+    "custom.regex"
+  ],
+  "customManagers": [
+    {
+      "description": "PGDG apt pins in docker/*/extensions.<major>.json",
+      "customType": "regex",
+      "managerFilePatterns": [
+        "/^docker/[^/]+/extensions\\.\\d+\\.json$/"
+      ],
+      "matchStrings": [
+        "\"package\"\\s*:\\s*\"(?<packageName>[^\"]+)\"[^{}]*?\"package_version\"\\s*:\\s*\"(?<currentValue>[^\"]+)\""
+      ],
+      "depNameTemplate": "{{{replace '^postgresql-\\d+-' '' packageName}}}",
+      "datasourceTemplate": "deb",
+      "versioningTemplate": "deb"
+    },
+    {
+      "description": "pgBackRest pin in the Dockerfiles. The suffix has the shell variable VERSION_ID, so only the upstream version and Debian revision are captured and the suffix stays as written. A PG beta needs a matching pgBackRest release. Renovate does not check this.",
+      "customType": "regex",
+      "managerFilePatterns": [
+        "/^docker/[^/]+/Dockerfile$/"
+      ],
+      "matchStrings": [
+        "\"pgbackrest=(?<currentValue>\\d[\\d.]*-\\d+)\\.pgdg\\$\\{VERSION_ID\\}\\+1\""
+      ],
+      "depNameTemplate": "pgbackrest",
+      "extractVersionTemplate": "^(?<version>\\d[\\d.]*-\\d+)\\.pgdg12\\+1$",
+      "datasourceTemplate": "deb",
+      "versioningTemplate": "deb"
+    },
+    {
+      "description": "PostGIS CLI pin in the Dockerfiles (PG 17 only, so bookworm). The pgdg suffix stays as written.",
+      "customType": "regex",
+      "managerFilePatterns": [
+        "/^docker/[^/]+/Dockerfile$/"
+      ],
+      "matchStrings": [
+        "POSTGIS_PKG_VERSION=(?<currentValue>[^\\s.]+(?:\\.\\d+)*\\+dfsg-\\d+)\\.(?:pgdg12\\+1|\\$\\{PGDG_SUFFIX\\})"
+      ],
+      "depNameTemplate": "postgis",
+      "extractVersionTemplate": "^(?<version>.+\\+dfsg-\\d+)\\.pgdg12\\+1$",
+      "datasourceTemplate": "deb",
+      "versioningTemplate": "deb"
+    },
+    {
+      "description": "GitHub-release pins in docker/*/extensions.<major>.json for extensions that are not in PGDG. xatautils is a private repository, and Renovate reads it with the GIT_TOKEN of the workflow, which the build also uses to download it. The Dockerfile downloads the release asset for the manifest's `version`, so Renovate edits that field and the repository comes from docs_url. The allowlist keeps out entries that also have a GitHub docs_url but a different source, such as pg_duckdb. Their version is not a release tag. The post-upgrade script does not run for these, because the default_version check in the build already catches a mismatch.",
+      "customType": "regex",
+      "managerFilePatterns": [
+        "/^docker/[^/]+/extensions\\.\\d+\\.json$/"
+      ],
+      "matchStrings": [
+        "\"name\"\\s*:\\s*\"(?:pg_deltax|pg_textsearch|xatautils)\"[^{}]*?\"version\"\\s*:\\s*\"(?<currentValue>[^\"]+)\"[^{}]*?\"docs_url\"\\s*:\\s*\"https://github\\.com/(?<depName>[^\"/]+/[^\"/]+)\""
+      ],
+      "datasourceTemplate": "github-releases",
+      "extractVersionTemplate": "^v(?<version>.+)$",
+      "versioningTemplate": "semver"
+    }
+  ],
+  "packageRules": [
+    {
+      "description": "Debian bookworm builds (every PG major except 19)",
+      "matchDatasources": [
+        "deb"
+      ],
+      "registryUrls": [
+        "https://apt.postgresql.org/pub/repos/apt?suite=bookworm-pgdg&components=main&binaryArch=amd64"
+      ]
+    },
+    {
+      "description": "PG 19 builds on trixie",
+      "matchDatasources": [
+        "deb"
+      ],
+      "matchFileNames": [
+        "docker/*/extensions.19.json"
+      ],
+      "registryUrls": [
+        "https://apt.postgresql.org/pub/repos/apt?suite=trixie-pgdg&components=main&binaryArch=amd64"
+      ]
+    },
+    {
+      "description": "One PR per extension across every PG major and image",
+      "matchDatasources": [
+        "deb"
+      ],
+      "groupName": "PGDG {{{depName}}}",
+      "commitMessageTopic": "PGDG {{{depName}}}",
+      "postUpgradeTasks": {
+        "commands": [
+          "python3 .github/renovate/post-upgrade.py"
+        ],
+        "fileFilters": [
+          "docker/*/extensions.*.json",
+          "docker/*/Dockerfile"
+        ],
+        "executionMode": "branch"
+      }
+    }
+  ],
+  "semanticCommits": "disabled",
+  "prHourlyLimit": 0,
+  "prConcurrentLimit": 5
+}
