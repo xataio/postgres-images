@@ -276,9 +276,9 @@ jobs:
             sha_suffix="-pg18-${ARCH}"
             ;;
           19)
-            # PG19 is still a beta. CNPG publishes it as 19beta3, on trixie only.
-            base_minimal="ghcr.io/cloudnative-pg/postgresql:19beta3-minimal-trixie"
-            base_standard="ghcr.io/cloudnative-pg/postgresql:19beta3-standard-trixie"
+            # PG19 is still a beta. CNPG publishes it as 19beta4, on trixie only.
+            base_minimal="ghcr.io/cloudnative-pg/postgresql:19beta4-minimal-trixie"
+            base_standard="ghcr.io/cloudnative-pg/postgresql:19beta4-standard-trixie"
             default_base="$base_minimal"
             sha_suffix="-pg19-${ARCH}"
             ;;
@@ -518,9 +518,9 @@ jobs:
               sha_suffix="-pg18-${ARCH}"
               ;;
             19)
-              # PG19 is still a beta. CNPG publishes it as 19beta3, on trixie only.
-              base_minimal="ghcr.io/cloudnative-pg/postgresql:19beta3-minimal-trixie"
-              base_standard="ghcr.io/cloudnative-pg/postgresql:19beta3-standard-trixie"
+              # PG19 is still a beta. CNPG publishes it as 19beta4, on trixie only.
+              base_minimal="ghcr.io/cloudnative-pg/postgresql:19beta4-minimal-trixie"
+              base_standard="ghcr.io/cloudnative-pg/postgresql:19beta4-standard-trixie"
               default_base="$base_minimal"
               sha_suffix="-pg19-${ARCH}"
               ;;
