@@ -90,7 +90,10 @@ jobs:
             for pair in "${VERSION_LIST[@]}"; do
               # Each entry is "version=immutable_tag", e.g. "17.11=17.11-20261001T020304Z".
               version="${pair%%=*}"
-              immutable_tag="${pair#*=}"
+              immutable_tag=""
+              if [[ "$pair" == *=* ]]; then
+                immutable_tag="${pair#*=}"
+              fi
 
               # Extract major version (e.g., 17 from 17.7)
               major="${version%%.*}"
