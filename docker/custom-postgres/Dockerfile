@@ -48,6 +48,15 @@ COPY ${CONFIG_FILE} /tmp/extensions.json
 # Generate plain version map for verification
 RUN jq -r '.extensions[] | "\(.name) \(.version)"' /tmp/extensions.json > /usr/local/share/extensions-versions.txt
 
+# pg_stat_monitor is not in PGDG; install Percona's pinned .deb directly rather than adding their repo
+RUN set -eux; \
+  PKG_VERSION="$(jq -r '.extensions[] | select(.name=="pg_stat_monitor") | .package_version' /tmp/extensions.json)"; \
+  ARCH="$(dpkg --print-architecture)"; \
+  wget -q -O /tmp/pg-stat-monitor.deb \
+    "https://repo.percona.com/ppg-${PG_MAJOR}/apt/pool/main/p/percona-pg-stat-monitor/percona-pg-stat-monitor${PG_MAJOR}_${PKG_VERSION#*:}_${ARCH}.deb"; \
+  dpkg -i /tmp/pg-stat-monitor.deb; \
+  rm /tmp/pg-stat-monitor.deb
+
 
 
 # Install pinned package versions (skip contrib virtual and ignore blank pins)
