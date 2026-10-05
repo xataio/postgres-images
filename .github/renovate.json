@@ -83,12 +83,12 @@
       ]
     },
     {
-      "description": "One PR per extension across every PG major and image",
+      "description": "One PR for all PGDG updates. The build fails on every stale pin, so a PR for one package cannot pass CI while another pin is stale.",
       "matchDatasources": [
         "deb"
       ],
-      "groupName": "PGDG {{{depName}}}",
-      "commitMessageTopic": "PGDG {{{depName}}}",
+      "groupName": "PGDG packages",
+      "commitMessageTopic": "PGDG packages",
       "postUpgradeTasks": {
         "commands": [
           "python3 .github/renovate/post-upgrade.py"
