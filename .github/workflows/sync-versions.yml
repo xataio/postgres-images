@@ -170,7 +170,7 @@ jobs:
           BRANCH_NAME="sync-postgres-versions-$(date +%Y%m%d-%H%M%S)"
 
           # Check if there's already an open PR for syncing versions
-          EXISTING_PR=$(gh pr list --search "Sync PostgreSQL image versions" --state open --json number --jq '.[0].number' || echo "")
+          EXISTING_PR=$(gh pr list --state open --limit 1000 --json number,headRefName --jq 'map(select(.headRefName | startswith("sync-postgres-versions-"))) | .[0].number // empty' || echo "")
 
           if [[ -n "$EXISTING_PR" ]]; then
             echo "Existing PR #${EXISTING_PR} found, updating it..."
