@@ -4,6 +4,10 @@ on:
   push:
     branches: [main]
   pull_request:
+    # A base branch change sends `edited`, so a PR retargeted to main (for
+    # example from a stacked branch) needs it to get a build. Other edits,
+    # such as to the title or description, skip all jobs.
+    types: [opened, synchronize, reopened, edited]
     branches: [main]
   workflow_dispatch:
     inputs:
@@ -39,6 +43,7 @@ on:
 jobs:
   # Detect which folders to build
   detect-changes:
+    if: github.event.action != 'edited' || github.event.changes.base
     runs-on: ubuntu-latest
     env:
       INPUT_TARGET_FOLDER: ${{ github.event.inputs.target_folder }}
@@ -842,7 +847,7 @@ jobs:
     name: build-test-publish
     runs-on: ubuntu-latest
     needs: [build-test-publish-amd64, build-test-publish-arm64, create-manifest, trigger-sync]
-    if: always()
+    if: always() && (github.event.action != 'edited' || github.event.changes.base)
     steps:
       - name: Check job results
         run: |
