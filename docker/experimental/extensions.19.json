@@ -276,7 +276,7 @@
     {
       "name": "ip4r",
       "package": "postgresql-19-ip4r",
-      "package_version": "2.4.3-1.pgdg13+1",
+      "package_version": "2.4.3-1.pgdg13+2",
       "version": "2.4",
       "description": "IPv4 and IPv6 types and functions",
       "docs_url": "https://github.com/RhodiumToad/ip4r",
@@ -292,7 +292,7 @@
     {
       "name": "pg_repack",
       "package": "postgresql-19-repack",
-      "package_version": "1.5.3-1.pgdg13+1",
+      "package_version": "1.5.3-1.pgdg13+2",
       "version": "1.5.3",
       "description": "Remove bloat from tables and indexes without exclusive lock",
       "docs_url": "https://github.com/reorg/pg_repack",
@@ -338,8 +338,8 @@
     {
       "name": "vector",
       "package": "postgresql-19-pgvector",
-      "package_version": "0.8.6-1.pgdg13+1",
-      "version": "0.8.6",
+      "package_version": "0.8.7-1.pgdg13+1",
+      "version": "0.8.7",
       "description": "Vector similarity search for PostgreSQL",
       "docs_url": "https://github.com/pgvector/pgvector",
       "preload_required": false,
@@ -792,7 +792,7 @@
     {
       "name": "pg_cron",
       "package": "postgresql-19-cron",
-      "package_version": "1.6.8-1.pgdg13+1",
+      "package_version": "1.6.8-1.pgdg13+2",
       "version": "1.6",
       "description": "Job scheduler for PostgreSQL",
       "docs_url": "https://github.com/citusdata/pg_cron",
@@ -810,7 +810,7 @@
     {
       "name": "pgaudit",
       "package": "postgresql-19-pgaudit",
-      "package_version": "19~beta3-1.pgdg13+1",
+      "package_version": "19~beta4-1.pgdg13+1",
       "version": "19.0",
       "description": "Audit logging extension for PostgreSQL",
       "docs_url": "https://github.com/pgaudit/pgaudit",
@@ -824,7 +824,7 @@
     {
       "name": "hypopg",
       "package": "postgresql-19-hypopg",
-      "package_version": "1.4.3-1.pgdg13+1",
+      "package_version": "1.4.3-1.pgdg13+2",
       "version": "1.4.3",
       "description": "Hypothetical indexes for query planning",
       "docs_url": "https://hypopg.readthedocs.io/",
@@ -839,7 +839,7 @@
     {
       "name": "hll",
       "package": "postgresql-19-hll",
-      "package_version": "2.21-1.pgdg13+1",
+      "package_version": "2.21-1.pgdg13+2",
       "version": "2.21",
       "description": "HyperLogLog data type for cardinality estimation",
       "docs_url": "https://github.com/citusdata/postgresql-hll",
@@ -854,8 +854,8 @@
     {
       "name": "pg_partman",
       "package": "postgresql-19-partman",
-      "package_version": "5.4.3-1.pgdg13+1",
-      "version": "5.4.3",
+      "package_version": "5.5.0-1.pgdg13+1",
+      "version": "5.5.0",
       "description": "Partition management extension for PostgreSQL",
       "docs_url": "https://github.com/pgpartman/pg_partman",
       "preload_required": false,
