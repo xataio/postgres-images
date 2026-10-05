@@ -110,8 +110,11 @@ jobs:
               major_exists=$(yq ".sources[${source_idx}].major_versions.\"${major}\"" "$VERSIONS_FILE")
 
               if [[ "$major_exists" == "null" || "$major_exists" == "{}" ]]; then
-                echo "  Creating new major version entry for $major"
-                yq -i ".sources[${source_idx}].major_versions.\"${major}\" = {\"versions\": [], \"latest\": \"\", \"supported\": true}" "$VERSIONS_FILE"
+                # A new major is created hidden. maki decides when to offer
+                # it, by mapping a pgMajor<major> feature flag or by removing
+                # hidden. The sync never changes these fields afterwards.
+                echo "  Creating new hidden major version entry for $major"
+                yq -i ".sources[${source_idx}].major_versions.\"${major}\" = {\"versions\": [], \"latest\": \"\", \"supported\": true, \"hidden\": true}" "$VERSIONS_FILE"
                 CHANGES_MADE=true
               fi
 
