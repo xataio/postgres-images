@@ -115,6 +115,11 @@ jobs:
                 # hidden. The sync never changes these fields afterwards.
                 echo "  Creating new hidden major version entry for $major"
                 yq -i ".sources[${source_idx}].major_versions.\"${major}\" = {\"versions\": [], \"latest\": \"\", \"supported\": true, \"hidden\": true}" "$VERSIONS_FILE"
+                # maki requires show_only_latest: true on each major of the
+                # cnpg-postgres-plus images.
+                if [[ "$image_key" == "cnpg-postgres-plus" ]]; then
+                  yq -i ".sources[${source_idx}].major_versions.\"${major}\".show_only_latest = true" "$VERSIONS_FILE"
+                fi
                 CHANGES_MADE=true
               fi
 
