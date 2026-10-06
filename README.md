@@ -242,3 +242,35 @@ snyk auth
 ```bash
   make scan
 ```
+
+## Keeping packages current (Renovate)
+
+We use [Renovate](https://docs.renovatebot.com/) to keep pinned packages
+current. PGDG keeps only about three versions of each package, so old pins
+disappear and builds break.
+
+Renovate manages:
+
+- the PGDG apt pins in `docker/*/extensions.<major>.json`. It also updates the
+  `version` field that goes with each pin.
+- the pgBackRest pin in the Dockerfiles. A PG beta needs a matching pgBackRest
+  release, and Renovate does not check this.
+- the PostGIS CLI pin in the Dockerfiles.
+- the `version` of `pg_deltax`, `pg_textsearch` and `xatautils`, which are GitHub releases
+  and not PGDG packages. Renovate edits only that field. The build checks it
+  against `default_version`.
+
+All PGDG updates go in one PR. A build fails on every stale pin, so a PR for
+one package cannot pass while another pin is stale.
+
+Run it locally to check the configuration and proposed changes.
+Local mode reads only the files that git tracks.
+This creates no branches or PRs.
+
+```bash
+.github/renovate/local.sh
+git diff
+```
+
+To open the real PRs, run the `Renovate` workflow from the Actions tab.
+It also runs every day.
