@@ -16,8 +16,6 @@
     },
     {
       "name": "pg_trgm",
-      "package": "postgresql-contrib-15",
-      "package_version": "",
       "version": "1.6",
       "description": "Trigram matching for similarity searches",
       "docs_url": "https://www.postgresql.org/docs/current/pgtrgm.html",
@@ -31,8 +29,6 @@
     },
     {
       "name": "pgcrypto",
-      "package": "postgresql-contrib-15",
-      "package_version": "",
       "version": "1.3",
       "description": "Cryptographic functions",
       "docs_url": "https://www.postgresql.org/docs/current/pgcrypto.html",
@@ -45,8 +41,6 @@
     },
     {
       "name": "citext",
-      "package": "postgresql-contrib-15",
-      "package_version": "",
       "version": "1.6",
       "description": "Case-insensitive text data type",
       "docs_url": "https://www.postgresql.org/docs/current/citext.html",
@@ -60,8 +54,6 @@
     },
     {
       "name": "hstore",
-      "package": "postgresql-contrib-15",
-      "package_version": "",
       "version": "1.8",
       "description": "Key-value store data type",
       "docs_url": "https://www.postgresql.org/docs/current/hstore.html",
@@ -75,8 +67,6 @@
     },
     {
       "name": "ltree",
-      "package": "postgresql-contrib-15",
-      "package_version": "",
       "version": "1.2",
       "description": "Tree-like structures data type",
       "docs_url": "https://www.postgresql.org/docs/current/ltree.html",
@@ -90,8 +80,6 @@
     },
     {
       "name": "pg_buffercache",
-      "package": "postgresql-contrib-15",
-      "package_version": "",
       "version": "1.3",
       "description": "Buffer cache inspection",
       "docs_url": "https://www.postgresql.org/docs/current/pgbuffercache.html",
@@ -104,8 +92,6 @@
     },
     {
       "name": "pg_freespacemap",
-      "package": "postgresql-contrib-15",
-      "package_version":"",
       "version": "1.2",
       "description": "Free space map examination",
       "docs_url": "https://www.postgresql.org/docs/current/pgfreespacemap.html",
@@ -118,8 +104,6 @@
     },
     {
       "name": "pg_visibility",
-      "package": "postgresql-contrib-15",
-      "package_version": "",
       "version": "1.2",
       "description": "Visibility map examination",
       "docs_url": "https://www.postgresql.org/docs/current/pgvisibility.html",
@@ -132,8 +116,6 @@
     },
     {
       "name": "pgrowlocks",
-      "package": "postgresql-contrib-15",
-      "package_version": "",
       "version": "1.2",
       "description": "Row locking information",
       "docs_url": "https://www.postgresql.org/docs/current/pgrowlocks.html",
@@ -147,8 +129,6 @@
     },
     {
       "name": "moddatetime",
-      "package": "postgresql-contrib-15",
-      "package_version": "",
       "version": "1.0",
       "description": "Automatic timestamp updates",
       "docs_url": "https://www.postgresql.org/docs/current/contrib-spi.html#id-1.11.7.47.10",
@@ -162,8 +142,6 @@
     },
     {
       "name": "insert_username",
-      "package": "postgresql-contrib-15",
-      "package_version": "",
       "version": "1.0",
       "description": "Automatic username insertion",
       "docs_url": "https://www.postgresql.org/docs/current/contrib-spi.html#id-1.11.7.47.9",
@@ -177,8 +155,6 @@
     },
     {
       "name": "dblink",
-      "package": "postgresql-contrib-15",
-      "package_version": "",
       "version": "1.2",
       "description": "Cross-database queries",
       "docs_url": "https://www.postgresql.org/docs/current/dblink.html",
@@ -242,8 +218,6 @@
     },
     {
       "name": "pg_stat_statements",
-      "package": "postgresql-contrib-15",
-      "package_version": "",
       "version": "1.10",
       "description": "Query execution statistics",
       "docs_url": "https://www.postgresql.org/docs/current/pgstatstatements.html",
@@ -256,8 +230,6 @@
     },
     {
       "name": "auto_explain",
-      "package": "postgresql-contrib-15",
-      "package_version": "",
       "version": "1.0",
       "description": "Automatic query plan logging",
       "docs_url": "https://www.postgresql.org/docs/current/auto-explain.html",
@@ -269,8 +241,6 @@
     },
     {
       "name": "auth_delay",
-      "package": "postgresql-contrib-15",
-      "package_version": "",
       "version": "1.0",
       "description": "Pause briefly before reporting authentication failure",
       "docs_url": "https://www.postgresql.org/docs/current/auth-delay.html",
@@ -282,8 +252,6 @@
     },
     {
       "name": "pg_prewarm",
-      "package": "postgresql-contrib-15",
-      "package_version": "",
       "version": "1.2",
       "description": "Database prewarming",
       "docs_url": "https://www.postgresql.org/docs/current/pgprewarm.html",
@@ -325,8 +293,6 @@
     },
     {
       "name": "fuzzystrmatch",
-      "package": "postgresql-contrib-15",
-      "package_version": "",
       "version": "1.1",
       "description": "Determine similarities and distance between strings",
       "docs_url": "https://www.postgresql.org/docs/current/fuzzystrmatch.html",
@@ -445,8 +411,6 @@
     },
     {
       "name": "pgstattuple",
-      "package": "postgresql-contrib-15",
-      "package_version": "",
       "version": "1.5",
       "description": "Functions to show tuple-level statistics",
       "docs_url": "https://www.postgresql.org/docs/current/pgstattuple.html",
@@ -460,9 +424,7 @@
     },
     {
       "name": "address_standardizer",
-      "package": "postgresql-contrib-15",
       "version": "3.6.4",
-      "package_version": "",
       "description": "Standardizes address data using rules-based parsing",
       "docs_url": "https://postgis.net/docs/Extras.html#Address_Standardizer",
       "preload_required": false,
@@ -475,9 +437,7 @@
     },
     {
       "name": "address_standardizer_data_us",
-      "package": "postgresql-contrib-15",
       "version": "3.6.4",
-      "package_version": "",
       "description": "US address data for address_standardizer",
       "docs_url": "https://postgis.net/docs/Extras.html#Address_Standardizer_Tables",
       "preload_required": false,
@@ -490,9 +450,7 @@
     },
     {
       "name": "amcheck",
-      "package": "postgresql-contrib-15",
       "version": "1.3",
-      "package_version": "",
       "description": "Functions for verifying relation integrity",
       "docs_url": "https://www.postgresql.org/docs/current/amcheck.html",
       "preload_required": false,
@@ -503,9 +461,7 @@
     },
     {
       "name": "autoinc",
-      "package": "postgresql-contrib-15",
       "version": "1.0",
-      "package_version": "",
       "description": "Functions for automatic increment of fields",
       "docs_url": "https://www.postgresql.org/docs/current/contrib-spi.html#id-1.11.7.47.8",
       "preload_required": false,
@@ -516,9 +472,7 @@
     },
     {
       "name": "bloom",
-      "package": "postgresql-contrib-15",
       "version": "1.0",
-      "package_version": "",
       "description": "Bloom index access method",
       "docs_url": "https://www.postgresql.org/docs/current/bloom.html",
       "preload_required": false,
@@ -529,9 +483,7 @@
     },
     {
       "name": "btree_gin",
-      "package": "postgresql-contrib-15",
       "version": "1.3",
-      "package_version": "",
       "description": "Support for indexing common datatypes in GIN",
       "docs_url": "https://www.postgresql.org/docs/current/btree-gin.html",
       "preload_required": false,
@@ -542,9 +494,7 @@
     },
     {
       "name": "btree_gist",
-      "package": "postgresql-contrib-15",
       "version": "1.7",
-      "package_version": "",
       "description": "Support for indexing common datatypes in GiST",
       "docs_url": "https://www.postgresql.org/docs/current/btree-gist.html",
       "preload_required": false,
@@ -555,9 +505,7 @@
     },
     {
       "name": "cube",
-      "package": "postgresql-contrib-15",
       "version": "1.5",
-      "package_version": "",
       "description": "Multi-dimensional cube data type",
       "docs_url": "https://www.postgresql.org/docs/current/cube.html",
       "preload_required": false,
@@ -568,9 +516,7 @@
     },
     {
       "name": "dict_int",
-      "package": "postgresql-contrib-15",
       "version": "1.0",
-      "package_version": "",
       "description": "Text search dictionary template for integers",
       "docs_url": "https://www.postgresql.org/docs/current/dict-int.html",
       "preload_required": false,
@@ -581,9 +527,7 @@
     },
     {
       "name": "dict_xsyn",
-      "package": "postgresql-contrib-15",
       "version": "1.0",
-      "package_version": "",
       "description": "Text search dictionary template for synonyms",
       "docs_url": "https://www.postgresql.org/docs/current/dict-xsyn.html",
       "preload_required": false,
@@ -594,9 +538,7 @@
     },
     {
       "name": "earthdistance",
-      "package": "postgresql-contrib-15",
       "version": "1.1",
-      "package_version": "",
       "description": "Earth distance calculations",
       "docs_url": "https://www.postgresql.org/docs/current/earthdistance.html",
       "preload_required": false,
@@ -607,9 +549,7 @@
     },
     {
       "name": "intagg",
-      "package": "postgresql-contrib-15",
       "version": "1.1",
-      "package_version": "",
       "description": "Integer aggregator (deprecated in favor of array_agg)",
       "docs_url": "https://www.postgresql.org/docs/current/intagg.html",
       "preload_required": false,
@@ -620,9 +560,7 @@
     },
     {
       "name": "intarray",
-      "package": "postgresql-contrib-15",
       "version": "1.5",
-      "package_version": "",
       "description": "Functions for 1-D arrays of integers",
       "docs_url": "https://www.postgresql.org/docs/current/intarray.html",
       "preload_required": false,
@@ -633,9 +571,7 @@
     },
     {
       "name": "isn",
-      "package": "postgresql-contrib-15",
       "version": "1.2",
-      "package_version": "",
       "description": "International Standard Number data types",
       "docs_url": "https://www.postgresql.org/docs/current/isn.html",
       "preload_required": false,
@@ -646,9 +582,7 @@
     },
     {
       "name": "lo",
-      "package": "postgresql-contrib-15",
       "version": "1.1",
-      "package_version": "",
       "description": "Large Object maintenance functions",
       "docs_url": "https://www.postgresql.org/docs/current/lo.html",
       "preload_required": false,
@@ -659,9 +593,7 @@
     },
     {
       "name": "pageinspect",
-      "package": "postgresql-contrib-15",
       "version": "1.11",
-      "package_version": "",
       "description": "Low-level page inspection",
       "docs_url": "https://www.postgresql.org/docs/current/pageinspect.html",
       "preload_required": false,
@@ -672,9 +604,7 @@
     },
     {
       "name": "pg_surgery",
-      "package": "postgresql-contrib-15",
       "version": "1.0",
-      "package_version": "",
       "description": "Row surgery functions for modifying rows",
       "docs_url": "https://www.postgresql.org/docs/current/pgsurgery.html",
       "preload_required": false,
@@ -685,9 +615,7 @@
     },
     {
       "name": "plpgsql",
-      "package": "postgresql-contrib-15",
       "version": "1.0",
-      "package_version": "",
       "description": "PL/pgSQL procedural language",
       "docs_url": "https://www.postgresql.org/docs/current/plpgsql.html",
       "preload_required": false,
@@ -698,9 +626,7 @@
     },
     {
       "name": "postgres_fdw",
-      "package": "postgresql-contrib-15",
       "version": "1.1",
-      "package_version": "",
       "description": "Foreign data wrapper for PostgreSQL",
       "docs_url": "https://www.postgresql.org/docs/current/postgres-fdw.html",
       "preload_required": false,
@@ -711,9 +637,7 @@
     },
     {
       "name": "refint",
-      "package": "postgresql-contrib-15",
       "version": "1.0",
-      "package_version": "",
       "description": "Referential integrity triggers (example)",
       "docs_url": "https://www.postgresql.org/docs/current/contrib-spi.html#id-1.11.7.47.11",
       "preload_required": false,
@@ -724,9 +648,7 @@
     },
     {
       "name": "seg",
-      "package": "postgresql-contrib-15",
       "version": "1.4",
-      "package_version": "",
       "description": "Floating-point intervals",
       "docs_url": "https://www.postgresql.org/docs/current/seg.html",
       "preload_required": false,
@@ -737,9 +659,7 @@
     },
     {
       "name": "sslinfo",
-      "package": "postgresql-contrib-15",
       "version": "1.2",
-      "package_version": "",
       "description": "Information about SSL connections",
       "docs_url": "https://www.postgresql.org/docs/current/sslinfo.html",
       "preload_required": false,
@@ -750,9 +670,7 @@
     },
     {
       "name": "tablefunc",
-      "package": "postgresql-contrib-15",
       "version": "1.0",
-      "package_version": "",
       "description": "Functions that manipulate whole tables, including crosstab",
       "docs_url": "https://www.postgresql.org/docs/current/tablefunc.html",
       "preload_required": false,
@@ -763,9 +681,7 @@
     },
     {
       "name": "tcn",
-      "package": "postgresql-contrib-15",
       "version": "1.0",
-      "package_version": "",
       "description": "Triggered change notifications",
       "docs_url": "https://www.postgresql.org/docs/current/tcn.html",
       "preload_required": false,
@@ -776,9 +692,7 @@
     },
     {
       "name": "tsm_system_rows",
-      "package": "postgresql-contrib-15",
       "version": "1.0",
-      "package_version": "",
       "description": "TABLESAMPLE method which accepts number of rows",
       "docs_url": "https://www.postgresql.org/docs/current/tsm-system-rows.html",
       "preload_required": false,
@@ -789,9 +703,7 @@
     },
     {
       "name": "tsm_system_time",
-      "package": "postgresql-contrib-15",
       "version": "1.0",
-      "package_version": "",
       "description": "TABLESAMPLE method which accepts time in milliseconds",
       "docs_url": "https://www.postgresql.org/docs/current/tsm-system-time.html",
       "preload_required": false,
@@ -802,9 +714,7 @@
     },
     {
       "name": "unaccent",
-      "package": "postgresql-contrib-15",
       "version": "1.1",
-      "package_version": "",
       "description": "Text search dictionary that removes accents",
       "docs_url": "https://www.postgresql.org/docs/current/unaccent.html",
       "preload_required": false,
@@ -815,9 +725,7 @@
     },
     {
       "name": "uuid-ossp",
-      "package": "postgresql-contrib-15",
       "version": "1.1",
-      "package_version": "",
       "description": "UUID generation functions",
       "docs_url": "https://www.postgresql.org/docs/current/uuid-ossp.html",
       "preload_required": false,

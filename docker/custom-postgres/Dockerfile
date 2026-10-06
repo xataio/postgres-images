@@ -59,18 +59,14 @@ RUN set -eux; \
 
 
 
-# Install pinned package versions (skip contrib virtual and ignore blank pins)
-# - postgresql-contrib-${PG_MAJOR} is virtual so it does not get a proper version
+# Install pinned package versions (ignore blank pins)
+# - entries without a package (contrib extensions) come with postgresql-${PG_MAJOR}
+#   in the CNPG base image
 # - for RC builds we allow empty package_version to pull the latest
-# Assumes: ARG PG_MAJOR and /tmp/extensions.json already COPY'd
-# Requires: jq installed earlier in the image
-# Assumes: ARG PG_MAJOR and /tmp/extensions.json already COPY'd
-# Requires: jq installed earlier
 # Assumes: ARG PG_MAJOR and /tmp/extensions.json already COPY'd; jq is installed
 RUN set -e; \
-  VIRTUAL="postgresql-contrib-${PG_MAJOR}"; \
-  PINNED_PKGS="$(jq -r --arg v "$VIRTUAL" \
-    '.extensions[] | select(.package != $v) | select(.package_version and (.package_version != "")) | "\(.package)=\(.package_version)"' \
+  PINNED_PKGS="$(jq -r \
+    '.extensions[] | select(.package_version and (.package_version != "")) | "\(.package)=\(.package_version)"' \
     /tmp/extensions.json | sort -u | tr '\n' ' ' )"; \
   echo "Installing pinned (PG${PG_MAJOR}): ${PINNED_PKGS}"; \
   if [ -n "${PINNED_PKGS}" ]; then \
