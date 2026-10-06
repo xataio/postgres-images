@@ -207,7 +207,9 @@ Open `docker/custom-postgres/extensions.json` and add a new object under `"exten
 Terms:
 * name: Extension name as used by CREATE EXTENSION.
 
-* package: APT package to install in the Dockerfile.
+* package: APT package to install in the Dockerfile. Leave it out for contrib
+  extensions (`pgcrypto`, `pg_trgm` and so on). They come with
+  `postgresql-<major>` in the CNPG base image.
 
 * preload_required: If true, it will be added to shared_preload_libraries.
 
