@@ -18,6 +18,8 @@ The script handles the entries whose package_version differs from --base-ref
 state. With --all it checks every pinned entry. Add --dry-run to avoid writing.
 
 It also checks that each changed pin is in the PGDG index for amd64 and arm64.
+Percona packages (pg_stat_monitor) are checked in the Percona index for the
+same PG major.
 CI builds both, and Renovate looks at amd64 only. The same check covers the
 pgBackRest and PostGIS CLI pins in docker/*/Dockerfile, which have no `version`
 field. The pgBackRest suffix uses ${VERSION_ID}, so that pin is checked on
@@ -45,6 +47,9 @@ import tarfile
 import urllib.request
 
 PGDG = "https://apt.postgresql.org/pub/repos/apt"
+# Percona publishes one repository per PG major, with a suite per Debian
+# release. The pin ends with the suite name, such as 1:2.4.0-1.bookworm.
+PERCONA = "https://repo.percona.com/ppg-{major}/apt"
 ARCHES = ("amd64", "arm64")
 # PGDG appends the Debian major to the package version: pgdg12 on bookworm,
 # pgdg13 on trixie. Reading the suite from the pin avoids duplicating the
@@ -52,6 +57,17 @@ ARCHES = ("amd64", "arm64")
 SUITES = {"pgdg12": "bookworm-pgdg", "pgdg13": "trixie-pgdg"}
 
 _indexes = {}
+
+
+def repo_for(pkg, pin):
+    """Return (repository URL, suite) that serves a pin, or None."""
+    m = re.fullmatch(r"percona-.*?(\d+)", pkg)
+    if m:
+        s = re.search(r"\.(bookworm|trixie)$", pin)
+        return (PERCONA.format(major=m.group(1)), s.group(1)) if s else None
+    m = re.search(r"(pgdg\d+)\+", pin)
+    suite = SUITES.get(m.group(1)) if m else None
+    return (PGDG, suite) if suite else None
 
 
 def fetch(url):
@@ -66,11 +82,11 @@ def fetch(url):
     raise RuntimeError(f"cannot fetch {url}: {last}")
 
 
-def package_index(suite, arch):
-    """Map (package, version) to the Filename in the PGDG index."""
-    key = (suite, arch)
+def package_index(repo, suite, arch):
+    """Map (package, version) to the Filename in a repository's index."""
+    key = (repo, suite, arch)
     if key not in _indexes:
-        raw = gzip.decompress(fetch(f"{PGDG}/dists/{suite}/main/binary-{arch}/Packages.gz"))
+        raw = gzip.decompress(fetch(f"{repo}/dists/{suite}/main/binary-{arch}/Packages.gz"))
         index = {}
         for stanza in raw.decode("utf-8", "replace").split("\n\n"):
             fields = dict(re.findall(r"^(Package|Version|Filename): (.*)$", stanza, re.M))
@@ -178,7 +194,7 @@ def check_dockerfiles(paths, ref, check_all):
         base = subprocess.run(["git", "show", f"{ref}:{path}"], capture_output=True, text=True)
         before = set() if check_all or base.returncode != 0 else set(dockerfile_pins(base.stdout))
         for pkg, suite, pin in sorted(now - before):
-            missing = [a for a in ARCHES if (pkg, pin) not in package_index(suite, a)]
+            missing = [a for a in ARCHES if (pkg, pin) not in package_index(PGDG, suite, a)]
             if missing:
                 print(f"FAIL {path}: {pkg}={pin} is not in {suite} for {', '.join(missing)}")
                 failures += 1
@@ -224,13 +240,12 @@ def main():
 
         for entry in changed_entries(path, manifest, args.base_ref, args.all):
             pkg, pin, name = entry["package"], entry["package_version"], entry["name"]
-            m = re.search(r"(pgdg\d+)\+", pin)
-            suite = SUITES.get(m.group(1)) if m else None
+            repo, suite = repo_for(pkg, pin) or (None, None)
             if not suite:
                 print(f"FAIL {path}: {name}: cannot tell the suite from {pin}")
                 failures += 1
                 continue
-            missing = [a for a in ARCHES if (pkg, pin) not in package_index(suite, a)]
+            missing = [a for a in ARCHES if (pkg, pin) not in package_index(repo, suite, a)]
             if missing:
                 print(f"FAIL {path}: {pkg}={pin} is not in {suite} for {', '.join(missing)}")
                 failures += 1
@@ -239,11 +254,11 @@ def main():
             # (postgis-3, pgrouting) at the same version.
             controls = {}
             for candidate in (pkg, pkg + "-scripts"):
-                filename = package_index(suite, "amd64").get((candidate, pin))
+                filename = package_index(repo, suite, "amd64").get((candidate, pin))
                 if filename is None:
                     continue
                 if filename not in debs:
-                    debs[filename] = deb_control_versions(fetch(f"{PGDG}/{filename}"))
+                    debs[filename] = deb_control_versions(fetch(f"{repo}/{filename}"))
                 controls.update(debs[filename])
             # postgis ships postgis-3.control, which `CREATE EXTENSION postgis`
             # resolves through a symlink.

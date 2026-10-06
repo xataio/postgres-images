@@ -256,6 +256,8 @@ Renovate manages:
 - the pgBackRest pin in the Dockerfiles. A PG beta needs a matching pgBackRest
   release, and Renovate does not check this.
 - the PostGIS CLI pin in the Dockerfiles.
+- the `percona-pg-stat-monitor<major>` pins. They come from the Percona repo
+  for the same PG major, not from PGDG, so Renovate looks them up there.
 - the `version` of `pg_deltax`, `pg_textsearch` and `xatautils`, which are GitHub releases
   and not PGDG packages. Renovate edits only that field. The build checks it
   against `default_version`.

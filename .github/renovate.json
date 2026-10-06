@@ -71,6 +71,66 @@
       ]
     },
     {
+      "description": "pg_stat_monitor for PG 14 comes from the Percona repo, not PGDG. All its pins are bookworm builds.",
+      "matchDatasources": [
+        "deb"
+      ],
+      "matchPackageNames": [
+        "percona-pg-stat-monitor14"
+      ],
+      "registryUrls": [
+        "https://repo.percona.com/ppg-14/apt?suite=bookworm&components=main&binaryArch=amd64"
+      ]
+    },
+    {
+      "description": "pg_stat_monitor for PG 15 comes from the Percona repo, not PGDG. All its pins are bookworm builds.",
+      "matchDatasources": [
+        "deb"
+      ],
+      "matchPackageNames": [
+        "percona-pg-stat-monitor15"
+      ],
+      "registryUrls": [
+        "https://repo.percona.com/ppg-15/apt?suite=bookworm&components=main&binaryArch=amd64"
+      ]
+    },
+    {
+      "description": "pg_stat_monitor for PG 16 comes from the Percona repo, not PGDG. All its pins are bookworm builds.",
+      "matchDatasources": [
+        "deb"
+      ],
+      "matchPackageNames": [
+        "percona-pg-stat-monitor16"
+      ],
+      "registryUrls": [
+        "https://repo.percona.com/ppg-16/apt?suite=bookworm&components=main&binaryArch=amd64"
+      ]
+    },
+    {
+      "description": "pg_stat_monitor for PG 17 comes from the Percona repo, not PGDG. All its pins are bookworm builds.",
+      "matchDatasources": [
+        "deb"
+      ],
+      "matchPackageNames": [
+        "percona-pg-stat-monitor17"
+      ],
+      "registryUrls": [
+        "https://repo.percona.com/ppg-17/apt?suite=bookworm&components=main&binaryArch=amd64"
+      ]
+    },
+    {
+      "description": "pg_stat_monitor for PG 18 comes from the Percona repo, not PGDG. All its pins are bookworm builds.",
+      "matchDatasources": [
+        "deb"
+      ],
+      "matchPackageNames": [
+        "percona-pg-stat-monitor18"
+      ],
+      "registryUrls": [
+        "https://repo.percona.com/ppg-18/apt?suite=bookworm&components=main&binaryArch=amd64"
+      ]
+    },
+    {
       "description": "PG 19 builds on trixie",
       "matchDatasources": [
         "deb"
@@ -99,6 +159,17 @@
         ],
         "executionMode": "branch"
       }
+    },
+    {
+      "description": "Percona pins do not go stale, because Percona keeps old versions in its index, so they get their own PR.",
+      "matchDatasources": [
+        "deb"
+      ],
+      "matchPackageNames": [
+        "/^percona-/"
+      ],
+      "groupName": "Percona packages",
+      "commitMessageTopic": "Percona packages"
     }
   ],
   "semanticCommits": "disabled",
