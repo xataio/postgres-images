@@ -95,8 +95,14 @@ jobs:
                 pinned_tag="${pair#*=}"
               fi
 
-              # Extract major version (e.g., 17 from 17.7)
-              major="${version%%.*}"
+              # Extract major version from the leading digits (e.g., 17 from
+              # 17.7, 19 from 19beta3-trixie) so pre-releases share the
+              # entry of their major.
+              major="${version%%[!0-9]*}"
+              if [[ -z "$major" ]]; then
+                echo "  Skipping $version: no leading major version digits"
+                continue
+              fi
 
               echo "  Checking version $version (major: $major, pinned tag: ${pinned_tag:-<none>})"
 
@@ -104,8 +110,16 @@ jobs:
               major_exists=$(yq ".sources[${source_idx}].major_versions.\"${major}\"" "$VERSIONS_FILE")
 
               if [[ "$major_exists" == "null" || "$major_exists" == "{}" ]]; then
-                echo "  Creating new major version entry for $major"
-                yq -i ".sources[${source_idx}].major_versions.\"${major}\" = {\"versions\": [], \"latest\": \"\", \"supported\": true}" "$VERSIONS_FILE"
+                # A new major is created hidden. maki decides when to offer
+                # it, by mapping a pgMajor<major> feature flag or by removing
+                # hidden. The sync never changes these fields afterwards.
+                echo "  Creating new hidden major version entry for $major"
+                yq -i ".sources[${source_idx}].major_versions.\"${major}\" = {\"versions\": [], \"latest\": \"\", \"supported\": true, \"hidden\": true}" "$VERSIONS_FILE"
+                # maki requires show_only_latest: true on each major of the
+                # cnpg-postgres-plus images.
+                if [[ "$image_key" == "cnpg-postgres-plus" ]]; then
+                  yq -i ".sources[${source_idx}].major_versions.\"${major}\".show_only_latest = true" "$VERSIONS_FILE"
+                fi
                 CHANGES_MADE=true
               fi
 
