@@ -1,0 +1,109 @@
+Xata Postgres Images
+Copyright (c) Xata, Inc.
+
+This repository (the build tooling, Dockerfiles, extension manifests and
+scripts) is licensed under the Apache License, Version 2.0. See the LICENSE
+file for the full text.
+
+The container images produced from this repository are an AGGREGATION of
+independently licensed software. Each component is distributed under its own
+license, and this NOTICE does not alter those licenses. The images are built
+on the CloudNativePG PostgreSQL base image (Debian "bookworm") and install
+PostgreSQL, its contrib modules and a set of extensions. Except where noted
+below, third-party components are installed UNMODIFIED from the official
+PostgreSQL APT repository (PGDG, https://apt.postgresql.org) and the Debian
+archive; the sole exception is xatautils (Xata's own extension, Apache-2.0)
+and, in the "analytics" variant, pg_duckdb, which are built from source.
+
+Exact package versions are pinned per image variant and PostgreSQL major in
+the extension manifests in this repository:
+  docker/custom-postgres/extensions.<major>.json
+  docker/analytics/extensions.<major>.json
+  docker/experimental/extensions.<major>.json
+  docker/minimal/extensions.<major>.json
+
+--------------------------------------------------------------------------------
+Copyleft (GPL / AGPL / LGPL) components and corresponding source
+--------------------------------------------------------------------------------
+
+The following components are covered by copyleft licenses. They are included
+UNMODIFIED as distributed by PGDG/Debian. Because these images are published
+publicly, the corresponding source is made available as described under
+"Obtaining source code" below.
+
+1. PostGIS  --  GPL-2.0-or-later
+   Extensions: postgis, postgis_raster, postgis_sfcgal, postgis_tiger_geocoder,
+   address_standardizer, address_standardizer_data_us
+   Version:  3.6.x  (e.g. Debian package 3.6.4+dfsg-2.pgdg12+1)
+   Debian packages: postgresql-<major>-postgis-3, postgresql-<major>-postgis-3-scripts
+   Project: https://postgis.net  --  Source: https://git.osgeo.org/gitea/postgis/postgis
+   Present in: custom-postgres, analytics, experimental (not in minimal).
+
+2. pgRouting  --  GPL-2.0-or-later
+   Extension: pgrouting
+   Version:  4.0.x  (e.g. Debian package 4.0.1-1.pgdg12+1)
+   Debian package: postgresql-<major>-pgrouting
+   Project: https://pgrouting.org  --  Source: https://github.com/pgRouting/pgrouting
+   Present in: custom-postgres, analytics, experimental (not in minimal).
+
+3. Geometry/geoprocessing libraries linked by PostGIS (installed as
+   dependencies of the PostGIS packages, unmodified from Debian):
+     - SFCGAL          --  LGPL-2.0-or-later   (https://sfcgal.org)
+     - CGAL            --  GPL-3.0-or-later / LGPL-3.0-or-later (https://www.cgal.org)
+     - GEOS            --  LGPL-2.1-or-later   (https://libgeos.org)
+   (PROJ and GDAL, also pulled in by PostGIS, are permissively licensed
+   (MIT/X11-style).)
+
+4. Base image and operating-system packages
+   The CloudNativePG base image (ghcr.io/cloudnative-pg/postgresql,
+   *-minimal-bookworm) is licensed Apache-2.0. The underlying Debian "bookworm"
+   userland contains packages under a range of licenses, including GPL and LGPL
+   (e.g. glibc under LGPL, coreutils/util-linux under GPL). These are unmodified
+   Debian packages, included by mere aggregation. The corresponding source for
+   any Debian package is available from the Debian archive (see below).
+   Note: the base is the CNPG "minimal" image, which does NOT include Barman
+   (GPL-3.0).
+
+--------------------------------------------------------------------------------
+Other notable third-party components (non-copyleft)
+--------------------------------------------------------------------------------
+
+  - PostgreSQL and its contrib modules  --  PostgreSQL License
+    (pg_trgm, pgcrypto, citext, hstore, ltree, pg_stat_statements, pageinspect,
+    postgres_fdw, uuid-ossp, and the other contrib extensions listed in the
+    manifests).
+  - pgvector, pg_cron, pg_partman, pg_hint_plan, hll, pgaudit, hypopg, pg_repack,
+    wal2json, prefix, ip4r, pgtap  --  PostgreSQL License / BSD / MIT / Apache-2.0
+    (permissive; see each project for the exact terms).
+  - pg_duckdb (analytics variant only)  --  MIT  (built from source; embeds
+    DuckDB, MIT).  See docker/pg-duckdb-pkg/.
+  - pg_stat_monitor (experimental variant only)  --  PostgreSQL License.
+  - xatautils  --  Apache-2.0  (Xata's own extension, a fork of supautils;
+    https://github.com/xataio/xata-utils). Built from source and installed as a
+    prebuilt package. It hooks PostgreSQL core only; it is not combined with,
+    and does not link against, PostGIS, pgRouting or any GPL/AGPL component.
+
+Note on build-time script hardening: docker/custom-postgres/harden-ip4r-scripts.sh
+adjusts the installed SQL scripts of the ip4r extension (schema-qualifying
+built-in references). ip4r is permissively licensed; no copyleft component is
+modified by this repository.
+
+--------------------------------------------------------------------------------
+Obtaining source code
+--------------------------------------------------------------------------------
+
+All copyleft components above are included unmodified from their upstream
+binary distributions. The complete corresponding source code is available from:
+
+  - PostgreSQL APT repository (PGDG):  https://apt.postgresql.org
+    (source packages alongside the binary .deb packages used to build these
+    images; versions match the pins in the extension manifests).
+  - Debian archive:  https://deb.debian.org  and  https://snapshot.debian.org
+    (for base-image and OS-package sources at the exact versions).
+  - Upstream projects: PostGIS (https://git.osgeo.org/gitea/postgis/postgis),
+    pgRouting (https://github.com/pgRouting/pgrouting), SFCGAL, CGAL and GEOS
+    at the links above.
+
+Written offer: Xata will also, on request, provide the complete corresponding
+source code for any GPL/LGPL component distributed in these images, at the
+version shipped. Contact: legal@xata.io (or open an issue in this repository).
