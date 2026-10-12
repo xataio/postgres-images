@@ -1,4 +1,10 @@
 ARG CNPG_BASE=ghcr.io/cloudnative-pg/postgresql:17-minimal-bookworm
+
+# TEMPORARY: unreleased pgBackRest (2.60.0dev) built from source for the GCS
+# Workload Identity Federation web-id key type (pgbackrest/pgbackrest#2839).
+ARG PGBACKREST_PKG=ghcr.io/xataio/postgres-images/pgbackrest-pkg:2.60.0dev
+FROM ${PGBACKREST_PKG} AS pgbackrest_pkg
+
 FROM ${CNPG_BASE}
 
 # Build-time knobs (overridden by Makefile)
@@ -31,11 +37,17 @@ COPY ${CONFIG_FILE} /tmp/extensions.json
 # Generate plain version map for verification
 RUN jq -r '.extensions[] | "\(.name) \(.version)"' /tmp/extensions.json > /usr/local/share/extensions-versions.txt
 
-# Pin pgBackRest so image rebuilds cannot introduce incompatible backup protocol versions.
-RUN . /etc/os-release && \
-    apt-get update && apt-get install -y --no-install-recommends \
-    "pgbackrest=2.59.2-1.pgdg${VERSION_ID}+1" \
-    && rm -rf /var/lib/apt/lists/*
+# TEMPORARY: install unreleased pgBackRest from the pre-built .deb (built from
+# source, see pgbackrest/pgbackrest#2839). apt resolves the runtime deps from
+# the package's Depends. Revert to the apt pin below once released:
+#   RUN . /etc/os-release && \
+#       apt-get update && apt-get install -y --no-install-recommends \
+#       "pgbackrest=2.59.2-1.pgdg${VERSION_ID}+1" \
+#       && rm -rf /var/lib/apt/lists/*
+RUN --mount=from=pgbackrest_pkg,source=/,target=/pgbackrest-pkg \
+    apt-get update && \
+    apt-get install -y --no-install-recommends /pgbackrest-pkg/pgbackrest.deb && \
+    rm -rf /var/lib/apt/lists/*
 
 
 # Verify pgbackrest installation
