@@ -154,7 +154,7 @@
     {
       "name": "wal2json",
       "package": "postgresql-18-wal2json",
-      "package_version": "2.6-3.pgdg12+1",
+      "package_version": "2.6-4.pgdg12+1",
       "version": "2.6",
       "description": "Logical replication output plugin for JSON",
       "docs_url": "https://github.com/eulerto/wal2json",
@@ -172,8 +172,8 @@
     {
       "name": "hypopg",
       "package": "postgresql-18-hypopg",
-      "package_version": "1.4.2-2.pgdg12+1",
-      "version": "1.4.2",
+      "package_version": "1.4.3-1.pgdg12+2",
+      "version": "1.4.3",
       "description": "Hypothetical indexes for query planning",
       "docs_url": "https://hypopg.readthedocs.io/",
       "preload_required": false,
@@ -275,7 +275,7 @@
     {
       "name": "ip4r",
       "package": "postgresql-18-ip4r",
-      "package_version": "2.4.2-5.pgdg12+1",
+      "package_version": "2.4.3-1.pgdg12+2",
       "version": "2.4",
       "description": "IPv4 and IPv6 types and functions",
       "docs_url": "https://github.com/RhodiumToad/ip4r",
@@ -304,7 +304,7 @@
     {
       "name": "pg_repack",
       "package": "postgresql-18-repack",
-      "package_version": "1.5.3-1.pgdg12+1",
+      "package_version": "1.5.3-1.pgdg12+2",
       "version": "1.5.3",
       "description": "Remove bloat from tables and indexes without exclusive lock",
       "docs_url": "https://github.com/reorg/pg_repack",
@@ -365,7 +365,7 @@
     {
       "name": "prefix",
       "package": "postgresql-18-prefix",
-      "package_version": "1.2.10-4.pgdg12+1",
+      "package_version": "1.2.11-1.pgdg12+1",
       "version": "1.2.0",
       "description": "Prefix matching operator",
       "docs_url": "https://github.com/dimitri/prefix",
@@ -744,7 +744,7 @@
     {
       "name": "pg_cron",
       "package": "postgresql-18-cron",
-      "package_version": "1.6.7-3.pgdg12+1",
+      "package_version": "1.6.8-1.pgdg12+2",
       "version": "1.6",
       "description": "Job scheduler for PostgreSQL",
       "docs_url": "https://github.com/citusdata/pg_cron",
@@ -762,7 +762,7 @@
     {
       "name": "pgaudit",
       "package": "postgresql-18-pgaudit",
-      "package_version": "18.0-2.pgdg12+1",
+      "package_version": "18.0-3.pgdg12+1",
       "version": "18.0",
       "description": "Audit logging extension for PostgreSQL",
       "docs_url": "https://github.com/pgaudit/pgaudit",
@@ -776,8 +776,8 @@
     {
       "name": "hll",
       "package": "postgresql-18-hll",
-      "package_version": "2.20-1.pgdg12+1",
-      "version": "2.20",
+      "package_version": "2.21-1.pgdg12+2",
+      "version": "2.21",
       "description": "HyperLogLog data type for cardinality estimation",
       "docs_url": "https://github.com/citusdata/postgresql-hll",
       "preload_required": false,
@@ -791,8 +791,8 @@
     {
       "name": "pg_partman",
       "package": "postgresql-18-partman",
-      "package_version": "5.4.2-1.pgdg12+1",
-      "version": "5.4.1",
+      "package_version": "5.5.0-1.pgdg12+1",
+      "version": "5.5.0",
       "description": "Partition management extension for PostgreSQL",
       "docs_url": "https://github.com/pgpartman/pg_partman",
       "preload_required": false,
