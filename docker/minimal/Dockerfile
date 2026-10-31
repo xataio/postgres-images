@@ -42,7 +42,7 @@ RUN jq -r '.extensions[] | "\(.name) \(.version)"' /tmp/extensions.json > /usr/l
 # the package's Depends. Revert to the apt pin below once released:
 #   RUN . /etc/os-release && \
 #       apt-get update && apt-get install -y --no-install-recommends \
-#       "pgbackrest=2.59.2-1.pgdg${VERSION_ID}+1" \
+#       "pgbackrest=2.60.0-1.pgdg${VERSION_ID}+1" \
 #       && rm -rf /var/lib/apt/lists/*
 RUN --mount=from=pgbackrest_pkg,source=/,target=/pgbackrest-pkg \
     apt-get update && \
