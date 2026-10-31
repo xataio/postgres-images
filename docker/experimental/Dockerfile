@@ -128,7 +128,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # Use pinned package version matching the SQL extension version (3.6.4)
 RUN ARCH=$(dpkg --print-architecture) && \
     if [ "$ARCH" = "arm64" ]; then \
-        POSTGIS_PKG_VERSION=3.6.4+dfsg-2.${PGDG_SUFFIX} && \
+        POSTGIS_PKG_VERSION=3.7.0+dfsg-1.${PGDG_SUFFIX} && \
         apt-get update && \
         mkdir -p /tmp/postgis-tools && \
         cd /tmp/postgis-tools && \
@@ -159,7 +159,7 @@ RUN which shp2pgsql || echo "shp2pgsql not found" && \
 # the package's Depends. Revert to the apt pin below once released:
 #   RUN . /etc/os-release && \
 #       apt-get update && apt-get install -y --no-install-recommends \
-#       "pgbackrest=2.59.2-1.pgdg${VERSION_ID}+1"
+#       "pgbackrest=2.60.0-1.pgdg${VERSION_ID}+1"
 RUN --mount=from=pgbackrest_pkg,source=/,target=/pgbackrest-pkg \
     apt-get update && \
     apt-get install -y --no-install-recommends /pgbackrest-pkg/pgbackrest.deb && \
