@@ -204,8 +204,8 @@
     {
       "name": "hypopg",
       "package": "postgresql-16-hypopg",
-      "package_version": "1.4.2-2.pgdg12+1",
-      "version": "1.4.2",
+      "package_version": "1.4.5-1.pgdg12+1",
+      "version": "1.4.5",
       "description": "Hypothetical indexes for query planning",
       "docs_url": "https://hypopg.readthedocs.io/",
       "preload_required": false,
