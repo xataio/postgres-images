@@ -92,41 +92,42 @@ COPY docker/custom-postgres/harden-ip4r-scripts.sh /tmp/harden-ip4r-scripts.sh
 RUN bash /tmp/harden-ip4r-scripts.sh "/usr/share/postgresql/${PG_MAJOR}/extension" \
     && rm -f /tmp/harden-ip4r-scripts.sh
 
-# Install PostGIS extensions and additional dependencies
-RUN apt-get update && apt-get install -y --no-install-recommends \
+# Install PostGIS extensions
+# GDAL/GEOS/PROJ/json-c/protobuf-c are pulled in as dependencies of
+# postgresql-${PG_MAJOR}-postgis-3. Do not name them here: the package names
+# carry the library ABI version (libgdal32, libgeos-c1v5, ...) and those names
+# change between PostGIS releases and Debian suites, so a hardcoded list breaks
+# on a bump.
+# The pinned install above already put the manifest's PostGIS version in place.
+# --no-upgrade keeps this step from moving it to the newest version in PGDG.
+RUN apt-get update && apt-get install -y --no-install-recommends --no-upgrade \
     postgresql-${PG_MAJOR}-postgis-3 \
     postgresql-${PG_MAJOR}-postgis-3-scripts \
-    libgdal32 \
-    libgeos-c1v5 \
-    libproj25 \
-    libjson-c5 \
-    libprotobuf-c1 \
     && rm -rf /var/lib/apt/lists/*
 
-# Download and install PostGIS tools manually for ARM64
-# Use pinned package version matching the SQL extension version (3.6.4)
+# Install the PostGIS command line tools (shp2pgsql, raster2pgsql, ...).
+# Both architectures use the pinned version, which matches the SQL extension
+# version (3.6.4). arm64 unpacks the .deb by hand, amd64 installs it.
 RUN ARCH=$(dpkg --print-architecture) && \
+    POSTGIS_PKG_VERSION=3.6.4+dfsg-2.pgdg12+1 && \
     if [ "$ARCH" = "arm64" ]; then \
-        POSTGIS_PKG_VERSION=3.6.4+dfsg-2.pgdg12+1 && \
         apt-get update && \
         mkdir -p /tmp/postgis-tools && \
         cd /tmp/postgis-tools && \
         echo "Downloading pinned postgis CLI: ${POSTGIS_PKG_VERSION}"; \
         apt-get download postgis=${POSTGIS_PKG_VERSION} && \
         dpkg-deb -x postgis_*.deb . && cp -r usr/bin/* /usr/bin/ || true; \
-        apt-get install -y --no-install-recommends \
-            libgdal32 \
+        # dpkg-deb -x skips dependency resolution, so pull the shared libraries
+        # back in via the package that declares them, not by hardcoded name.
+        apt-get install -y --no-install-recommends --no-upgrade \
+            postgresql-${PG_MAJOR}-postgis-3 \
             gdal-data \
-            libgeos-c1v5 \
-            libproj25 \
-            libjson-c5 \
-            libprotobuf-c1 \
             || true && \
         cd / && rm -rf /tmp/postgis-tools && \
         rm -rf /var/lib/apt/lists/*; \
     else \
         apt-get update && \
-        apt-get install -y --no-install-recommends postgis && \
+        apt-get install -y --no-install-recommends postgis=${POSTGIS_PKG_VERSION} && \
         rm -rf /var/lib/apt/lists/*; \
     fi
 
