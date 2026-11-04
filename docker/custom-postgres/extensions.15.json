@@ -735,20 +735,6 @@
       ]
     },
     {
-      "name": "postgis_raster",
-      "package": "postgresql-15-postgis-3",
-      "version": "3.6.4",
-      "package_version": "3.6.4+dfsg-2.pgdg12+1",
-      "description": "PostGIS raster extension",
-      "docs_url": "https://postgis.net/docs/RT_reference.html",
-      "preload_required": false,
-      "test_enabled": true,
-      "test_commands": [
-        "CREATE EXTENSION IF NOT EXISTS postgis_raster;",
-        "SELECT PostGIS_Raster_Lib_Version();"
-      ]
-    },
-    {
       "name": "postgis_sfcgal",
       "package": "postgresql-15-postgis-3",
       "version": "3.6.4",
