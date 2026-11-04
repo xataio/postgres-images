@@ -81,9 +81,15 @@ RUN set -e; \
   PINNED_PKGS="$(jq -r \
     '.extensions[] | select(.package_version and (.package_version != "")) | "\(.package)=\(.package_version)"' \
     /tmp/extensions.json | sort -u | tr '\n' ' ' )"; \
-  echo "Installing pinned (PG${PG_MAJOR}): ${PINNED_PKGS}"; \
   if [ -n "${PINNED_PKGS}" ]; then \
-    apt-get update && apt-get install -y --no-install-recommends ${PINNED_PKGS}; \
+    apt-get update; \
+    for pkg in ${PINNED_PKGS}; do \
+      if apt-cache show "${pkg%%=*}-scripts" >/dev/null 2>&1; then \
+        PINNED_PKGS="${PINNED_PKGS} ${pkg%%=*}-scripts=${pkg#*=}"; \
+      fi; \
+    done; \
+    echo "Installing pinned (PG${PG_MAJOR}): ${PINNED_PKGS}"; \
+    apt-get install -y --no-install-recommends ${PINNED_PKGS}; \
   fi; \
   rm -rf /var/lib/apt/lists/*
 
@@ -93,40 +99,31 @@ RUN bash /tmp/harden-ip4r-scripts.sh "/usr/share/postgresql/${PG_MAJOR}/extensio
     && rm -f /tmp/harden-ip4r-scripts.sh
 
 # Install PostGIS extensions and additional dependencies
-RUN apt-get update && apt-get install -y --no-install-recommends \
+RUN apt-get update && apt-get install -y --no-install-recommends --no-upgrade \
     postgresql-${PG_MAJOR}-postgis-3 \
     postgresql-${PG_MAJOR}-postgis-3-scripts \
-    libgdal32 \
-    libgeos-c1v5 \
-    libproj25 \
-    libjson-c5 \
-    libprotobuf-c1 \
     && rm -rf /var/lib/apt/lists/*
 
 # Download and install PostGIS tools manually for ARM64
 # Use pinned package version matching the SQL extension version (3.6.4)
 RUN ARCH=$(dpkg --print-architecture) && \
+    POSTGIS_PKG_VERSION=3.6.4+dfsg-2.pgdg12+1 && \
     if [ "$ARCH" = "arm64" ]; then \
-        POSTGIS_PKG_VERSION=3.6.4+dfsg-2.pgdg12+1 && \
         apt-get update && \
         mkdir -p /tmp/postgis-tools && \
         cd /tmp/postgis-tools && \
         echo "Downloading pinned postgis CLI: ${POSTGIS_PKG_VERSION}"; \
         apt-get download postgis=${POSTGIS_PKG_VERSION} && \
         dpkg-deb -x postgis_*.deb . && cp -r usr/bin/* /usr/bin/ || true; \
-        apt-get install -y --no-install-recommends \
-            libgdal32 \
+        apt-get install -y --no-install-recommends --no-upgrade \
+            postgresql-${PG_MAJOR}-postgis-3 \
             gdal-data \
-            libgeos-c1v5 \
-            libproj25 \
-            libjson-c5 \
-            libprotobuf-c1 \
             || true && \
         cd / && rm -rf /tmp/postgis-tools && \
         rm -rf /var/lib/apt/lists/*; \
     else \
         apt-get update && \
-        apt-get install -y --no-install-recommends postgis && \
+        apt-get install -y --no-install-recommends postgis=${POSTGIS_PKG_VERSION} && \
         rm -rf /var/lib/apt/lists/*; \
     fi
 
