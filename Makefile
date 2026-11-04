@@ -13,10 +13,11 @@ IMAGE_NAME ?= xataio/postgres-images/cnpg-postgres-plus
 CNPG_BASE ?= ghcr.io/cloudnative-pg/postgresql:$(PG_TAG)-minimal-$(DEBIAN_SUITE)
 
 # pg_duckdb package - use CNPG_BASE for PG16 (no pg_duckdb support)
+include docker/pg-duckdb-pkg/versions.env
 ifeq ($(PG_MAJOR),16)
 PG_DUCKDB_PKG ?= $(CNPG_BASE)
 else
-PG_DUCKDB_PKG ?= ghcr.io/xataio/postgres-images/pg-duckdb-pkg:v1.1.1-duckdbv1.4.3-pg$(PG_MAJOR)
+PG_DUCKDB_PKG ?= ghcr.io/xataio/postgres-images/pg-duckdb-pkg:$(PG_DUCKDB_VERSION)-pg$(PG_MAJOR)
 endif
 DOCKERFILE_DIR ?= docker/custom-postgres
 DOCKERFILE ?= $(DOCKERFILE_DIR)/Dockerfile

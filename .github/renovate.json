@@ -47,7 +47,7 @@
       "versioningTemplate": "deb"
     },
     {
-      "description": "GitHub-release pins in docker/*/extensions.<major>.json for extensions that are not in PGDG. xatautils is a private repository, and Renovate reads it with the GIT_TOKEN of the workflow, which the build also uses to download it. The Dockerfile downloads the release asset for the manifest's `version`, so Renovate edits that field and the repository comes from docs_url. The allowlist keeps out entries that also have a GitHub docs_url but a different source, such as pg_duckdb. Their version is not a release tag. The post-upgrade script does not run for these, because the default_version check in the build already catches a mismatch.",
+      "description": "GitHub-release pins in docker/*/extensions.<major>.json for extensions that are not in PGDG. xatautils is a private repository, and Renovate reads it with the GIT_TOKEN of the workflow, which the build also uses to download it. The Dockerfile downloads the release asset for the manifest's `version`, so Renovate edits that field and the repository comes from docs_url. The allowlist keeps out entries that also have a GitHub docs_url but a different source, such as pg_duckdb. Their version is not a release tag, and the manager for docker/pg-duckdb-pkg/versions.env handles pg_duckdb. The post-upgrade script does not run for these, because the default_version check in the build already catches a mismatch.",
       "customType": "regex",
       "managerFilePatterns": [
         "/^docker/[^/]+/extensions\\.\\d+\\.json$/"
@@ -55,6 +55,20 @@
       "matchStrings": [
         "\"name\"\\s*:\\s*\"(?:pg_deltax|pg_textsearch|xatautils)\"[^{}]*?\"version\"\\s*:\\s*\"(?<currentValue>[^\"]+)\"[^{}]*?\"docs_url\"\\s*:\\s*\"https://github\\.com/(?<depName>[^\"/]+/[^\"/]+)\""
       ],
+      "datasourceTemplate": "github-releases",
+      "extractVersionTemplate": "^v(?<version>.+)$",
+      "versioningTemplate": "semver"
+    },
+    {
+      "description": "pg_duckdb release in docker/pg-duckdb-pkg/versions.env. DuckDB has no pin, because each release vendors one DuckDB and the package build reads it from the pg_duckdb Makefile.",
+      "customType": "regex",
+      "managerFilePatterns": [
+        "/^docker/pg-duckdb-pkg/versions\\.env$/"
+      ],
+      "matchStrings": [
+        "PG_DUCKDB_VERSION=v(?<currentValue>\\d+\\.\\d+\\.\\d+)"
+      ],
+      "depNameTemplate": "duckdb/pg_duckdb",
       "datasourceTemplate": "github-releases",
       "extractVersionTemplate": "^v(?<version>.+)$",
       "versioningTemplate": "semver"
@@ -170,6 +184,32 @@
       ],
       "groupName": "Percona packages",
       "commitMessageTopic": "Percona packages"
+    },
+    {
+      "description": "pg_duckdb in its own PR, apart from the PGDG group. Upstream can mark a release experimental in its notes, so a reviewer checks them before merging.",
+      "matchDatasources": [
+        "github-releases"
+      ],
+      "matchPackageNames": [
+        "duckdb/pg_duckdb"
+      ],
+      "groupName": "pg_duckdb and DuckDB",
+      "commitMessageTopic": "pg_duckdb and DuckDB",
+      "minimumReleaseAge": "14 days",
+      "internalChecksFilter": "strict",
+      "automerge": false,
+      "prBodyNotes": [
+        "Read the upstream release notes before merging, and check the DuckDB version that this release vendors."
+      ],
+      "postUpgradeTasks": {
+        "commands": [
+          "python3 .github/renovate/post-upgrade.py"
+        ],
+        "fileFilters": [
+          "docker/analytics/extensions.*.json"
+        ],
+        "executionMode": "branch"
+      }
     }
   ],
   "semanticCommits": "disabled",

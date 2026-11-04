@@ -1,34 +1,108 @@
 name: Build pg_duckdb .deb packages
 
+# Builds the pg-duckdb-pkg image that the analytics images copy pg_duckdb from.
+#
+# Each tag holds one pg_duckdb release and a PG major. The image only
+# carries a .deb that the analytics image installs, and the DuckDB version is the
+# one that the pg_duckdb release vendors.
+#
+# build-custom-image.yml calls this workflow before it builds the analytics
+# images, so a Renovate PR that bumps the versions builds the package images in
+# the same run. It can also be run by hand, for example to build the images of
+# a release before the repository adopts it.
+
 on:
+  workflow_call:
   workflow_dispatch:
     inputs:
       pg_duckdb_version:
-        description: 'pg_duckdb version tag (e.g., v1.0.0)'
-        required: true
-        default: 'v1.0.0'
+        description: 'pg_duckdb version tag (e.g., v1.2.0). Empty uses versions.env'
+        required: false
+        default: ''
         type: string
-      duckdb_version:
-        description: 'DuckDB version to embed (e.g., v1.3.2)'
-        required: true
-        default: 'v1.3.2'
-        type: string
+
+permissions:
+  contents: read
+  packages: write
 
 env:
   REGISTRY: ghcr.io
   PACKAGE_NAME: xataio/postgres-images/pg-duckdb-pkg
+  # The PG majors that have a pg_duckdb package.
+  PG_MAJORS: '17 18'
 
 jobs:
+  # Work out the versions, and which PG majors have no image yet.
+  check:
+    runs-on: ubuntu-latest
+    outputs:
+      pg_duckdb_version: ${{ steps.resolve.outputs.pg_duckdb_version }}
+      majors: ${{ steps.resolve.outputs.majors }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@b45d80f862d83dbcd57f89517bcf500b2ab88fb2 # v4
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Resolve versions and find missing images
+        id: resolve
+        env:
+          INPUT_PG_DUCKDB_VERSION: ${{ inputs.pg_duckdb_version }}
+        run: |
+          set -euo pipefail
+
+          if [[ -n "${INPUT_PG_DUCKDB_VERSION}" ]]; then
+            pg_duckdb_version="${INPUT_PG_DUCKDB_VERSION}"
+          else
+            # shellcheck source=/dev/null
+            source docker/pg-duckdb-pkg/versions.env
+            pg_duckdb_version="${PG_DUCKDB_VERSION}"
+          fi
+
+          if [[ ! "${pg_duckdb_version}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error::'${pg_duckdb_version}' is not a version tag such as v1.2.0."
+            exit 1
+          fi
+
+          missing=()
+          for major in ${PG_MAJORS}; do
+            tag="${REGISTRY}/${PACKAGE_NAME}:${pg_duckdb_version}-pg${major}"
+            if out="$(docker buildx imagetools inspect "$tag" 2>&1)"; then
+              echo "${tag} exists, so it is not built again."
+            elif grep -qiE 'not found|manifest unknown|404' <<<"$out"; then
+              echo "${tag} is missing."
+              missing+=("$major")
+            else
+              # An error that is not "not found" must not lead to a build
+              # that overwrites a tag.
+              echo "::error::Cannot tell if ${tag} exists: ${out}"
+              exit 1
+            fi
+          done
+
+          majors="$(jq -nc '$ARGS.positional | map(tonumber)' --args "${missing[@]}")"
+          {
+            echo "pg_duckdb_version=${pg_duckdb_version}"
+            echo "majors=${majors}"
+          } >> "$GITHUB_OUTPUT"
+          echo "pg_duckdb ${pg_duckdb_version}, PG majors to build: ${majors}"
+
   build-amd64:
+    needs: check
+    if: needs.check.outputs.majors != '[]'
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        postgres: [17, 18]
+        postgres: ${{ fromJSON(needs.check.outputs.majors) }}
     env:
       ARCH: amd64
       PG_MAJOR: ${{ matrix.postgres }}
-      PG_DUCKDB_VERSION: ${{ inputs.pg_duckdb_version }}
-      DUCKDB_VERSION: ${{ inputs.duckdb_version }}
+      PG_DUCKDB_VERSION: ${{ needs.check.outputs.pg_duckdb_version }}
 
     steps:
       - name: Checkout repository
@@ -49,7 +123,7 @@ jobs:
           # Set CNPG base image based on PG version
           CNPG_BASE="ghcr.io/cloudnative-pg/postgresql:${PG_MAJOR}-minimal-bookworm"
 
-          IMAGE_TAG="${REGISTRY}/${PACKAGE_NAME}:${PG_DUCKDB_VERSION}-duckdb${DUCKDB_VERSION}-pg${PG_MAJOR}-${ARCH}"
+          IMAGE_TAG="${REGISTRY}/${PACKAGE_NAME}:${PG_DUCKDB_VERSION}-pg${PG_MAJOR}-${ARCH}"
 
           echo "Building pg_duckdb package using base: ${CNPG_BASE}"
           echo "Image tag: ${IMAGE_TAG}"
@@ -59,7 +133,6 @@ jobs:
             --build-arg CNPG_BASE="${CNPG_BASE}" \
             --build-arg PG_MAJOR="${PG_MAJOR}" \
             --build-arg PG_DUCKDB_VERSION="${PG_DUCKDB_VERSION}" \
-            --build-arg DUCKDB_VERSION="${DUCKDB_VERSION}" \
             --build-arg ARCH="${ARCH}" \
             -t "${IMAGE_TAG}" \
             --push \
@@ -69,16 +142,17 @@ jobs:
           echo "Pushed: ${IMAGE_TAG}"
 
   build-arm64:
+    needs: check
+    if: needs.check.outputs.majors != '[]'
     runs-on:
       group: arm-runners
     strategy:
       matrix:
-        postgres: [17, 18]
+        postgres: ${{ fromJSON(needs.check.outputs.majors) }}
     env:
       ARCH: arm64
       PG_MAJOR: ${{ matrix.postgres }}
-      PG_DUCKDB_VERSION: ${{ inputs.pg_duckdb_version }}
-      DUCKDB_VERSION: ${{ inputs.duckdb_version }}
+      PG_DUCKDB_VERSION: ${{ needs.check.outputs.pg_duckdb_version }}
 
     steps:
       - name: Checkout repository
@@ -99,7 +173,7 @@ jobs:
           # Set CNPG base image based on PG version
           CNPG_BASE="ghcr.io/cloudnative-pg/postgresql:${PG_MAJOR}-minimal-bookworm"
 
-          IMAGE_TAG="${REGISTRY}/${PACKAGE_NAME}:${PG_DUCKDB_VERSION}-duckdb${DUCKDB_VERSION}-pg${PG_MAJOR}-${ARCH}"
+          IMAGE_TAG="${REGISTRY}/${PACKAGE_NAME}:${PG_DUCKDB_VERSION}-pg${PG_MAJOR}-${ARCH}"
 
           echo "Building pg_duckdb package using base: ${CNPG_BASE}"
           echo "Image tag: ${IMAGE_TAG}"
@@ -109,7 +183,6 @@ jobs:
             --build-arg CNPG_BASE="${CNPG_BASE}" \
             --build-arg PG_MAJOR="${PG_MAJOR}" \
             --build-arg PG_DUCKDB_VERSION="${PG_DUCKDB_VERSION}" \
-            --build-arg DUCKDB_VERSION="${DUCKDB_VERSION}" \
             --build-arg ARCH="${ARCH}" \
             -t "${IMAGE_TAG}" \
             --push \
@@ -117,16 +190,17 @@ jobs:
             .
 
           echo "Pushed: ${IMAGE_TAG}"
+
   create-manifest:
-    needs: [build-amd64, build-arm64]
+    needs: [check, build-amd64, build-arm64]
+    if: needs.check.outputs.majors != '[]'
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        postgres: [17, 18]
+        postgres: ${{ fromJSON(needs.check.outputs.majors) }}
     env:
       PG_MAJOR: ${{ matrix.postgres }}
-      PG_DUCKDB_VERSION: ${{ inputs.pg_duckdb_version }}
-      DUCKDB_VERSION: ${{ inputs.duckdb_version }}
+      PG_DUCKDB_VERSION: ${{ needs.check.outputs.pg_duckdb_version }}
 
     steps:
       - name: Log in to GitHub Container Registry
@@ -138,7 +212,7 @@ jobs:
 
       - name: Create and push multi-arch manifest
         run: |
-          BASE_TAG="${REGISTRY}/${PACKAGE_NAME}:${PG_DUCKDB_VERSION}-duckdb${DUCKDB_VERSION}-pg${PG_MAJOR}"
+          BASE_TAG="${REGISTRY}/${PACKAGE_NAME}:${PG_DUCKDB_VERSION}-pg${PG_MAJOR}"
           AMD64_TAG="${BASE_TAG}-amd64"
           ARM64_TAG="${BASE_TAG}-arm64"
 

@@ -2,8 +2,7 @@ ARG CNPG_BASE=ghcr.io/cloudnative-pg/postgresql:17-minimal-bookworm
 FROM ${CNPG_BASE}
 
 ARG PG_MAJOR=17
-ARG PG_DUCKDB_VERSION=v1.0.0
-ARG DUCKDB_VERSION=v1.3.2
+ARG PG_DUCKDB_VERSION
 ARG ARCH=amd64
 
 USER root
@@ -40,6 +39,10 @@ RUN cd /tmp \
     && git clone https://github.com/duckdb/pg_duckdb.git \
     && cd pg_duckdb \
     && git checkout ${PG_DUCKDB_VERSION} \
+    && DUCKDB_VERSION="$(sed -n 's/^DUCKDB_VERSION *= *//p' Makefile)" \
+    && echo "${DUCKDB_VERSION}" | grep -Eq '^v[0-9]+\.[0-9]+\.[0-9]+$' \
+    && echo "${DUCKDB_VERSION}" > /tmp/duckdb_version \
+    && echo "Building pg_duckdb ${PG_DUCKDB_VERSION} with DuckDB ${DUCKDB_VERSION}" \
     && export DUCKDB_EXTENSION_REMOTE_URLS="" \
     && make GEN=ninja \
         BUILD_SHELL=0 BUILD_PYTHON=0 BUILD_UNITTESTS=0 BUILD_HTTPFS=0 \
@@ -55,6 +58,7 @@ RUN cd /tmp \
 
 # Create .deb package
 RUN PKG_NAME="pg-duckdb" && \
+    DUCKDB_VERSION="$(cat /tmp/duckdb_version)" && \
     PKG_VERSION="${PG_DUCKDB_VERSION#v}" && \
     DEB_NAME="${PKG_NAME}-${PG_DUCKDB_VERSION}-pg${PG_MAJOR}-${ARCH}-linux-gnu" && \
     DEB_DIR="/tmp/${DEB_NAME}" && \
