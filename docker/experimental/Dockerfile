@@ -103,9 +103,15 @@ RUN set -e; \
   PINNED_PKGS="$(jq -r \
      '.extensions[] | select((.package? // "") | startswith("percona-") | not) | select(.package_version and (.package_version != "")) | "\(.package)=\(.package_version)"' \
     /tmp/extensions.json | sort -u | tr '\n' ' ' )"; \
-  echo "Installing pinned (PG${PG_MAJOR}): ${PINNED_PKGS}"; \
   if [ -n "${PINNED_PKGS}" ]; then \
-    apt-get update && apt-get install -y --no-install-recommends ${PINNED_PKGS}; \
+    apt-get update; \
+    for pkg in ${PINNED_PKGS}; do \
+      if apt-cache show "${pkg%%=*}-scripts" >/dev/null 2>&1; then \
+        PINNED_PKGS="${PINNED_PKGS} ${pkg%%=*}-scripts=${pkg#*=}"; \
+      fi; \
+    done; \
+    echo "Installing pinned (PG${PG_MAJOR}): ${PINNED_PKGS}"; \
+    apt-get install -y --no-install-recommends ${PINNED_PKGS}; \
   fi; \
   rm -rf /var/lib/apt/lists/*
 
