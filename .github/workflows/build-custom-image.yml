@@ -118,6 +118,12 @@ jobs:
               fi
             done
           
+            # A change to the pg_duckdb package is a change to the analytics image.
+            if git diff --name-only HEAD~1 HEAD | grep -q "^docker/pg-duckdb-pkg/" \
+              && [[ ! " ${changed_folders[*]} " =~ " docker/analytics " ]]; then
+              changed_folders+=("docker/analytics")
+            fi
+
             if [[ ${#changed_folders[@]} -eq 0 ]]; then
               # No docker folders changed, build all (fallback)
               matrix='{"include":['
@@ -140,10 +146,20 @@ jobs:
           echo "matrix=$matrix" >> $GITHUB_OUTPUT
           echo "Generated matrix: $matrix"
 
+  # Build the pg_duckdb package images, if their tags do not exist yet.
+  pg-duckdb-pkg:
+    needs: detect-changes
+    if: contains(fromJSON(needs.detect-changes.outputs.matrix).include.*.folder, 'docker/analytics')
+    permissions:
+      contents: read
+      packages: write
+    uses: ./.github/workflows/build-pg-duckdb.yml
+
   # Build AMD64 images
   build-test-publish-amd64:
     runs-on: ubuntu-latest
-    needs: detect-changes
+    needs: [detect-changes, pg-duckdb-pkg]
+    if: ${{ !cancelled() && needs.detect-changes.result == 'success' && needs.pg-duckdb-pkg.result != 'failure' }}
     strategy:
       fail-fast: false
       matrix: ${{ fromJSON(needs.detect-changes.outputs.matrix) }}
@@ -385,7 +401,8 @@ jobs:
   build-test-publish-arm64:
     runs-on:
       group: arm-runners
-    needs: detect-changes
+    needs: [detect-changes, pg-duckdb-pkg]
+    if: ${{ !cancelled() && needs.detect-changes.result == 'success' && needs.pg-duckdb-pkg.result != 'failure' }}
     strategy:
       fail-fast: false
       matrix: ${{ fromJSON(needs.detect-changes.outputs.matrix) }}
@@ -853,20 +870,27 @@ jobs:
   build-test-publish:
     name: build-test-publish
     runs-on: ubuntu-latest
-    needs: [build-test-publish-amd64, build-test-publish-arm64, create-manifest, trigger-sync]
+    needs: [pg-duckdb-pkg, build-test-publish-amd64, build-test-publish-arm64, create-manifest, trigger-sync]
     if: always()
     steps:
       - name: Check job results
         run: |
+          pkg_result="${{ needs.pg-duckdb-pkg.result }}"
           amd64_result="${{ needs.build-test-publish-amd64.result }}"
           arm64_result="${{ needs.build-test-publish-arm64.result }}"
           manifest_result="${{ needs.create-manifest.result }}"
           trigger_sync_result="${{ needs.trigger-sync.result }}"
 
+          echo "pg_duckdb package result: $pkg_result"
           echo "AMD64 build result: $amd64_result"
           echo "ARM64 build result: $arm64_result"
           echo "Manifest creation result: $manifest_result"
           echo "Trigger sync result: $trigger_sync_result"
+
+          if [[ "$pkg_result" == "failure" ]]; then
+            echo "The pg_duckdb package build failed"
+            exit 1
+          fi
 
           if [[ "$amd64_result" == "failure" || "$arm64_result" == "failure" ]]; then
             echo "One or more build jobs failed"

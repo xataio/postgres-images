@@ -263,6 +263,7 @@ Renovate manages:
 - the `version` of `pg_deltax`, `pg_textsearch` and `xatautils`, which are GitHub releases
   and not PGDG packages. Renovate edits only that field. The build checks it
   against `default_version`.
+- the `pg_duckdb` release in `docker/pg-duckdb-pkg/versions.env`. See below.
 
 All PGDG updates go in one PR. A build fails on every stale pin, so a PR for
 one package cannot pass while another pin is stale.

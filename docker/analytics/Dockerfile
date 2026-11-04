@@ -1,5 +1,5 @@
 ARG CNPG_BASE=ghcr.io/cloudnative-pg/postgresql:17-minimal-bookworm
-ARG PG_DUCKDB_PKG=ghcr.io/xataio/postgres-images/pg-duckdb-pkg:v1.1.1-duckdbv1.4.3-pg17
+ARG PG_DUCKDB_PKG
 # TEMPORARY: unreleased pgBackRest (2.60.0dev) built from source for the GCS
 # Workload Identity Federation web-id key type (pgbackrest/pgbackrest#2839).
 ARG PGBACKREST_PKG=ghcr.io/xataio/postgres-images/pgbackrest-pkg:2.60.0dev

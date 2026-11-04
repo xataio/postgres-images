@@ -26,6 +26,10 @@ field. The pgBackRest suffix uses ${VERSION_ID}, so that pin is checked on
 bookworm and trixie. The PostGIS CLI is PG 17 only, so it is checked on
 bookworm.
 
+pg_duckdb has no package. Renovate bumps PG_DUCKDB_VERSION in
+docker/pg-duckdb-pkg/versions.env, and this script writes default_version from
+pg_duckdb.control at that tag to the `version` field of the pg_duckdb entries.
+
 The script uses only the standard library, plus `zstd` for .deb files that use
 it. It edits the files in place, so the formatting does not change.
 
@@ -203,6 +207,59 @@ def check_dockerfiles(paths, ref, check_all):
     return failures
 
 
+PG_DUCKDB_ENV = "docker/pg-duckdb-pkg/versions.env"
+PG_DUCKDB_RAW = "https://raw.githubusercontent.com/duckdb/pg_duckdb/{tag}/{path}"
+
+
+def reconcile_pg_duckdb(dry_run):
+    """Make the manifest versions match default_version of the pinned pg_duckdb."""
+    with open(PG_DUCKDB_ENV, encoding="utf-8") as f:
+        pinned = re.search(r"^PG_DUCKDB_VERSION=(v\d+\.\d+\.\d+)\s*$", f.read(), re.M)
+    if not pinned:
+        print(f"FAIL {PG_DUCKDB_ENV}: cannot find PG_DUCKDB_VERSION")
+        return 1
+    tag = pinned.group(1)
+
+    try:
+        control = fetch(PG_DUCKDB_RAW.format(tag=tag, path="pg_duckdb.control")).decode("utf-8", "replace")
+    except RuntimeError as err:
+        print(f"FAIL pg_duckdb {tag}: {err}")
+        return 1
+    default = re.search(r"^\s*default_version\s*=\s*'([^']*)'", control, re.M)
+    if not default:
+        print(f"FAIL pg_duckdb {tag}: cannot read default_version from the control file")
+        return 1
+    default = default.group(1)
+
+    failures = 0
+    for path in sorted(glob.glob("docker/*/extensions.*.json")):
+        with open(path, encoding="utf-8", newline="") as f:
+            text = f.read()
+        edits = []
+        for s, e in entry_spans(text):
+            entry = json.loads(text[s:e])
+            if entry.get("name") != "pg_duckdb" or entry.get("package") != "source":
+                continue
+            if entry["version"] == default:
+                print(f"ok   {path}: pg_duckdb {default}")
+                continue
+            pattern = re.compile(r'(?<!\\)("version"\s*:\s*")' + re.escape(entry["version"]) + '"')
+            span = text[s:e]
+            if len(pattern.findall(span)) != 1:
+                print(f"FAIL {path}: pg_duckdb: cannot locate the version field to edit")
+                failures += 1
+                continue
+            edits.append((s, e, pattern.sub(lambda mm: mm.group(1) + default + '"', span)))
+            print(f"set  {path}: pg_duckdb version {entry['version']} -> {default} (pg_duckdb {tag})")
+        if edits and not dry_run:
+            for s, e, replacement in sorted(edits, reverse=True):
+                text = text[:s] + replacement + text[e:]
+            json.loads(text)  # must still parse
+            with open(path, "w", encoding="utf-8", newline="") as f:
+                f.write(text)
+    return failures
+
+
 def base_manifest(path, ref):
     out = subprocess.run(["git", "show", f"{ref}:{path}"], capture_output=True, text=True)
     return json.loads(out.stdout) if out.returncode == 0 else None
@@ -290,6 +347,7 @@ def main():
 
     if not args.files:
         failures += check_dockerfiles(sorted(glob.glob("docker/*/Dockerfile")), args.base_ref, args.all)
+        failures += reconcile_pg_duckdb(args.dry_run)
 
     return 1 if failures else 0
 
