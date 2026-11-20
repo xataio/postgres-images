@@ -756,8 +756,8 @@
     {
       "name": "pgaudit",
       "package": "postgresql-15-pgaudit",
-      "package_version": "1.7.1-2.pgdg12+2",
-      "version": "1.7.1",
+      "package_version": "1.7.2-1.pgdg12+1",
+      "version": "1.7.2",
       "description": "Audit logging extension for PostgreSQL",
       "docs_url": "https://github.com/pgaudit/pgaudit",
       "preload_required": true,
