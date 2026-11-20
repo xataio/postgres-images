@@ -187,7 +187,7 @@ test: ## Run tests on the built image
     	echo "Testing extension: $$ext"; \
     	echo "Running commands for $$ext:"; \
     	jq -r --arg ext "$$ext" '.extensions[] | select(.name == $$ext and .test_enabled==true) | .test_commands[]' $(CONFIG_FILE) | sed 's/^/ → /'; \
-    	if ! jq -r --arg ext "$$ext" '.extensions[] | select(.name == $$ext and .test_enabled==true) | .test_commands[]' $(CONFIG_FILE) | docker exec -i pg-test psql -U postgres; then \
+    	if ! jq -r --arg ext "$$ext" '.extensions[] | select(.name == $$ext and .test_enabled==true) | .test_commands[]' $(CONFIG_FILE) | docker exec -i pg-test psql -U postgres -v ON_ERROR_STOP=1; then \
         	echo "ERROR: Commands failed for extension $$ext"; \
         	docker rm -f pg-test; \
         	exit 1; \
