@@ -129,7 +129,7 @@ RUN which shp2pgsql || echo "shp2pgsql not found" && \
 # Pin pgBackRest so image rebuilds cannot introduce incompatible backup protocol versions.
 RUN . /etc/os-release && \
     apt-get update && apt-get install -y --no-install-recommends \
-    "pgbackrest=2.60.0-1.pgdg${VERSION_ID}+1" \
+    "pgbackrest=2.60.1-1.pgdg${VERSION_ID}+1" \
     && rm -rf /var/lib/apt/lists/*
 
 
