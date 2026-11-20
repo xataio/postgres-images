@@ -1,8 +1,7 @@
 # PostgreSQL CNPG Custom Image Makefile
 PG_MAJOR ?= 17
-# PG19 is still a release candidate; CNPG tags it 19rc2 and publishes it on trixie only.
-PG_TAG       ?= $(if $(filter $(PG_MAJOR),19),19rc2,$(PG_MAJOR))
-DEBIAN_SUITE ?= $(if $(filter $(PG_MAJOR),19),trixie,bookworm)
+PG_TAG       ?= $(PG_MAJOR)
+DEBIAN_SUITE ?= bookworm
 # PGDG appends the Debian major to package versions: pgdg12 on bookworm,
 # pgdg13 on trixie.
 PGDG_SUFFIX  ?= $(if $(filter bookworm,$(DEBIAN_SUITE)),pgdg12+1,pgdg13+1)
@@ -187,7 +186,7 @@ test: ## Run tests on the built image
     	echo "Testing extension: $$ext"; \
     	echo "Running commands for $$ext:"; \
     	jq -r --arg ext "$$ext" '.extensions[] | select(.name == $$ext and .test_enabled==true) | .test_commands[]' $(CONFIG_FILE) | sed 's/^/ → /'; \
-    	if ! jq -r --arg ext "$$ext" '.extensions[] | select(.name == $$ext and .test_enabled==true) | .test_commands[]' $(CONFIG_FILE) | docker exec -i pg-test psql -U postgres; then \
+    	if ! jq -r --arg ext "$$ext" '.extensions[] | select(.name == $$ext and .test_enabled==true) | .test_commands[]' $(CONFIG_FILE) | docker exec -i pg-test psql -U postgres -v ON_ERROR_STOP=1; then \
         	echo "ERROR: Commands failed for extension $$ext"; \
         	docker rm -f pg-test; \
         	exit 1; \

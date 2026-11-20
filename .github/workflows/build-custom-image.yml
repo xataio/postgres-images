@@ -57,7 +57,7 @@ jobs:
         run: |
           # Define folder configurations
           declare -A folders=(
-            ["docker/custom-postgres"]='{"pg_versions":[17,18,14,15,16],"image_name":"xataio/postgres-images/cnpg-postgres-plus","description":"CNPG PostgreSQL with additional extensions"}'
+            ["docker/custom-postgres"]='{"pg_versions":[17,18,19,14,15,16],"image_name":"xataio/postgres-images/cnpg-postgres-plus","description":"CNPG PostgreSQL with additional extensions"}'
             ["docker/experimental"]='{"pg_versions":[17,18,19,16],"image_name":"xataio/postgres-images/experimental","description":"My custom PostgreSQL experimental"}'
             ["docker/analytics"]='{"pg_versions":[17,18],"image_name":"xataio/postgres-images/xata-analytics","description":"CNPG PostgreSQL plus with added pg_duckdb"}'
             ["docker/minimal"]='{"pg_versions":[17,19],"image_name":"xataio/postgres-images/minimal","description":"Minimal PostgreSQL 17 with xatautils and pgbackrest"}'
@@ -276,9 +276,8 @@ jobs:
             sha_suffix="-pg18-${ARCH}"
             ;;
           19)
-            # PG19 is still a release candidate. CNPG publishes it as 19rc2, on trixie only.
-            base_minimal="ghcr.io/cloudnative-pg/postgresql:19rc2-minimal-trixie"
-            base_standard="ghcr.io/cloudnative-pg/postgresql:19rc2-standard-trixie"
+            base_minimal="ghcr.io/cloudnative-pg/postgresql:19-minimal-bookworm"
+            base_standard="ghcr.io/cloudnative-pg/postgresql:19-standard-bookworm"
             default_base="$base_minimal"
             sha_suffix="-pg19-${ARCH}"
             ;;
@@ -518,9 +517,8 @@ jobs:
               sha_suffix="-pg18-${ARCH}"
               ;;
             19)
-              # PG19 is still a release candidate. CNPG publishes it as 19rc2, on trixie only.
-              base_minimal="ghcr.io/cloudnative-pg/postgresql:19rc2-minimal-trixie"
-              base_standard="ghcr.io/cloudnative-pg/postgresql:19rc2-standard-trixie"
+              base_minimal="ghcr.io/cloudnative-pg/postgresql:19-minimal-bookworm"
+              base_standard="ghcr.io/cloudnative-pg/postgresql:19-standard-bookworm"
               default_base="$base_minimal"
               sha_suffix="-pg19-${ARCH}"
               ;;
@@ -710,7 +708,7 @@ jobs:
                 AMD_TAG="${SHA}-pg19-amd64"
                 ARM_TAG="${SHA}-pg19-arm64"
                 FINAL_SHA_TAG="${SHA}-pg19"
-                SUITE="trixie"
+                SUITE="bookworm"
                 ;;
               *)
                 echo "Unsupported PG version: $pg_major"; exit 1
