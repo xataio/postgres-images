@@ -1,8 +1,7 @@
 # PostgreSQL CNPG Custom Image Makefile
 PG_MAJOR ?= 17
-# PG19 is still a release candidate; CNPG tags it 19rc2 and publishes it on trixie only.
-PG_TAG       ?= $(if $(filter $(PG_MAJOR),19),19rc2,$(PG_MAJOR))
-DEBIAN_SUITE ?= $(if $(filter $(PG_MAJOR),19),trixie,bookworm)
+PG_TAG       ?= $(PG_MAJOR)
+DEBIAN_SUITE ?= bookworm
 # PGDG appends the Debian major to package versions: pgdg12 on bookworm,
 # pgdg13 on trixie.
 PGDG_SUFFIX  ?= $(if $(filter bookworm,$(DEBIAN_SUITE)),pgdg12+1,pgdg13+1)
