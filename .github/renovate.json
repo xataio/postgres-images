@@ -62,7 +62,7 @@
   ],
   "packageRules": [
     {
-      "description": "Debian bookworm builds (every PG major except 19)",
+      "description": "Debian bookworm builds",
       "matchDatasources": [
         "deb"
       ],
@@ -131,15 +131,15 @@
       ]
     },
     {
-      "description": "PG 19 builds on trixie",
+      "description": "pg_stat_monitor for PG 19 comes from the Percona repo, not PGDG. All its pins are bookworm builds.",
       "matchDatasources": [
         "deb"
       ],
-      "matchFileNames": [
-        "docker/*/extensions.19.json"
+      "matchPackageNames": [
+        "percona-pg-stat-monitor19"
       ],
       "registryUrls": [
-        "https://apt.postgresql.org/pub/repos/apt?suite=trixie-pgdg&components=main&binaryArch=amd64"
+        "https://repo.percona.com/ppg-19/apt?suite=bookworm&components=main&binaryArch=amd64"
       ]
     },
     {
