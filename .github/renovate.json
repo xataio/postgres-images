@@ -170,6 +170,13 @@
       ],
       "groupName": "Percona packages",
       "commitMessageTopic": "Percona packages"
+    },
+    {
+      "description": "xata-utils is private. Do not copy its release notes into PRs in this public repository.",
+      "matchPackageNames": [
+        "xataio/xata-utils"
+      ],
+      "fetchChangeLogs": "off"
     }
   ],
   "semanticCommits": "disabled",
