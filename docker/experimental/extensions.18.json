@@ -257,7 +257,7 @@
       "test_enabled": true,
       "test_commands": [
         "CREATE EXTENSION IF NOT EXISTS \"fuzzystrmatch\";",
-        "CREATE EXTENSION IF NOT EXISTS \"postgis_tiger_geocoder\";"
+        "CREATE EXTENSION IF NOT EXISTS \"postgis_tiger_geocoder\" CASCADE;"
       ]
     },
     {
@@ -858,6 +858,7 @@
     { "setting": "max_worker_processes", "value": "10" },
     { "setting": "max_wal_senders", "value": "10" },
     { "setting": "pgaudit.log", "value": "all" },
-    { "setting": "pgaudit.log_catalog", "value": "off" }
+    { "setting": "pgaudit.log_catalog", "value": "off" },
+    { "setting": "output_plugin_libraries", "value": "wal2json" }
   ]
 }

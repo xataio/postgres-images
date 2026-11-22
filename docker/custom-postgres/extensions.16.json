@@ -288,7 +288,7 @@
       "preload_required": false,
       "test_enabled": true,
       "test_commands": [
-        "CREATE EXTENSION IF NOT EXISTS \"postgis_tiger_geocoder\";"
+        "CREATE EXTENSION IF NOT EXISTS \"postgis_tiger_geocoder\" CASCADE;"
       ]
     },
     {
@@ -834,7 +834,8 @@
     { "setting": "wal_level", "value": "logical" },
     { "setting": "max_replication_slots", "value": "10" },
     { "setting": "max_worker_processes", "value": "10" },
-    { "setting": "max_wal_senders", "value": "10" }
+    { "setting": "max_wal_senders", "value": "10" },
+    { "setting": "output_plugin_libraries", "value": "wal2json" }
   ],
   "postgres_config_post_restart": [
     { "setting": "pgaudit.log", "value": "all" },
