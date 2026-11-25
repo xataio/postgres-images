@@ -76,6 +76,17 @@ make build-multiarch PLATFORMS=linux/amd64
 make ci-build
 ```
 
+### White Label Image
+The white label image is `cnpg-postgres-plus` with the `pgprivs` build of the
+security library instead of `xatautils`. Build the packages in xata-utils with
+`make -f packaging.mk build EXT_NAME=pgprivs ARCH=<arch> PGVER=18 DISTRO=bookworm TAG=v0.0.1-white-label`
+and copy them into `out/debs/`. Then:
+```bash
+make build-white-label PG_MAJOR=18
+# amd64, no tests
+make build-white-label PG_MAJOR=18 WL_PLATFORM=linux/amd64 WL_TAG_SUFFIX=white-label-amd64
+```
+
 ## Available Make Targets
 
 - `help` - Show available targets

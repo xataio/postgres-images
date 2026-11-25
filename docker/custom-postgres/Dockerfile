@@ -131,8 +131,14 @@ RUN . /etc/os-release && \
 # Verify pgbackrest installation
 RUN pgbackrest version
 
+# Security library. xatautils comes from its GitHub release. Any other name is
+# a local package build in SECURITY_LIB_DEBS (white label images).
+ARG SECURITY_LIB=xatautils
+ARG SECURITY_LIB_DEBS=docker/custom-postgres
+
 # Install xatautils extension using Docker secrets for GitHub token
 RUN --mount=type=secret,id=github_token \
+    if [ "${SECURITY_LIB}" != "xatautils" ]; then exit 0; fi && \
     ARCH=$(dpkg --print-architecture) && \
     if [ ! -f "/run/secrets/github_token" ]; then \
         echo "ERROR: GitHub token secret is required to access private xata-utils repository"; \
@@ -176,6 +182,24 @@ RUN --mount=type=secret,id=github_token \
     echo "Installed xatautils: ${INSTALLED_XATA_VERSION}" && \
     rm /tmp/xatautils.deb
 
+RUN --mount=type=bind,source=${SECURITY_LIB_DEBS},target=/tmp/security-lib-debs \
+    set -eu; \
+    if [ "${SECURITY_LIB}" = "xatautils" ]; then exit 0; fi; \
+    LIB_VERSION="$(jq -r --arg n "${SECURITY_LIB}" '.extensions[] | select(.name==$n) | .version' /tmp/extensions.json)"; \
+    if [ -z "${LIB_VERSION}" ] || [ "${LIB_VERSION}" = "null" ]; then \
+        echo "ERROR: no ${SECURITY_LIB} version pinned in the extension manifest"; \
+        exit 1; \
+    fi; \
+    . /etc/os-release; \
+    DEB="/tmp/security-lib-debs/${SECURITY_LIB}-v${LIB_VERSION}-pg${PG_MAJOR}-$(dpkg --print-architecture)-${VERSION_CODENAME}-linux-gnu.deb"; \
+    dpkg -i "${DEB}"; \
+    INSTALLED="$(dpkg-query -W -f='${Version}' "${SECURITY_LIB}")"; \
+    if [ "${INSTALLED}" != "${LIB_VERSION}" ]; then \
+        echo "ERROR: installed ${SECURITY_LIB} ${INSTALLED} != pinned ${LIB_VERSION}"; \
+        exit 1; \
+    fi; \
+    echo "Installed ${SECURITY_LIB}: ${INSTALLED}"
+
 # Remove tools
 RUN apt-get purge -y --auto-remove \
     wget \
@@ -198,7 +222,7 @@ mismatches=()
 
 while read -r name expected_version; do
     # Skip preload-only modules or non-creatable ones
-    if [[ "$name" == "auto_explain" || "$name" == "auth_delay" || "$name" == "wal2json" ]]; then
+    if [[ "$name" == "auto_explain" || "$name" == "auth_delay" || "$name" == "wal2json" || "$name" == "pgprivs" ]]; then
         so_path=$(find /usr/lib/postgresql -name "${name}.so" 2>/dev/null)
         if [[ -z "$so_path" ]]; then
             mismatches+=("Module '${name}' not found (.so missing)")

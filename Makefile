@@ -348,6 +348,46 @@ test-github-access: check-github-token ## Test GitHub token access to xata-utils
 		exit 1; \
 	fi
 
+# White label image: cnpg-postgres-plus with the pgprivs build of the security
+# library instead of xatautils, installed from a local package build in WL_DEBS.
+WL_LIB         ?= pgprivs
+WL_LIB_VERSION ?= 0.0.1-white-label
+WL_DEBS        ?= out/debs
+WL_REGISTRY    ?= localhost:5000
+WL_IMAGE_NAME  ?= cnpg-postgres-plus
+WL_TAG_SUFFIX  ?= white-label
+WL_PLATFORM    ?=
+WL_CONFIG      := out/white-label/extensions.$(PG_MAJOR).json
+
+.PHONY: white-label-config
+white-label-config: ## Write the extension manifest of the white label image
+	@mkdir -p $(dir $(WL_CONFIG))
+	jq --arg lib "$(WL_LIB)" --arg ver "$(WL_LIB_VERSION)" --arg major "$(PG_MAJOR)" \
+		-f $(DOCKERFILE_DIR)/white-label.jq \
+		$(DOCKERFILE_DIR)/extensions.$(PG_MAJOR).json > $(WL_CONFIG)
+
+.PHONY: build-white-label
+build-white-label: get-pg-version get-base-digest white-label-config ## Build and test the white label image (no push)
+	docker build \
+		-f $(DOCKERFILE) \
+		$(if $(WL_PLATFORM),--platform $(WL_PLATFORM)) \
+		-t $(WL_REGISTRY)/$(WL_IMAGE_NAME):$(PG_VERSION)-$(WL_TAG_SUFFIX) \
+		--label "base.digest=$(BASE_DIGEST)" \
+		--label "org.opencontainers.image.description=CNPG PostgreSQL with additional extensions" \
+		--label "org.opencontainers.image.licenses=PostgreSQL" \
+		--build-arg CNPG_BASE=$(CNPG_BASE) \
+		--build-arg PG_MAJOR=$(PG_MAJOR) \
+		--build-arg CONFIG_FILE=$(WL_CONFIG) \
+		--build-arg PGDG_SUFFIX=$(PGDG_SUFFIX) \
+		--build-arg SECURITY_LIB=$(WL_LIB) \
+		--build-arg SECURITY_LIB_DEBS=$(WL_DEBS) \
+		.
+	$(if $(WL_PLATFORM),,$(MAKE) test \
+		REGISTRY=$(WL_REGISTRY) \
+		IMAGE_NAME=$(WL_IMAGE_NAME) \
+		IMAGE_TAG=$(PG_VERSION)-$(WL_TAG_SUFFIX) \
+		CONFIG_FILE=$(WL_CONFIG))
+
 # Build experimental image
 .PHONY: build-experimental
 build-experimental: check-github-token ## Build experimental image locally
