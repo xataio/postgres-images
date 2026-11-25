@@ -23,6 +23,23 @@ PLATFORMS ?= linux/amd64,linux/arm64
 DATE_TAG := $(shell date +%Y%m%d)
 CONFIG_FILE ?= $(DOCKERFILE_DIR)/extensions.$(PG_MAJOR).json
 DESCRIPTION ?= CNPG PostgreSQL with additional extensions and tools
+
+# Security library package: xatautils, or pgprivs, which is the same library
+# built under another name. The manifest for another name is the per-major
+# manifest with the xatautils entry replaced by $(DOCKERFILE_DIR)/<name>.json.
+SECURITY_LIB ?= xatautils
+ifneq ($(SECURITY_LIB),xatautils)
+SECURITY_LIB_CONFIG := build/$(SECURITY_LIB)/extensions.$(PG_MAJOR).json
+ifneq ($(shell mkdir -p $(dir $(SECURITY_LIB_CONFIG)) && jq \
+	--slurpfile lib $(DOCKERFILE_DIR)/$(SECURITY_LIB).json --arg major $(PG_MAJOR) \
+	'(.extensions | map(.name) | index("xatautils")) as $$i \
+	| if $$i == null then error("no xatautils entry to replace") else . end \
+	| .extensions[$$i] = ($$lib[0] | del(.docs_url) | .file_check = "/usr/lib/postgresql/\($$major)/lib/\(.name).so")' \
+	$(CONFIG_FILE) > $(SECURITY_LIB_CONFIG) && echo ok),ok)
+$(error Cannot write the $(SECURITY_LIB) manifest from $(CONFIG_FILE))
+endif
+override CONFIG_FILE := $(SECURITY_LIB_CONFIG)
+endif
 IMAGE_TAG ?= latest # Default tag; CI overrides with commit SHA
 
 # GitHub token for private repository access
@@ -116,6 +133,7 @@ build-local: get-pg-version get-base-digest check-github-token ## Build image lo
 		--build-arg POSTGIS_CLI_VERSION_17=$(POSTGIS_CLI_VERSION_17) \
 		--build-arg PGDG_SUFFIX=$(PGDG_SUFFIX) \
 		--build-arg PG_DUCKDB_PKG=$(PG_DUCKDB_PKG) \
+		--build-arg SECURITY_LIB=$(SECURITY_LIB) \
 		--secret id=github_token,src=/dev/stdin \
 		.
 
@@ -193,6 +211,17 @@ test: ## Run tests on the built image
     	fi; \
 	done
 
+	@if [ "$(SECURITY_LIB)" != "xatautils" ]; then \
+		echo "Verifying that the image has $(SECURITY_LIB) in place of xatautils..."; \
+		found="$$(docker exec -u root pg-test find / -xdev -iname '*xatautils*')"; \
+		settings="$$(docker exec pg-test psql -U postgres -tAc "SELECT name FROM pg_settings WHERE name ILIKE '%xatautils%' OR setting ILIKE '%xatautils%'")"; \
+		if [ -n "$$found$$settings" ]; then \
+			echo "ERROR: xatautils found in the image:"; echo "$$found"; echo "$$settings"; \
+			docker rm -f pg-test; \
+			exit 1; \
+		fi; \
+	fi
+
 	@echo "Listing available extensions..."
 	docker exec pg-test psql -U postgres -c "SELECT name FROM pg_available_extensions ORDER BY name;"
 
@@ -233,6 +262,7 @@ build-multiarch: get-pg-version get-base-digest check-github-token setup-buildx 
 		--build-arg POSTGIS_CLI_VERSION_17=$(POSTGIS_CLI_VERSION_17) \
 		--build-arg PGDG_SUFFIX=$(PGDG_SUFFIX) \
 		--build-arg PG_DUCKDB_PKG=$(PG_DUCKDB_PKG) \
+		--build-arg SECURITY_LIB=$(SECURITY_LIB) \
 		--secret id=github_token,src=/dev/stdin \
 		.
 
@@ -253,6 +283,7 @@ push-arch: get-pg-version get-base-digest check-github-token setup-buildx ## Bui
 		--build-arg POSTGIS_CLI_VERSION_17=$(POSTGIS_CLI_VERSION_17) \
 		--build-arg PGDG_SUFFIX=$(PGDG_SUFFIX) \
 		--build-arg PG_DUCKDB_PKG=$(PG_DUCKDB_PKG) \
+		--build-arg SECURITY_LIB=$(SECURITY_LIB) \
 		--secret id=github_token,src=/dev/stdin \
 		--output type=image,push=true \
 		.
@@ -297,6 +328,7 @@ show-info: get-pg-version get-base-digest ## Show build information
 	@echo "Dockerfile: $(DOCKERFILE)"
 	@echo "Image Tag: $(IMAGE_TAG)"
 	@echo "Config File: $(CONFIG_FILE)"
+	@echo "Security Library: $(SECURITY_LIB)"
 	@echo "GitHub Token: $(if $(GITHUB_TOKEN),SET,NOT SET)"
 
 # CI-friendly target that mirrors the GitHub Actions logic

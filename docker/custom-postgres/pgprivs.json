@@ -1,0 +1,11 @@
+{
+  "name": "pgprivs",
+  "version": "0.3.17",
+  "description": "Privilege controls for database roles",
+  "docs_url": "https://github.com/xataio/xata-utils",
+  "preload_required": true,
+  "test_enabled": true,
+  "test_commands": [
+    "SHOW pgprivs.privileged_role;"
+  ]
+}

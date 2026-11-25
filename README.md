@@ -76,6 +76,22 @@ make build-multiarch PLATFORMS=linux/amd64
 make ci-build
 ```
 
+### The `postgres` Image
+The `postgres` image has the same content as `cnpg-postgres-plus`, but it
+ships the security library as the `pgprivs` package and not as `xatautils`.
+The module is `pgprivs.so`, its settings are `pgprivs.*` and its scripts are in
+`/etc/pgprivs/extensions`. It is built for PG 17, 18 and 19 from
+`docker/custom-postgres`, and the workflow publishes it with the same tags as
+the other images, for example `postgres:18.1`.
+
+`SECURITY_LIB` selects the package. The package version is pinned in
+`docker/custom-postgres/pgprivs.json`. The build fails if the release has no
+package of that version for the PG major.
+```bash
+make build-and-test PG_MAJOR=18 SECURITY_LIB=pgprivs \
+  IMAGE_NAME=xataio/postgres-images/postgres
+```
+
 ## Available Make Targets
 
 - `help` - Show available targets
@@ -260,7 +276,7 @@ Renovate manages:
 - the PostGIS CLI pin in the Dockerfiles.
 - the `percona-pg-stat-monitor<major>` pins. They come from the Percona repo
   for the same PG major, not from PGDG, so Renovate looks them up there.
-- the `version` of `pg_deltax`, `pg_textsearch` and `xatautils`, which are GitHub releases
+- the `version` of `pg_deltax`, `pg_textsearch`, `xatautils` and `pgprivs`, which are GitHub releases
   and not PGDG packages. Renovate edits only that field. The build checks it
   against `default_version`.
 

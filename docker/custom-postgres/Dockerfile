@@ -131,7 +131,11 @@ RUN . /etc/os-release && \
 # Verify pgbackrest installation
 RUN pgbackrest version
 
-# Install xatautils extension using Docker secrets for GitHub token
+# Security library package from the xata-utils release: xatautils, or pgprivs,
+# which is the same library built under another name.
+ARG SECURITY_LIB=xatautils
+
+# Install the security library using Docker secrets for GitHub token
 RUN --mount=type=secret,id=github_token \
     ARCH=$(dpkg --print-architecture) && \
     if [ ! -f "/run/secrets/github_token" ]; then \
@@ -140,22 +144,23 @@ RUN --mount=type=secret,id=github_token \
     fi && \
     GITHUB_TOKEN=$(cat /run/secrets/github_token) && \
     # Pin to the version in the extension manifest
-    XATA_VERSION="v$(jq -r '.extensions[] | select(.name=="xatautils") | .version' /tmp/extensions.json)" && \
-    if [ "$XATA_VERSION" = "v" ] || [ "$XATA_VERSION" = "vnull" ]; then \
-        echo "ERROR: no xatautils version pinned in the extension manifest"; \
+    LIB_VERSION="v$(jq -r --arg name "${SECURITY_LIB}" '.extensions[] | select(.name==$name) | .version' /tmp/extensions.json)" && \
+    if [ "$LIB_VERSION" = "v" ] || [ "$LIB_VERSION" = "vnull" ]; then \
+        echo "ERROR: no ${SECURITY_LIB} version pinned in the extension manifest"; \
         exit 1; \
     fi && \
-    echo "Pinned xatautils version: ${XATA_VERSION}" && \
+    echo "Pinned ${SECURITY_LIB} version: ${LIB_VERSION}" && \
     # Get the release info to find the asset download URL
     RELEASE_INFO=$(wget --tries=5 --waitretry=10 --retry-connrefused --retry-on-http-error=429,500,502,503,504 --header="Authorization: token $GITHUB_TOKEN" \
                         --header="Accept: application/vnd.github.v3+json" \
                         -O- -q \
-                        "https://api.github.com/repos/xataio/xata-utils/releases/tags/${XATA_VERSION}") && \
-    ASSET_NAME="xatautils-${XATA_VERSION}-pg${PG_MAJOR}-${ARCH}-linux-gnu.deb" && \
-    echo "Downloading xatautils extension: ${ASSET_NAME}..." && \
+                        "https://api.github.com/repos/xataio/xata-utils/releases/tags/${LIB_VERSION}") && \
+    . /etc/os-release && \
+    ASSET_NAME="${SECURITY_LIB}-${LIB_VERSION}-pg${PG_MAJOR}-${ARCH}-${VERSION_CODENAME}-linux-gnu.deb" && \
+    echo "Downloading ${SECURITY_LIB} extension: ${ASSET_NAME}..." && \
     DOWNLOAD_URL=$(printf '%s' "$RELEASE_INFO" | jq -r ".assets[] | select(.name==\"$ASSET_NAME\") | .url") && \
     if [ -z "$DOWNLOAD_URL" ] || [ "$DOWNLOAD_URL" = "null" ]; then \
-        echo "ERROR: Asset ${ASSET_NAME} not found in release ${XATA_VERSION}"; \
+        echo "ERROR: Asset ${ASSET_NAME} not found in release ${LIB_VERSION}"; \
         echo "Available assets:"; \
         echo "$RELEASE_INFO" | jq -r '.assets[].name'; \
         exit 1; \
@@ -164,17 +169,17 @@ RUN --mount=type=secret,id=github_token \
     # Download the asset using the GitHub API
     wget --tries=5 --waitretry=10 --retry-connrefused --retry-on-http-error=429,500,502,503,504 --header="Authorization: token $GITHUB_TOKEN" \
          --header="Accept: application/octet-stream" \
-         -O /tmp/xatautils.deb \
+         -O /tmp/security-lib.deb \
          "$DOWNLOAD_URL" && \
-    dpkg -i /tmp/xatautils.deb && \
-    # verify-extensions.sh skips xatautils, so check the installed version here
-    INSTALLED_XATA_VERSION="$(dpkg-query -W -f='${Version}' xatautils)" && \
-    if [ "$INSTALLED_XATA_VERSION" != "${XATA_VERSION#v}" ]; then \
-        echo "ERROR: installed xatautils ${INSTALLED_XATA_VERSION} != pinned ${XATA_VERSION}"; \
+    dpkg -i /tmp/security-lib.deb && \
+    # verify-extensions.sh skips the library, so check the installed version here
+    INSTALLED_VERSION="$(dpkg-query -W -f='${Version}' "${SECURITY_LIB}")" && \
+    if [ "$INSTALLED_VERSION" != "${LIB_VERSION#v}" ]; then \
+        echo "ERROR: installed ${SECURITY_LIB} ${INSTALLED_VERSION} != pinned ${LIB_VERSION}"; \
         exit 1; \
     fi && \
-    echo "Installed xatautils: ${INSTALLED_XATA_VERSION}" && \
-    rm /tmp/xatautils.deb
+    echo "Installed ${SECURITY_LIB}: ${INSTALLED_VERSION}" && \
+    rm /tmp/security-lib.deb
 
 # Remove tools
 RUN apt-get purge -y --auto-remove \
@@ -206,7 +211,7 @@ while read -r name expected_version; do
         continue
     fi
 
-    if  [[ "$name" != "xatautils" ]]; then
+    if  [[ "$name" != "@SECURITY_LIB@" ]]; then
         actual_version=$(psql -tAc "SELECT default_version FROM pg_available_extensions WHERE name='${name}';" 2>/dev/null | xargs)
         if [ -z "$actual_version" ]; then
             mismatches+=("Extension '${name}' not found (expected ${expected_version})")
@@ -229,7 +234,8 @@ else
 fi
 EOF
 
-RUN chmod +x /usr/local/bin/verify-extensions.sh
+RUN sed -i "s/@SECURITY_LIB@/${SECURITY_LIB}/" /usr/local/bin/verify-extensions.sh \
+    && chmod +x /usr/local/bin/verify-extensions.sh
 
 # Verify locales are still available after cleanup
 RUN echo "Available locales after cleanup:" && locale -a | wc -l && echo "locales installed"

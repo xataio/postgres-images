@@ -136,6 +136,22 @@ jobs:
               matrix="${matrix%,}]}"
             fi
           fi
+
+          # Image variants. A variant is built from the folder of another
+          # image, for the majors of that build which the variant has.
+          # security_lib selects the library package (default: xatautils).
+          variants='[
+            {"folder":"docker/custom-postgres","config":{"pg_versions":[17,18,19],"image_name":"xataio/postgres-images/postgres","description":"PostgreSQL with additional extensions","security_lib":"pgprivs"}}
+          ]'
+          matrix="$(jq --argjson variants "$variants" '
+            .include += [
+              .include[] as $item
+              | $variants[]
+              | select(.folder == $item.folder)
+              | .config.pg_versions -= (.config.pg_versions - $item.config.pg_versions)
+              | select(.config.pg_versions | length > 0)
+            ]' <<<"$matrix")"
+
           matrix="$(jq -c . <<<"$matrix")"
           echo "matrix=$matrix" >> $GITHUB_OUTPUT
           echo "Generated matrix: $matrix"
@@ -229,6 +245,7 @@ jobs:
           echo "IMAGE_NAME=${image_name}" >> $GITHUB_ENV
           echo "DOCKERFILE_DIR=${{ matrix.folder }}" >> $GITHUB_ENV
           echo "DESCRIPTION=${description}" >> $GITHUB_ENV
+          echo "SECURITY_LIB=${{ matrix.config.security_lib || 'xatautils' }}" >> $GITHUB_ENV
 
       # Build each PG version for this folder
       - name: Build and process PG versions
@@ -470,6 +487,7 @@ jobs:
           echo "IMAGE_NAME=${image_name}" >> $GITHUB_ENV
           echo "DOCKERFILE_DIR=${{ matrix.folder }}" >> $GITHUB_ENV
           echo "DESCRIPTION=${description}" >> $GITHUB_ENV
+          echo "SECURITY_LIB=${{ matrix.config.security_lib || 'xatautils' }}" >> $GITHUB_ENV
 
       # Build each PG version for this folder
       - name: Build and process PG versions
