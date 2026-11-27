@@ -817,7 +817,7 @@
     {
       "name": "pg_stat_monitor",
       "package": "percona-pg-stat-monitor19",
-      "package_version": "1:2.4.1-1+20.4.bookworm",
+      "package_version": "1:2.4.1-1+22.2.bookworm",
       "version": "2.4",
       "description": "Percona's advanced query performance monitoring extension for PostgreSQL",
       "docs_url": "https://docs.percona.com/pg-stat-monitor/",
