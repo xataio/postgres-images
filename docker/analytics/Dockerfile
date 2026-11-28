@@ -101,7 +101,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends --no-upgrade \
 # Download and install PostGIS tools manually for ARM64
 # Use pinned package version matching the SQL extension version
 RUN ARCH=$(dpkg --print-architecture) && \
-    POSTGIS_PKG_VERSION=3.7.0+dfsg-1.pgdg12+1 && \
+    POSTGIS_PKG_VERSION=3.7.0+dfsg-2.pgdg12+1 && \
     if [ "$ARCH" = "arm64" ]; then \
         apt-get update && \
         mkdir -p /tmp/postgis-tools && \
